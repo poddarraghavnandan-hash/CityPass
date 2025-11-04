@@ -1,8 +1,15 @@
 import mbxGeocoding from '@mapbox/mapbox-sdk/services/geocoding';
 
-const geocodingClient = mbxGeocoding({
-  accessToken: process.env.MAPBOX_API_KEY || '',
-});
+let geocodingClient: ReturnType<typeof mbxGeocoding> | null = null;
+
+function getGeocodingClient() {
+  if (!geocodingClient && process.env.MAPBOX_API_KEY) {
+    geocodingClient = mbxGeocoding({
+      accessToken: process.env.MAPBOX_API_KEY,
+    });
+  }
+  return geocodingClient;
+}
 
 export async function geocodeAddress(address: string, city: string = 'New York') {
   if (!address || !process.env.MAPBOX_API_KEY) {
@@ -10,8 +17,13 @@ export async function geocodeAddress(address: string, city: string = 'New York')
   }
 
   try {
+    const client = getGeocodingClient();
+    if (!client) {
+      return { lat: undefined, lon: undefined };
+    }
+
     const query = `${address}, ${city}`;
-    const response = await geocodingClient
+    const response = await client
       .forwardGeocode({
         query,
         limit: 1,

@@ -12,7 +12,14 @@
       "Bash(pnpm dev:web:*)",
       "Bash(pnpm dev)",
       "Bash(git init:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git remote add:*)",
+      "Bash(git branch:*)",
+      "Bash(git push:*)",
+      "Bash(git remote set-url:*)",
+      "Bash(git pull:*)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []
