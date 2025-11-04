@@ -1,0 +1,199 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearch", "postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pg_trgm]
+}
+
+model Event {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Required fields
+  sourceUrl   String   @map("source_url")
+  title       String
+  city        String
+  startTime   DateTime @map("start_time")
+
+  // Optional fields
+  subtitle    String?
+  description String?  @db.Text
+  category    EventCategory?
+  organizer   String?
+
+  // Venue information
+  venueName     String?   @map("venue_name")
+  address       String?
+  neighborhood  String?
+  lat           Float?
+  lon           Float?
+
+  // Time details
+  endTime    DateTime? @map("end_time")
+  timezone   String?   @default("America/New_York")
+
+  // Pricing
+  priceMin   Float?    @map("price_min")
+  priceMax   Float?    @map("price_max")
+  currency   String?   @default("USD")
+
+  // Additional metadata
+  minAge         Int?      @map("min_age")
+  tags           String[]
+  imageUrl       String?   @map("image_url")
+  bookingUrl     String?   @map("booking_url")
+  accessibility  String[]
+
+  // Tracking
+  sourceDomain   String    @map("source_domain")
+  checksum       String    // Hash of content for change detection
+
+  // Deduplication
+  canonicalUrlHash String  @map("canonical_url_hash")
+
+  // Relations
+  venue    Venue?  @relation(fields: [venueId], references: [id])
+  venueId  String? @map("venue_id")
+
+  source   Source? @relation(fields: [sourceId], references: [id])
+  sourceId String? @map("source_id")
+
+  // Indexes
+  @@unique([canonicalUrlHash, startTime], name: "unique_event")
+  @@index([city, startTime])
+  @@index([category, startTime])
+  @@index([startTime])
+  @@index([sourceDomain])
+  @@index([checksum])
+  @@map("events")
+}
+
+model Venue {
+  id           String   @id @default(cuid())
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  name         String
+  address      String?
+  neighborhood String?
+  city         String
+  lat          Float?
+  lon          Float?
+
+  website      String?
+  description  String?  @db.Text
+  imageUrl     String?  @map("image_url")
+
+  // Normalization
+  canonicalName String  @map("canonical_name")
+
+  events Event[]
+
+  @@unique([canonicalName, city])
+  @@index([city])
+  @@map("venues")
+}
+
+model Source {
+  id          String       @id @default(cuid())
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  name        String
+  url         String       @unique
+  domain      String
+  city        String
+
+  sourceType  SourceType   @map("source_type")
+  category    EventCategory?
+
+  // Crawl config
+  crawlMethod CrawlMethod  @default(FIRECRAWL) @map("crawl_method")
+  crawlFrequency Int       @default(3600) @map("crawl_frequency") // seconds
+
+  active      Boolean      @default(true)
+  lastCrawled DateTime?    @map("last_crawled")
+  lastSuccess DateTime?    @map("last_success")
+
+  // Selectors (optional, for targeted scraping)
+  eventSelector String?    @map("event_selector")
+
+  events      Event[]
+  jobs        IngestJob[]
+
+  @@index([domain])
+  @@index([active, lastCrawled])
+  @@map("sources")
+}
+
+model IngestJob {
+  id         String      @id @default(cuid())
+  createdAt  DateTime    @default(now()) @map("created_at")
+  updatedAt  DateTime    @updatedAt @map("updated_at")
+
+  source     Source      @relation(fields: [sourceId], references: [id])
+  sourceId   String      @map("source_id")
+
+  status     JobStatus   @default(PENDING)
+
+  // Execution details
+  startedAt  DateTime?   @map("started_at")
+  completedAt DateTime?  @map("completed_at")
+
+  // Results
+  pagesProcessed Int      @default(0) @map("pages_processed")
+  eventsFound    Int      @default(0) @map("events_found")
+  eventsCreated  Int      @default(0) @map("events_created")
+  eventsUpdated  Int      @default(0) @map("events_updated")
+
+  errorMessage   String?  @map("error_message") @db.Text
+
+  // Metadata
+  crawlMethod    String?  @map("crawl_method")
+  metadata       Json?
+
+  @@index([sourceId, createdAt])
+  @@index([status])
+  @@map("ingest_jobs")
+}
+
+enum EventCategory {
+  MUSIC
+  COMEDY
+  THEATRE
+  FITNESS
+  DANCE
+  ARTS
+  FOOD
+  NETWORKING
+  FAMILY
+  OTHER
+}
+
+enum SourceType {
+  VENUE
+  PROMOTER
+  TICKETING
+  MEDIA
+  BLOG
+  AGGREGATOR
+}
+
+enum CrawlMethod {
+  FIRECRAWL
+  APIFY
+  MANUAL
+}
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  RETRYING
+}
