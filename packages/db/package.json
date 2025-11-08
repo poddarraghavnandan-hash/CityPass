@@ -9,7 +9,8 @@
     "migrate:dev": "prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",
     "studio": "prisma studio",
-    "seed": "tsx src/seed.ts"
+    "seed": "tsx src/seed.ts",
+    "seed:comprehensive": "tsx src/comprehensive-seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.9.1"

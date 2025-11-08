@@ -6,6 +6,7 @@ import { retryWithBackoff } from '@citypass/utils';
  */
 export async function crawlWithFirecrawl(state: CrawlState): Promise<Partial<CrawlState>> {
   console.log(`🔥 Crawling with Firecrawl: ${state.urls.length} URLs`);
+  console.log(`🔑 API Key: ${process.env.FIRECRAWL_API_KEY?.substring(0, 10)}...`);
 
   const rawPages: any[] = [];
   const processedUrls: string[] = [];
@@ -42,7 +43,7 @@ export async function crawlWithFirecrawl(state: CrawlState): Promise<Partial<Cra
           throw new Error(`Firecrawl failed: ${response.statusText}`);
         }
 
-        const data = await response.json();
+        const data = await response.json() as any;
 
         if (data.success) {
           rawPages.push({

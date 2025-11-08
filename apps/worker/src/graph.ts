@@ -105,34 +105,34 @@ export function createCrawlGraph() {
   workflow.addNode('upsert', upsertEvents);
 
   // Set entry point
-  workflow.setEntryPoint('discover');
+  workflow.setEntryPoint('discover' as any);
 
-  // Add edges
-  workflow.addConditionalEdges('discover', decideCrawlMethod, {
-    crawl_firecrawl: 'crawl_firecrawl',
-    crawl_apify: 'crawl_apify',
+  // Add edges (with type assertions for LangGraph API)
+  workflow.addConditionalEdges('discover' as any, decideCrawlMethod, {
+    crawl_firecrawl: 'crawl_firecrawl' as any,
+    crawl_apify: 'crawl_apify' as any,
   });
 
-  workflow.addConditionalEdges('crawl_firecrawl', shouldRetry, {
-    discover: 'discover',
-    extract: 'extract',
+  workflow.addConditionalEdges('crawl_firecrawl' as any, shouldRetry, {
+    discover: 'discover' as any,
+    extract: 'extract' as any,
     [END]: END,
   });
 
-  workflow.addConditionalEdges('crawl_apify', shouldRetry, {
-    discover: 'discover',
-    extract: 'extract',
+  workflow.addConditionalEdges('crawl_apify' as any, shouldRetry, {
+    discover: 'discover' as any,
+    extract: 'extract' as any,
     [END]: END,
   });
 
-  workflow.addConditionalEdges('extract', shouldContinue, {
-    validate: 'validate',
+  workflow.addConditionalEdges('extract' as any, shouldContinue, {
+    validate: 'validate' as any,
     [END]: END,
   });
 
-  workflow.addEdge('validate', 'geocode');
-  workflow.addEdge('geocode', 'upsert');
-  workflow.addEdge('upsert', END);
+  workflow.addEdge('validate' as any, 'geocode' as any);
+  workflow.addEdge('geocode' as any, 'upsert' as any);
+  workflow.addEdge('upsert' as any, END);
 
   return workflow.compile();
 }

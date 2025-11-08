@@ -19,7 +19,22 @@
       "Bash(git push:*)",
       "Bash(git remote set-url:*)",
       "Bash(git pull:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(docker logs:*)",
+      "Bash(taskkill:*)",
+      "Bash(docker exec:*)",
+      "Bash(python -m json.tool:*)",
+      "Bash(export FIRECRAWL_API_KEY=fc-52a1591d8ad74011949d93ef4caf57b6)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(timeout:*)",
+      "Bash(NUL)",
+      "Bash(pnpm --filter @citypass/db migrate:deploy:*)",
+      "Bash(pnpm --filter @citypass/db seed:comprehensive:*)",
+      "Bash(pnpm --filter @citypass/db generate:*)",
+      "Bash(pnpm:*)",
+      "Bash(ollama list:*)",
+      "Bash(npx tsc:*)"
     ],
     "deny": [],
     "ask": []

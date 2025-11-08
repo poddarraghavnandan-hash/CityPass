@@ -32,10 +32,10 @@ export async function crawlWithApify(state: CrawlState): Promise<Partial<CrawlSt
 
     for (const item of items) {
       rawPages.push({
-        url: item.url,
-        html: item.html || '',
+        url: (item as any).url,
+        html: (item as any).html || '',
       });
-      processedUrls.push(item.url);
+      processedUrls.push((item as any).url);
     }
 
     console.log(`✅ Apify crawled ${items.length} pages`);

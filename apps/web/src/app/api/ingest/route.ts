@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@citypass/db';
 import { IngestRequestSchema } from '@citypass/types';
 import { canonicalUrlHash, contentChecksum, extractDomain, normalizeCategory } from '@citypass/utils';
-import { extractEventsFromContent } from '@/lib/extraction';
 import { geocodeAddress } from '@/lib/geocoding';
 import { indexEvent } from '@/lib/typesense';
 
@@ -20,8 +19,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No content provided' }, { status: 400 });
     }
 
-    // Extract events using LLM
-    const extractedEvents = await extractEventsFromContent(content, url, city);
+    // Extract events using isolated API endpoint
+    console.log('🤖 Extracting events from content...');
+    const extractResponse = await fetch(`http://localhost:${process.env.PORT || 3002}/api/extract`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        content,
+        sourceUrl: url,
+        sourceName: extractDomain(url),
+      }),
+    });
+
+    if (!extractResponse.ok) {
+      throw new Error(`Extraction failed: ${extractResponse.status}`);
+    }
+
+    const { events: extractedEvents } = await extractResponse.json();
 
     if (extractedEvents.length === 0) {
       console.log('ℹ️  No events found in content');
@@ -79,7 +93,7 @@ export async function POST(req: NextRequest) {
               title: eventData.title,
               subtitle: eventData.subtitle,
               description: eventData.description,
-              category,
+              category: category as any,
               organizer: eventData.organizer,
               venueName: eventData.venue_name,
               address: eventData.address,
@@ -113,7 +127,7 @@ export async function POST(req: NextRequest) {
               title: eventData.title,
               subtitle: eventData.subtitle,
               description: eventData.description,
-              category,
+              category: category as any,
               organizer: eventData.organizer,
               venueName: eventData.venue_name,
               address: eventData.address,

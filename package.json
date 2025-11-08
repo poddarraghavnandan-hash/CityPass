@@ -7,14 +7,19 @@
     "dev": "turbo run dev --parallel",
     "build": "turbo run build",
     "lint": "turbo run lint",
-    "test": "turbo run test",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:quick": "vitest run --reporter=dot --no-coverage",
+    "test:coverage": "vitest run --coverage",
     "db:generate": "pnpm --filter @citypass/db generate",
     "db:push": "pnpm --filter @citypass/db push",
     "db:migrate": "pnpm --filter @citypass/db migrate:dev",
     "db:studio": "pnpm --filter @citypass/db studio"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^1.6.1",
     "turbo": "^1.12.5",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vitest": "^1.6.1"
   }
 }
