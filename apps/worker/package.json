@@ -11,16 +11,16 @@
     "@citypass/db": "workspace:*",
     "@citypass/types": "workspace:*",
     "@citypass/utils": "workspace:*",
-    "@langchain/anthropic": "^0.1.9",
-    "@langchain/core": "^0.1.52",
-    "@langchain/langgraph": "^0.0.15",
-    "apify-client": "^2.8.2",
-    "dotenv": "^16.4.5",
-    "@mendable/firecrawl-js": "^1.0.0"
+    "@langchain/anthropic": "^1.0.0",
+    "@langchain/core": "^1.0.3",
+    "@langchain/langgraph": "^1.0.1",
+    "@mendable/firecrawl-js": "^4.5.0",
+    "apify-client": "^2.19.0",
+    "dotenv": "^17.2.3"
   },
   "devDependencies": {
-    "@types/node": "^20.11.19",
-    "tsx": "^4.7.1",
-    "typescript": "^5.3.3"
+    "@types/node": "^24.10.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
   }
 }

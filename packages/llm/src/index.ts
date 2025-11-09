@@ -32,6 +32,23 @@ export {
   type ExtractionResult,
 } from './extraction';
 
+// Enhanced multi-provider extraction (Llama → Anthropic/OpenAI with auto-routing)
+export {
+  extractEventEnhanced,
+  extractEventsBatchEnhanced,
+  calculateExtractionCostEnhanced,
+} from './extraction-enhanced';
+
+// OpenAI-specific extraction functions
+export {
+  extractWithOpenAI,
+  extractWithOpenAIFunctions,
+  calculateOpenAICost,
+  tierToOpenAIModel,
+  OPENAI_PRICING,
+  type OpenAIModel,
+} from './extraction-openai';
+
 // RecAI-inspired personalized ranking
 export {
   recallStage,
