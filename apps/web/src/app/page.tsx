@@ -14,6 +14,7 @@ export default function HomePage() {
   const [darkMode, setDarkMode] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeView, setActiveView] = useState<'search' | 'categories' | 'feed'>('categories');
+  const cityLensEnabled = process.env.CITYLENS_ENABLED === 'true';
 
   const cities = ['New York', 'San Francisco', 'Los Angeles', 'Chicago', 'Boston'];
 
@@ -117,12 +118,14 @@ export default function HomePage() {
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-6">
-              <button
-                onClick={() => router.push('/feed')}
-                className={`transition ${darkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
-              >
-                Feed
-              </button>
+              {cityLensEnabled && (
+                <button
+                  onClick={() => router.push('/feed')}
+                  className={`transition ${darkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
+                >
+                  🧭 CityLens
+                </button>
+              )}
               <button
                 onClick={() => router.push('/search')}
                 className={`transition ${darkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
@@ -174,14 +177,16 @@ export default function HomePage() {
               }`}
             >
               <div className="px-4 py-4 space-y-3">
-                <button
-                  onClick={() => router.push('/feed')}
-                  className={`block w-full text-left px-4 py-2 rounded-lg transition ${
-                    darkMode ? 'text-gray-300 hover:bg-white/10' : 'text-gray-600 hover:bg-gray-100'
-                  }`}
-                >
-                  Feed
-                </button>
+                {cityLensEnabled && (
+                  <button
+                    onClick={() => router.push('/feed')}
+                    className={`block w-full text-left px-4 py-2 rounded-lg transition ${
+                      darkMode ? 'text-gray-300 hover:bg-white/10' : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    🧭 CityLens
+                  </button>
+                )}
                 <button
                   onClick={() => router.push('/search')}
                   className={`block w-full text-left px-4 py-2 rounded-lg transition ${

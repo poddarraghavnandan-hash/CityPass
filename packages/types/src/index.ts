@@ -1,4 +1,5 @@
 import { z } from 'zod';
+export * from './lens';
 
 // Event category enum matching Prisma
 export const EventCategorySchema = z.enum([

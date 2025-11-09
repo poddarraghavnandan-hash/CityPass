@@ -227,18 +227,42 @@ export function sampleThompson(arm: BanditArm): number {
 /**
  * Epsilon-greedy exploration strategy
  */
+export interface EpsilonGreedyResult {
+  scores: number[];
+  explorationIndexes: number[];
+}
+
+export function applyEpsilonGreedyWithExploration(
+  scores: number[],
+  epsilon: number = 0.1,
+  topN: number = 3
+): EpsilonGreedyResult {
+  if (scores.length === 0) {
+    return { scores, explorationIndexes: [] };
+  }
+
+  const result = [...scores];
+  const explorationIndexes: number[] = [];
+
+  if (Math.random() < epsilon) {
+    const candidateIndexes = scores.map((_, idx) => idx);
+    shuffle(candidateIndexes);
+    const picks = candidateIndexes.slice(0, Math.min(topN, scores.length));
+    for (const idx of picks) {
+      const noise = 0.2 + Math.random() * 0.3;
+      result[idx] = scores[idx] + noise;
+      explorationIndexes.push(idx);
+    }
+  }
+
+  return { scores: result, explorationIndexes };
+}
+
 export function applyEpsilonGreedy(
   scores: number[],
   epsilon: number = 0.1
 ): number[] {
-  const shouldExplore = Math.random() < epsilon;
-
-  if (shouldExplore) {
-    // Add random noise for exploration
-    return scores.map(s => s + Math.random() * 0.2 - 0.1);
-  }
-
-  return scores;
+  return applyEpsilonGreedyWithExploration(scores, epsilon).scores;
 }
 
 /**
@@ -308,4 +332,11 @@ function randomNormal(): number {
   const u1 = Math.random();
   const u2 = Math.random();
   return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+}
+
+function shuffle<T>(arr: T[]): void {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
 }

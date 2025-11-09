@@ -26,6 +26,7 @@ const AnalyticsEventSchema = z.object({
     'AD_CONVERSION',
     'SEARCH',
     'FILTER_CHANGE',
+    'WEB_VITAL',
   ]),
   eventId: z.string().optional(),
   adCampaignId: z.string().optional(),

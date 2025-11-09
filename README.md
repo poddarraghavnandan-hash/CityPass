@@ -435,6 +435,55 @@ pnpm --filter @citypass/db seed
 
 ---
 
+## CityLens Windows Runbook
+
+```powershell
+# Prereqs
+Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+npm i -g pnpm
+
+# 1) Install deps
+pnpm i
+
+# 2) Set env (staging or prod)
+# Example (PowerShell):
+setx CITYLENS_ENABLED true
+setx DATABASE_URL "<YOUR_PROD_OR_STAGING_DB_URL>"
+setx TYPESENSE_HOST "<host>"
+setx TYPESENSE_API_KEY "<key>"
+setx TYPESENSE_PROTOCOL "https"
+setx TYPESENSE_PORT "443"
+setx QDRANT_URL "<url>"
+setx QDRANT_API_KEY "<key>"
+setx SOCIAL_OEMBED_CACHE_TTL "3600"
+# (plus existing NextAuth/Supabase/Mapbox, etc.)
+
+# 3) Dev (uses live/staging data)
+pnpm --filter @citypass/web dev
+# open http://localhost:3000/feed
+
+# 4) Run tests (read-only staging)
+setx FREEZE_TIME_ISO "2025-11-09T21:00:00Z"
+pnpm --filter @citypass/web test
+
+# 5) Build & start
+pnpm --filter @citypass/web build
+pnpm --filter @citypass/web start
+```
+
+### Deterministic CityLens tests
+
+1. Export the staging read-only envs (see `.env.example`) plus `CITYLENS_TEST_BASE_URL` pointing to a running `@citypass/web` instance.
+2. Provide `STAGING_STABLE_EVENT_IDS` (comma separated) so the tests and `/feed` query can lock to deterministic cards.
+3. Install the Playwright browser once locally: `pnpm --filter @citypass/web exec playwright install chromium`.
+4. To refresh the committed visual baselines, run `CITYLENS_UPDATE_SNAPSHOTS=true pnpm --filter @citypass/web test -- citylens.spec.ts`.
+
+Budgets enforced:
+
+- `/tests/api/lens.recommend.spec.ts` → validates ranked payloads, sponsorship gating, and reasons.
+- `/tests/visual/citylens.spec.ts` → screenshots Home Feed, mood shift, and context modal (≤2% diff).
+- `/tests/perf/citylens.lighthouse.spec.ts` → Lighthouse mobile budget (LCP ≤2.5s, CLS ≤0.05, TBT ≤350 ms).
+
 ## 🤝 Contributing
 
 We welcome contributions! Areas for improvement:

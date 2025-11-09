@@ -20,7 +20,8 @@ export type AnalyticsEventType =
   | 'AD_VIEWABLE'
   | 'AD_CONVERSION'
   | 'SEARCH'
-  | 'FILTER_CHANGE';
+  | 'FILTER_CHANGE'
+  | 'WEB_VITAL';
 
 export interface AnalyticsEventInput {
   type: AnalyticsEventType;

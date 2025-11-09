@@ -1,0 +1,21 @@
+{
+  "name": "@citypass/rag",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "dev": "tsc --watch",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@citypass/db": "workspace:*",
+    "@citypass/types": "workspace:*",
+    "@qdrant/js-client-rest": "^1.12.0",
+    "typesense": "^1.8.2"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.0",
+    "typescript": "^5.9.3"
+  }
+}

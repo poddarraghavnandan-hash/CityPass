@@ -39,7 +39,8 @@
       "@citypass/utils": ["./packages/utils/src"],
       "@citypass/llm": ["./packages/llm/src"],
       "@citypass/search": ["./packages/search/src"],
-      "@citypass/analytics": ["./packages/analytics/src"]
+      "@citypass/analytics": ["./packages/analytics/src"],
+      "@citypass/social": ["./packages/social/src"]
     }
   },
   "exclude": [

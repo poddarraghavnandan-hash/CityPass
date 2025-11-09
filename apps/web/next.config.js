@@ -7,6 +7,7 @@ const nextConfig = {
     '@citypass/llm',
     '@citypass/search',
     '@citypass/analytics',
+    '@citypass/social',
   ],
   images: {
     remotePatterns: [
@@ -18,6 +19,9 @@ const nextConfig = {
   },
   // Externalize Anthropic SDK and OpenAI SDK to avoid bundling issues
   serverExternalPackages: ['@anthropic-ai/sdk', 'openai'],
+  env: {
+    CITYLENS_ENABLED: process.env.CITYLENS_ENABLED,
+  },
 
   // Turbopack configuration (Next.js 16+)
   turbopack: {},

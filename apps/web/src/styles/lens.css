@@ -1,0 +1,121 @@
+:root {
+  --lens-radius: 28px;
+  --lens-card-bg: rgba(10, 12, 24, 0.65);
+  --lens-border: rgba(255, 255, 255, 0.08);
+}
+
+.lens-shell {
+  background: radial-gradient(circle at top, rgba(67, 56, 202, 0.25), rgba(2, 6, 23, 0.95));
+  color: #f4f5ff;
+  display: flex;
+  flex-direction: column;
+}
+
+.lens-scroll {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 8rem;
+}
+
+.lens-card {
+  background: var(--lens-card-bg);
+  border: 1px solid var(--lens-border);
+  border-radius: var(--lens-radius);
+  backdrop-filter: blur(24px);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+
+.lens-card-media {
+  aspect-ratio: 9 / 16;
+  position: relative;
+  width: 100%;
+  background: radial-gradient(circle, rgba(15, 23, 42, 0.8), rgba(2, 6, 23, 0.95));
+}
+
+.lens-card-media iframe,
+.lens-card-media video,
+.lens-card-media img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border: 0;
+}
+
+.lens-card-media video {
+  border-radius: inherit;
+}
+
+.lens-token {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.lens-glow {
+  box-shadow: 0 25px 80px rgba(59, 130, 246, 0.45);
+}
+
+.lens-now-bar {
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 0.75rem;
+  background: linear-gradient(to bottom, rgba(2, 6, 23, 0), rgba(2, 6, 23, 0.9) 60%);
+  backdrop-filter: blur(18px);
+}
+
+.lens-context-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 7, 17, 0.75);
+  backdrop-filter: blur(16px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 100;
+}
+
+.lens-context-panel {
+  width: min(900px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  border-radius: 32px;
+  background: rgba(10, 12, 24, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 30px 120px rgba(0, 0, 0, 0.6);
+}
+
+.citylens-embed {
+  position: relative;
+  width: 100%;
+  min-height: 420px;
+  border-radius: 24px;
+  overflow: hidden;
+}
+
+.citylens-embed iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lens-card,
+  .lens-shell,
+  .lens-context-panel {
+    transition: none !important;
+    animation: none !important;
+  }
+}
