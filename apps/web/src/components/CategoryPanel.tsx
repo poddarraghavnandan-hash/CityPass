@@ -61,7 +61,7 @@ const CATEGORIES = [
     searchQuery: 'yoga meditation wellness',
   },
   {
-    id: 'ARTS',
+    id: 'PERFORMING_ARTS',
     label: 'Shows',
     icon: Theater,
     gradient: 'from-indigo-500 to-purple-500',
@@ -75,7 +75,7 @@ const CATEGORIES = [
     searchQuery: 'food dining restaurants',
   },
   {
-    id: 'ARTS',
+    id: 'VISUAL_ARTS',
     label: 'Arts',
     icon: Palette,
     gradient: 'from-violet-500 to-fuchsia-500',
