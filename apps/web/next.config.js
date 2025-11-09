@@ -16,11 +16,12 @@ const nextConfig = {
       },
     ],
   },
-  // Externalize Anthropic SDK to avoid bundling issues with private class fields
-  serverExternalPackages: ['@anthropic-ai/sdk'],
-  experimental: {
-    esmExternals: 'loose',
-  },
+  // Externalize Anthropic SDK and OpenAI SDK to avoid bundling issues
+  serverExternalPackages: ['@anthropic-ai/sdk', 'openai'],
+
+  // Turbopack configuration (Next.js 16+)
+  turbopack: {},
+
   webpack: (config, { isServer }) => {
     // Find and modify the rule that handles node_modules
     const rules = config.module.rules.find((rule) => {
