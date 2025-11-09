@@ -250,7 +250,7 @@ export function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowProps) {
 
               <div className="space-y-3">
                 {[
-                  { value: 'popular' as const, label: 'Popular Picks', desc: 'Show me what's trending and highly rated' },
+                  { value: 'popular' as const, label: 'Popular Picks', desc: 'Show me what is trending and highly rated' },
                   { value: 'hidden-gems' as const, label: 'Hidden Gems', desc: 'I want to discover unique, lesser-known events' },
                   { value: 'balanced' as const, label: 'Best of Both', desc: 'Mix of popular and hidden gems' },
                 ].map((option) => (
