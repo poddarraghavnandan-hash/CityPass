@@ -14,7 +14,11 @@
     "db:generate": "pnpm --filter @citypass/db generate",
     "db:push": "pnpm --filter @citypass/db push",
     "db:migrate": "pnpm --filter @citypass/db migrate:dev",
-    "db:studio": "pnpm --filter @citypass/db studio"
+    "db:studio": "pnpm --filter @citypass/db studio",
+    "jobs:embed": "tsx scripts/embed-events.ts",
+    "jobs:learn": "tsx scripts/learn-weights.ts",
+    "jobs:reconcile": "tsx scripts/reconcile-budgets.ts",
+    "jobs:all": "pnpm jobs:embed && pnpm jobs:learn && pnpm jobs:reconcile"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^4.0.8",

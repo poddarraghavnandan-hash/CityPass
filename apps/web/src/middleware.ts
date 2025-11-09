@@ -3,13 +3,25 @@ import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 
 export async function middleware(request: NextRequest) {
-  const response = NextResponse.next();
-
   // Get user session
   const token = await getToken({
     req: request as any,
     secret: process.env.NEXTAUTH_SECRET,
   });
+
+  // Protect admin routes
+  if (request.nextUrl.pathname.startsWith('/admin') ||
+      request.nextUrl.pathname.startsWith('/api/admin')) {
+
+    if (!token) {
+      // Redirect to sign in for admin routes
+      const signInUrl = new URL('/auth/signin', request.url);
+      signInUrl.searchParams.set('callbackUrl', request.nextUrl.pathname);
+      return NextResponse.redirect(signInUrl);
+    }
+  }
+
+  const response = NextResponse.next();
 
   // Read existing preferences cookie or create new one
   let preferences = request.cookies.get('user_prefs')?.value;
@@ -60,11 +72,11 @@ export const config = {
   matcher: [
     /*
      * Match all request paths except for the ones starting with:
-     * - api (API routes)
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
+     * - auth (auth pages)
      */
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    '/((?!_next/static|_next/image|favicon.ico|auth).*)',
   ],
 };

@@ -34,7 +34,8 @@
       "Bash(pnpm --filter @citypass/db generate:*)",
       "Bash(pnpm:*)",
       "Bash(ollama list:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(git reset:*)"
     ],
     "deny": [],
     "ask": []
