@@ -10,11 +10,11 @@
  * 6. Search and retrieve
  */
 
-import { describe, test, expect, beforeAll } from '@jest/globals';
+import { describe, it as test, expect, beforeAll } from 'vitest';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { prisma } from '@citypass/db';
-import { extractEventsFromContent } from '../src/lib/extraction';
+import { extractEventsFromContent } from '@citypass/llm';
 import { indexEvent, searchEvents, ensureEventsCollection } from '../src/lib/typesense';
 import { canonicalUrlHash, contentChecksum } from '@citypass/utils';
 

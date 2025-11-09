@@ -2,3 +2,62 @@
 > @citypass/worker@1.0.0 build C:\Users\ragha\citypass\apps\worker
 > tsc
 
+src/graph.ts(2,28): error TS6059: File 'C:/Users/ragha/citypass/packages/types/src/index.ts' is not under 'rootDir' 'C:/Users/ragha/citypass/apps/worker/src'. 'rootDir' is expected to contain all source files.
+  The file is in the program because:
+    Imported via '@citypass/types' from file 'C:/Users/ragha/citypass/apps/worker/src/graph.ts'
+    Imported via '@citypass/types' from file 'C:/Users/ragha/citypass/apps/worker/src/nodes/discover.ts'
+    Imported via '@citypass/types' from file 'C:/Users/ragha/citypass/apps/worker/src/nodes/crawl-firecrawl.ts'
+    Imported via '@citypass/types' from file 'C:/Users/ragha/citypass/apps/worker/src/nodes/crawl-apify.ts'
+    Imported via '@citypass/types' from file 'C:/Users/ragha/citypass/apps/worker/src/nodes/extract.ts'
+    Imported via '@citypass/types' from file 'C:/Users/ragha/citypass/apps/worker/src/nodes/validate.ts'
+    Imported via '@citypass/types' from file 'C:/Users/ragha/citypass/apps/worker/src/nodes/validate.ts'
+    Imported via '@citypass/types' from file 'C:/Users/ragha/citypass/apps/worker/src/nodes/geocode.ts'
+    Imported via '@citypass/types' from file 'C:/Users/ragha/citypass/apps/worker/src/nodes/upsert.ts'
+    Imported via '@citypass/types' from file 'C:/Users/ragha/citypass/apps/worker/src/index.ts'
+src/health.ts(6,1): error TS2354: This syntax requires an imported helper but module 'tslib' cannot be found.
+src/nodes/crawl-firecrawl.ts(2,34): error TS6059: File 'C:/Users/ragha/citypass/packages/utils/src/index.ts' is not under 'rootDir' 'C:/Users/ragha/citypass/apps/worker/src'. 'rootDir' is expected to contain all source files.
+  The file is in the program because:
+    Imported via '@citypass/utils' from file 'C:/Users/ragha/citypass/apps/worker/src/nodes/crawl-firecrawl.ts'
+    Imported via '@citypass/utils' from file 'C:/Users/ragha/citypass/apps/worker/src/index.ts'
+src/nodes/extract.ts(2,59): error TS6059: File 'C:/Users/ragha/citypass/packages/llm/src/index.ts' is not under 'rootDir' 'C:/Users/ragha/citypass/apps/worker/src'. 'rootDir' is expected to contain all source files.
+src/nodes/extract.ts(45,9): error TS2322: Type 'string[] | undefined' is not assignable to type 'string[]'.
+  Type 'undefined' is not assignable to type 'string[]'.
+src/nodes/extract.ts(52,9): error TS2322: Type 'string[] | undefined' is not assignable to type 'string[]'.
+  Type 'undefined' is not assignable to type 'string[]'.
+src/nodes/extract.ts(61,25): error TS2345: Argument of type '{ step: string; message: any; url: string; }' is not assignable to parameter of type 'string'.
+src/nodes/upsert.ts(2,24): error TS6059: File 'C:/Users/ragha/citypass/packages/db/src/index.ts' is not under 'rootDir' 'C:/Users/ragha/citypass/apps/worker/src'. 'rootDir' is expected to contain all source files.
+  The file is in the program because:
+    Imported via '@citypass/db' from file 'C:/Users/ragha/citypass/apps/worker/src/nodes/upsert.ts'
+    Imported via '@citypass/db' from file 'C:/Users/ragha/citypass/apps/worker/src/health.ts'
+    Imported via '@citypass/db' from file 'C:/Users/ragha/citypass/apps/worker/src/index.ts'
+../../packages/db/src/index.ts(15,1): error TS2354: This syntax requires an imported helper but module 'tslib' cannot be found.
+../../packages/llm/src/embeddings.ts(9,54): error TS6059: File 'C:/Users/ragha/citypass/packages/llm/src/cache.ts' is not under 'rootDir' 'C:/Users/ragha/citypass/apps/worker/src'. 'rootDir' is expected to contain all source files.
+  The file is in the program because:
+    Imported via './cache' from file 'C:/Users/ragha/citypass/packages/llm/src/embeddings.ts'
+    Imported via './cache' from file 'C:/Users/ragha/citypass/packages/llm/src/extraction.ts'
+    Imported via './cache' from file 'C:/Users/ragha/citypass/packages/llm/src/extraction-enhanced.ts'
+    Imported via './cache' from file 'C:/Users/ragha/citypass/packages/llm/src/index.ts'
+../../packages/llm/src/extraction-enhanced.ts(19,8): error TS6059: File 'C:/Users/ragha/citypass/packages/llm/src/extraction-openai.ts' is not under 'rootDir' 'C:/Users/ragha/citypass/apps/worker/src'. 'rootDir' is expected to contain all source files.
+  The file is in the program because:
+    Imported via './extraction-openai' from file 'C:/Users/ragha/citypass/packages/llm/src/extraction-enhanced.ts'
+    Imported via './extraction-openai' from file 'C:/Users/ragha/citypass/packages/llm/src/index.ts'
+../../packages/llm/src/index.ts(10,8): error TS6059: File 'C:/Users/ragha/citypass/packages/llm/src/ollama.ts' is not under 'rootDir' 'C:/Users/ragha/citypass/apps/worker/src'. 'rootDir' is expected to contain all source files.
+  The file is in the program because:
+    Imported via './ollama' from file 'C:/Users/ragha/citypass/packages/llm/src/index.ts'
+    Imported via './ollama' from file 'C:/Users/ragha/citypass/packages/llm/src/qdrant.ts'
+../../packages/llm/src/index.ts(24,8): error TS6059: File 'C:/Users/ragha/citypass/packages/llm/src/embeddings.ts' is not under 'rootDir' 'C:/Users/ragha/citypass/apps/worker/src'. 'rootDir' is expected to contain all source files.
+  The file is in the program because:
+    Imported via './embeddings' from file 'C:/Users/ragha/citypass/packages/llm/src/index.ts'
+    Imported via './embeddings' from file 'C:/Users/ragha/citypass/packages/llm/src/ranking.ts'
+    Imported via './embeddings' from file 'C:/Users/ragha/citypass/packages/llm/src/personalization.ts'
+    Imported via './embeddings' from file 'C:/Users/ragha/citypass/packages/llm/src/personalization.ts'
+../../packages/llm/src/index.ts(33,8): error TS6059: File 'C:/Users/ragha/citypass/packages/llm/src/extraction.ts' is not under 'rootDir' 'C:/Users/ragha/citypass/apps/worker/src'. 'rootDir' is expected to contain all source files.
+  The file is in the program because:
+    Imported via './extraction' from file 'C:/Users/ragha/citypass/packages/llm/src/index.ts'
+    Imported via './extraction' from file 'C:/Users/ragha/citypass/packages/llm/src/extraction-openai.ts'
+    Imported via './extraction' from file 'C:/Users/ragha/citypass/packages/llm/src/extraction-enhanced.ts'
+../../packages/llm/src/index.ts(40,8): error TS6059: File 'C:/Users/ragha/citypass/packages/llm/src/extraction-enhanced.ts' is not under 'rootDir' 'C:/Users/ragha/citypass/apps/worker/src'. 'rootDir' is expected to contain all source files.
+../../packages/llm/src/index.ts(61,8): error TS6059: File 'C:/Users/ragha/citypass/packages/llm/src/ranking.ts' is not under 'rootDir' 'C:/Users/ragha/citypass/apps/worker/src'. 'rootDir' is expected to contain all source files.
+../../packages/llm/src/index.ts(72,8): error TS6059: File 'C:/Users/ragha/citypass/packages/llm/src/personalization.ts' is not under 'rootDir' 'C:/Users/ragha/citypass/apps/worker/src'. 'rootDir' is expected to contain all source files.
+../../packages/llm/src/index.ts(82,8): error TS6059: File 'C:/Users/ragha/citypass/packages/llm/src/qdrant.ts' is not under 'rootDir' 'C:/Users/ragha/citypass/apps/worker/src'. 'rootDir' is expected to contain all source files.
+ ELIFECYCLE  Command failed with exit code 2.

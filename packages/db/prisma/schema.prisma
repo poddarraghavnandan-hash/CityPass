@@ -49,6 +49,14 @@ model Event {
   bookingUrl     String?   @map("booking_url")
   accessibility  String[]
 
+  // Engagement metrics
+  viewCount     Int @default(0) @map("view_count")
+  viewCount24h  Int @default(0) @map("view_count_24h")
+  saveCount     Int @default(0) @map("save_count")
+  saveCount24h  Int @default(0) @map("save_count_24h")
+  shareCount    Int @default(0) @map("share_count")
+  clickCount    Int @default(0) @map("click_count")
+
   // Tracking
   sourceDomain   String    @map("source_domain")
   checksum       String    // Hash of content for change detection
@@ -198,6 +206,31 @@ enum JobStatus {
   COMPLETED
   FAILED
   RETRYING
+}
+
+model SearchCache {
+  id         String          @id @default(cuid())
+  createdAt  DateTime        @default(now()) @map("created_at")
+  updatedAt  DateTime        @updatedAt @map("updated_at")
+  city       String
+  query      String          @default("")
+  category   EventCategory?
+  timeframe  SearchTimeframe
+  results    Json
+  eventIds   String[]        @default([])
+  generatedAt DateTime       @default(now()) @map("generated_at")
+  expiresAt  DateTime        @map("expires_at")
+  source     String          @default("BATCH")
+
+  @@unique([city, timeframe, query, category], name: "unique_search_cache_key")
+  @@index([timeframe, city], name: "idx_search_cache_timeframe_city")
+  @@map("search_cache")
+}
+
+enum SearchTimeframe {
+  TODAY
+  WEEK
+  MONTH
 }
 
 // ============================================

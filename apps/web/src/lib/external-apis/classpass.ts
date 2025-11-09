@@ -3,6 +3,9 @@
  * Fetches fitness classes, yoga sessions, wellness events
  */
 
+import { categorizeFromText, type EventCategoryValue } from '../categories';
+import { fetchWithTimeout } from './fetchWithTimeout';
+
 interface MindbodyClass {
   Id: number;
   Name: string;
@@ -44,7 +47,7 @@ interface NormalizedEvent {
   priceMin: number | null;
   priceMax: number | null;
   currency: string;
-  category: string;
+  category: EventCategoryValue;
   imageUrl: string | null;
   bookingUrl: string;
   timezone: string;
@@ -76,7 +79,7 @@ export async function searchClassPass(
       'LocationIds': '', // All locations for the site
     });
 
-    const response = await fetch(
+    const response = await fetchWithTimeout(
       `https://api.mindbodyonline.com/public/v6/class/classes?${params}`,
       {
         headers: {
@@ -84,6 +87,7 @@ export async function searchClassPass(
           'SiteId': siteId,
           'Content-Type': 'application/json',
         },
+        timeoutMs: 7000,
       }
     );
 
@@ -139,26 +143,8 @@ function normalizeMindbodyClass(cls: MindbodyClass): NormalizedEvent {
   };
 }
 
-function determineClassCategory(name: string, description?: string): string {
-  const text = `${name} ${description || ''}`.toLowerCase();
-
-  if (text.match(/yoga|meditation|mindfulness|pilates/)) {
-    return 'WELLNESS';
-  }
-  if (text.match(/spin|cycling|cardio|hiit|boot camp|crossfit|boxing|kickboxing/)) {
-    return 'FITNESS';
-  }
-  if (text.match(/dance|zumba|barre/)) {
-    return 'FITNESS';
-  }
-  if (text.match(/strength|weight|lifting|muscle/)) {
-    return 'FITNESS';
-  }
-  if (text.match(/swim|aqua/)) {
-    return 'SPORTS';
-  }
-
-  return 'WELLNESS';
+function determineClassCategory(name: string, description?: string): EventCategoryValue {
+  return categorizeFromText(name, description, null);
 }
 
 /**

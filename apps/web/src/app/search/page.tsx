@@ -1,41 +1,34 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Search, MapPin, Calendar, DollarSign, Sparkles, TrendingUp, Filter, Heart, Share2, Bookmark, ExternalLink, Moon, Sun, X as CloseIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
-
-interface Event {
-  id: string;
-  title: string;
-  subtitle?: string;
-  description?: string;
-  category?: string;
-  venueName?: string;
-  neighborhood?: string;
-  city: string;
-  startTime: string;
-  priceMin?: number;
-  priceMax?: number;
-  imageUrl?: string;
-  bookingUrl?: string;
-  score?: number;
-}
+import type { CityPassEvent } from '@/lib/event-types';
 
 function SearchResults() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [events, setEvents] = useState<Event[]>([]);
+  const [cachedEvents, setCachedEvents] = useState<CityPassEvent[]>([]);
+  const [freshEvents, setFreshEvents] = useState<CityPassEvent[]>([]);
+  const [events, setEvents] = useState<CityPassEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cacheLoading, setCacheLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [cacheError, setCacheError] = useState<string | null>(null);
   const [query, setQuery] = useState(searchParams.get('q') || '');
   const [city, setCity] = useState(searchParams.get('city') || 'New York');
   const [category, setCategory] = useState(searchParams.get('category') || '');
   const [darkMode, setDarkMode] = useState(false);
   const [savedEvents, setSavedEvents] = useState<Set<string>>(new Set());
+  const pendingRequest = useRef<AbortController | null>(null);
+  const pendingCacheRequest = useRef<AbortController | null>(null);
 
   const cities = ['New York', 'San Francisco', 'Los Angeles', 'Chicago', 'Boston'];
   const categories = ['MUSIC', 'COMEDY', 'THEATRE', 'ARTS', 'FOOD', 'FITNESS', 'DANCE'];
+  const isInitialLoading = loading && cacheLoading && events.length === 0;
+  const isShowingCachedWhileLoading = cachedEvents.length > 0 && loading;
 
   // Detect system theme preference
   useEffect(() => {
@@ -53,27 +46,101 @@ function SearchResults() {
   }, [darkMode]);
 
   useEffect(() => {
+    fetchCachedResults();
     fetchResults();
+    return () => {
+      pendingRequest.current?.abort();
+      pendingCacheRequest.current?.abort();
+    };
   }, [searchParams]);
 
-  const fetchResults = async () => {
-    setLoading(true);
+  useEffect(() => {
+    setEvents(mergeEventLists(cachedEvents, freshEvents));
+  }, [cachedEvents, freshEvents]);
+
+  const fetchCachedResults = async () => {
+    pendingCacheRequest.current?.abort();
+    const controller = new AbortController();
+    pendingCacheRequest.current = controller;
+
+    setCacheLoading(true);
+    setCacheError(null);
+
+    const params = new URLSearchParams();
+    if (query) params.append('q', query);
+    if (city) params.append('city', city);
+    if (category) params.append('category', category);
+    const timePreference = searchParams.get('timePreference');
+    if (timePreference) params.append('timePreference', timePreference);
+    params.append('cacheOnly', 'true');
+
     try {
-      const params = new URLSearchParams();
-      if (query) params.append('q', query);
-      if (city) params.append('city', city);
-      if (category) params.append('category', category);
-      params.append('limit', '20');
+      const response = await fetch(`/api/search?${params}`, {
+        signal: controller.signal,
+        cache: 'no-store',
+      });
+      const data = await response.json().catch(() => ({}));
 
-      const response = await fetch(`/api/search?${params}`);
-      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.error || 'Cache lookup failed');
+      }
 
-      setEvents(data.results || []);
-    } catch (error) {
-      console.error('Search failed:', error);
-      setEvents([]);
+      setCachedEvents(data.results || []);
+    } catch (error: any) {
+      if (error?.name === 'AbortError') {
+        return;
+      }
+      console.warn('Cache lookup failed:', error?.message || error);
+      setCachedEvents([]);
+      setCacheError(error?.message || 'Cache unavailable');
     } finally {
-      setLoading(false);
+      if (pendingCacheRequest.current === controller) {
+        setCacheLoading(false);
+      }
+    }
+  };
+
+  const fetchResults = async () => {
+    pendingRequest.current?.abort();
+    const controller = new AbortController();
+    pendingRequest.current = controller;
+
+    setLoading(true);
+    setError(null);
+
+    const params = new URLSearchParams();
+    if (query) params.append('q', query);
+    if (city) params.append('city', city);
+    if (category) params.append('category', category);
+    params.append('limit', '20');
+    const timePreference = searchParams.get('timePreference');
+    if (timePreference) params.append('timePreference', timePreference);
+
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    try {
+      const response = await fetch(`/api/search?${params}`, {
+        signal: controller.signal,
+      });
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data?.error || 'Search failed');
+      }
+
+      setFreshEvents(data.results || []);
+    } catch (error: any) {
+      if (error?.name === 'AbortError') {
+        return;
+      }
+      console.error('Search failed:', error);
+      setFreshEvents([]);
+      setError(error?.message || 'Search failed. Please try again.');
+    } finally {
+      clearTimeout(timeoutId);
+      if (pendingRequest.current === controller) {
+        setLoading(false);
+      }
     }
   };
 
@@ -104,7 +171,7 @@ function SearchResults() {
     });
   };
 
-  const handleShareEvent = async (event: Event) => {
+  const handleShareEvent = async (event: CityPassEvent) => {
     if (navigator.share && event.bookingUrl) {
       try {
         await navigator.share({
@@ -127,12 +194,12 @@ function SearchResults() {
     });
   };
 
-  const formatPrice = (event: Event) => {
+  const formatPrice = (event: CityPassEvent) => {
     if (event.priceMin === 0 && !event.priceMax) return 'Free';
-    if (event.priceMin && event.priceMax) {
+    if (typeof event.priceMin === 'number' && typeof event.priceMax === 'number') {
       return `$${event.priceMin} - $${event.priceMax}`;
     }
-    if (event.priceMin) return `From $${event.priceMin}`;
+    if (typeof event.priceMin === 'number') return `From $${event.priceMin}`;
     return 'Price varies';
   };
 
@@ -254,7 +321,7 @@ function SearchResults() {
 
       {/* Results */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {loading ? (
+        {isInitialLoading ? (
           <div className="text-center py-20">
             <motion.div
               animate={{ rotate: 360 }}
@@ -266,9 +333,35 @@ function SearchResults() {
               }`}
             />
             <p className={`mt-4 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-              Searching with AI...
+              Gathering events for you...
             </p>
           </div>
+        ) : events.length === 0 && error ? (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="text-center py-20"
+          >
+            <Sparkles className={`w-16 h-16 mx-auto mb-4 ${
+              darkMode ? 'text-red-300' : 'text-red-400'
+            }`} />
+            <h2 className={`text-2xl font-bold mb-2 ${
+              darkMode ? 'text-white' : 'text-gray-900'
+            }`}>
+              We hit a snag
+            </h2>
+            <p className={darkMode ? 'text-gray-400' : 'text-gray-600'}>
+              {error}
+            </p>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={fetchResults}
+              className="mt-6 px-5 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl"
+            >
+              Try again
+            </motion.button>
+          </motion.div>
         ) : events.length === 0 ? (
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
@@ -289,6 +382,41 @@ function SearchResults() {
           </motion.div>
         ) : (
           <>
+            {isShowingCachedWhileLoading && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`mb-4 px-4 py-3 rounded-2xl text-sm font-medium flex items-center gap-2 ${
+                  darkMode
+                    ? 'bg-white/10 border border-white/10 text-white'
+                    : 'bg-purple-50 border border-purple-100 text-purple-700'
+                }`}
+              >
+                <Sparkles className="w-4 h-4" />
+                Instant picks while live results finish loading...
+              </motion.div>
+            )}
+
+            {error && events.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`mb-4 px-4 py-3 rounded-2xl text-sm ${
+                  darkMode
+                    ? 'bg-red-500/10 text-red-200 border border-red-500/30'
+                    : 'bg-red-50 text-red-700 border border-red-100'
+                }`}
+              >
+                Live refresh failed — showing cached picks. {error}
+              </motion.div>
+            )}
+
+            {cacheError && cachedEvents.length === 0 && (
+              <p className={`mb-4 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                Could not load instant picks: {cacheError}
+              </p>
+            )}
+
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -453,13 +581,32 @@ function SearchResults() {
                         <span>Get Tickets</span>
                         <ExternalLink className="w-4 h-4 ml-2" />
                       </motion.a>
+                    ) : event.sourceUrl ? (
+                      <motion.a
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        href={event.sourceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`flex items-center justify-center w-full px-4 py-3 rounded-xl font-medium transition ${
+                          darkMode
+                            ? 'border border-white/20 text-white hover:bg-white/10'
+                            : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        <span>View Details</span>
+                        <ExternalLink className="w-4 h-4 ml-2" />
+                      </motion.a>
                     ) : (
-                      <button className={`w-full px-4 py-3 rounded-xl font-medium transition ${
-                        darkMode
-                          ? 'border border-white/20 text-white hover:bg-white/10'
-                          : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
-                      }`}>
-                        View Details
+                      <button
+                        disabled
+                        className={`w-full px-4 py-3 rounded-xl font-medium opacity-50 cursor-not-allowed ${
+                          darkMode
+                            ? 'border border-white/20 text-white'
+                            : 'border border-gray-300 text-gray-700'
+                        }`}
+                      >
+                        No Details Available
                       </button>
                     )}
                   </div>
@@ -471,6 +618,23 @@ function SearchResults() {
       </div>
     </div>
   );
+}
+
+function mergeEventLists(primary: CityPassEvent[], secondary: CityPassEvent[]): CityPassEvent[] {
+  const seen = new Set<string>();
+  const merged: CityPassEvent[] = [];
+  const lists = [primary, secondary];
+
+  for (const list of lists) {
+    for (const event of list) {
+      const key = event?.id || `${event.title}-${event.startTime}`;
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      merged.push(event);
+    }
+  }
+
+  return merged;
 }
 
 export default function SearchPage() {

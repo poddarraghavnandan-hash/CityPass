@@ -3,6 +3,9 @@
  * Fetches ticketed events from Eventbrite
  */
 
+import { normalizeCategory, type EventCategoryValue } from '../categories';
+import { fetchWithTimeout } from './fetchWithTimeout';
+
 interface EventbriteEvent {
   id: string;
   name: { text: string };
@@ -43,7 +46,7 @@ interface NormalizedEvent {
   priceMin: number | null;
   priceMax: number | null;
   currency: string;
-  category: string;
+  category: EventCategoryValue;
   imageUrl: string | null;
   bookingUrl: string;
   timezone: string;
@@ -71,12 +74,13 @@ export async function searchEventbrite(
       'sort_by': 'date',
     });
 
-    const response = await fetch(
+    const response = await fetchWithTimeout(
       `https://www.eventbriteapi.com/v3/events/search/?${params}`,
       {
         headers: {
           'Authorization': `Bearer ${apiKey}`,
         },
+        timeoutMs: 7000,
       }
     );
 
@@ -120,15 +124,15 @@ function normalizeEventbriteEvent(event: EventbriteEvent, city: string): Normali
   };
 }
 
-function mapEventbriteCategory(ebCategory?: string): string {
+function mapEventbriteCategory(ebCategory?: string): EventCategoryValue {
   if (!ebCategory) return 'OTHER';
 
-  const categoryMap: Record<string, string> = {
-    'Music': 'MUSIC',
-    'Food & Drink': 'FOOD_DRINK',
+  const categoryMap: Record<string, EventCategoryValue> = {
+    Music: 'MUSIC',
+    'Food & Drink': 'FOOD',
     'Performing & Visual Arts': 'ARTS',
-    'Health & Wellness': 'WELLNESS',
-    'Sports & Fitness': 'SPORTS',
+    'Health & Wellness': 'FITNESS',
+    'Sports & Fitness': 'FITNESS',
     'Business & Professional': 'NETWORKING',
     'Film, Media & Entertainment': 'ARTS',
     'Fashion & Beauty': 'OTHER',
@@ -136,5 +140,5 @@ function mapEventbriteCategory(ebCategory?: string): string {
     'Family & Education': 'FAMILY',
   };
 
-  return categoryMap[ebCategory] || 'OTHER';
+  return normalizeCategory(categoryMap[ebCategory] || ebCategory) ?? 'OTHER';
 }

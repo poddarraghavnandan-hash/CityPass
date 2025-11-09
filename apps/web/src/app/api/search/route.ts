@@ -1,28 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@citypass/db';
 import { typesenseClient } from '@/lib/typesense';
-import { searchEvents, rerank, generateEmbedding } from '@citypass/llm';
+import { searchEvents, rerank } from '@citypass/llm';
 import {
   getUserPreferences,
   calculatePersonalizationBoost,
   logSearchSession,
 } from '@/lib/personalization';
-
-// Category hierarchy for fallback search
-const CATEGORY_HIERARCHY: Record<string, string[]> = {
-  'MUSIC': ['MUSIC', 'NIGHTLIFE', 'ARTS'],
-  'COMEDY': ['COMEDY', 'NIGHTLIFE', 'ARTS'],
-  'FOOD_DRINK': ['FOOD_DRINK', 'NIGHTLIFE'],
-  'ARTS': ['ARTS', 'MUSIC', 'THEATRE'],
-  'THEATRE': ['THEATRE', 'ARTS', 'MUSIC'],
-  'SPORTS': ['SPORTS', 'FITNESS'],
-  'FITNESS': ['FITNESS', 'SPORTS', 'WELLNESS'],
-  'WELLNESS': ['WELLNESS', 'FITNESS'],
-  'NIGHTLIFE': ['NIGHTLIFE', 'MUSIC', 'FOOD_DRINK'],
-  'NETWORKING': ['NETWORKING', 'EDUCATION'],
-  'EDUCATION': ['EDUCATION', 'NETWORKING', 'ARTS'],
-  'FAMILY': ['FAMILY', 'EDUCATION', 'ARTS'],
-};
+import {
+  CATEGORY_HIERARCHY,
+  DEFAULT_RECOMMENDATION_CATEGORIES,
+  filterValidCategories,
+  normalizeCategory,
+  type EventCategoryValue,
+} from '@/lib/categories';
+import { getCachedResults, inferTimeframe } from '@/lib/search-cache';
 
 // Query expansion keywords
 const QUERY_EXPANSIONS: Record<string, string[]> = {
@@ -46,10 +38,37 @@ export async function GET(req: NextRequest) {
     const searchParams = req.nextUrl.searchParams;
     const query = searchParams.get('q') || '';
     const city = searchParams.get('city') || 'New York';
-    const category = searchParams.get('category');
+    const rawCategory = searchParams.get('category');
+    const category = normalizeCategory(rawCategory);
     const limit = parseInt(searchParams.get('limit') || '20');
+    const timePreference = searchParams.get('timePreference');
+    const requestedTimeframe = inferTimeframe(timePreference);
+    const cacheOnly = searchParams.get('cacheOnly') === 'true';
 
     console.log(`🔍 Search query: "${query}" in ${city}${category ? ` [${category}]` : ''}`);
+
+    if (cacheOnly) {
+      const cacheHit = await getCachedResults({
+        city,
+        query,
+        category,
+        timeframe: requestedTimeframe,
+      });
+
+      if (!cacheHit) {
+        return NextResponse.json({
+          results: [],
+          cacheMiss: true,
+        });
+      }
+
+      return NextResponse.json({
+        results: cacheHit.results,
+        cacheMiss: false,
+        generatedAt: cacheHit.entry.generatedAt,
+        expiresAt: cacheHit.entry.expiresAt,
+      });
+    }
 
     // Get user preferences for personalization
     const prefs = await getUserPreferences();
@@ -126,21 +145,27 @@ export async function GET(req: NextRequest) {
 async function performTier1Search(
   query: string,
   city: string,
-  category: string | null,
+  category: EventCategoryValue | null,
   limit: number,
   prefs: any
 ): Promise<any[]> {
   // Step 1: Keyword search with Typesense
-  const typesenseResults = await typesenseClient
-    .collections('events')
-    .documents()
-    .search({
-      q: query || '*',
-      query_by: 'title,description,venue_name,neighborhood,tags',
-      filter_by: category ? `city:=${city} && category:=${category}` : `city:=${city}`,
-      sort_by: 'start_time:asc',
-      per_page: limit * 2, // Get more for fallback
-    });
+  let typesenseResults: any = { hits: [] };
+  try {
+    const filter_by = category ? `city:=${city} && category:=${category}` : `city:=${city}`;
+    typesenseResults = await typesenseClient
+      .collections('events')
+      .documents()
+      .search({
+        q: query || '*',
+        query_by: 'title,description,venue_name,neighborhood,tags',
+        filter_by,
+        sort_by: 'start_time:asc',
+        per_page: limit * 2, // Get more for fallback
+      });
+  } catch (error: any) {
+    console.warn('   ⚠️ Typesense search failed, continuing with Prisma only:', error?.message || error);
+  }
 
   const keywordEventIds = typesenseResults.hits?.map((hit: any) => hit.document.id) || [];
 
@@ -157,6 +182,10 @@ async function performTier1Search(
 
   // Step 3: Combine and deduplicate
   const combinedEventIds = new Set([...keywordEventIds, ...semanticResults.map((r) => r.eventId)]);
+
+  if (combinedEventIds.size === 0) {
+    return [];
+  }
 
   // Step 4: Fetch full event data
   const events = await prisma.event.findMany({
@@ -216,7 +245,7 @@ async function performTier1Search(
 async function performTier2AdjacentSearch(
   query: string,
   city: string,
-  category: string | null,
+  category: EventCategoryValue | null,
   limit: number,
   prefs: any
 ): Promise<any[]> {
@@ -228,17 +257,21 @@ async function performTier2AdjacentSearch(
     console.log(`   📁 Expanding to related categories: ${relatedCategories.join(', ')}`);
 
     for (const relatedCat of relatedCategories.slice(0, 3)) {
-      const results = await prisma.event.findMany({
-        where: {
-          city,
-          category: relatedCat,
-          startTime: { gte: new Date() },
-        },
-        include: { venue: true },
-        take: 10,
-        orderBy: { startTime: 'asc' },
-      });
-      adjacentStrategies.push(...results.map(e => ({ ...e, _score: 0.6, _source: 'category_expansion' })));
+      try {
+        const results = await prisma.event.findMany({
+          where: {
+            city,
+            category: relatedCat,
+            startTime: { gte: new Date() },
+          },
+          include: { venue: true },
+          take: 10,
+          orderBy: { startTime: 'asc' },
+        });
+        adjacentStrategies.push(...results.map(e => ({ ...e, _score: 0.6, _source: 'category_expansion' })));
+      } catch (error: any) {
+        console.warn(`   ⚠️ Category expansion failed for ${relatedCat}:`, error?.message || error);
+      }
     }
   }
 
@@ -249,21 +282,25 @@ async function performTier2AdjacentSearch(
       console.log(`   🔍 Query expansion for "${keyword}": ${expansions.join(', ')}`);
 
       for (const expansion of expansions) {
-        const results = await prisma.event.findMany({
-          where: {
-            city,
-            OR: [
-              { title: { contains: expansion, mode: 'insensitive' } },
-              { description: { contains: expansion, mode: 'insensitive' } },
-              { tags: { has: expansion } },
-            ],
-            startTime: { gte: new Date() },
-          },
-          include: { venue: true },
-          take: 5,
-          orderBy: { startTime: 'asc' },
-        });
-        adjacentStrategies.push(...results.map(e => ({ ...e, _score: 0.5, _source: 'query_expansion' })));
+        try {
+          const results = await prisma.event.findMany({
+            where: {
+              city,
+              OR: [
+                { title: { contains: expansion, mode: 'insensitive' } },
+                { description: { contains: expansion, mode: 'insensitive' } },
+                { tags: { has: expansion } },
+              ],
+              startTime: { gte: new Date() },
+            },
+            include: { venue: true },
+            take: 5,
+            orderBy: { startTime: 'asc' },
+          });
+          adjacentStrategies.push(...results.map(e => ({ ...e, _score: 0.5, _source: 'query_expansion' })));
+        } catch (error: any) {
+          console.warn(`   ⚠️ Query expansion search failed for "${expansion}":`, error?.message || error);
+        }
       }
       break; // Only expand first match
     }
@@ -275,17 +312,21 @@ async function performTier2AdjacentSearch(
     const nextWeek = new Date();
     nextWeek.setDate(nextWeek.getDate() + 7);
 
-    const results = await prisma.event.findMany({
-      where: {
-        city,
-        startTime: { gte: new Date(), lte: nextWeek },
-        ...(category ? { category } : {}),
-      },
-      include: { venue: true },
-      take: 15,
-      orderBy: { startTime: 'asc' },
-    });
-    adjacentStrategies.push(...results.map(e => ({ ...e, _score: 0.4, _source: 'temporal_expansion' })));
+    try {
+      const results = await prisma.event.findMany({
+        where: {
+          city,
+          startTime: { gte: new Date(), lte: nextWeek },
+          ...(category ? { category } : {}),
+        },
+        include: { venue: true },
+        take: 15,
+        orderBy: { startTime: 'asc' },
+      });
+      adjacentStrategies.push(...results.map(e => ({ ...e, _score: 0.4, _source: 'temporal_expansion' })));
+    } catch (error: any) {
+      console.warn('   ⚠️ Temporal expansion failed:', error?.message || error);
+    }
   }
 
   return deduplicateEvents(adjacentStrategies);
@@ -295,7 +336,7 @@ async function performTier2AdjacentSearch(
 async function performTier3WebSearch(
   query: string,
   city: string,
-  category: string | null
+  category: EventCategoryValue | null
 ): Promise<any[]> {
   if (!process.env.ANTHROPIC_API_KEY) {
     console.warn('   ⚠️ ANTHROPIC_API_KEY not set, skipping web search');
@@ -336,7 +377,7 @@ async function performTier3WebSearch(
 async function performTier4ExternalAPIs(
   query: string,
   city: string,
-  category: string | null
+  category: EventCategoryValue | null
 ): Promise<any[]> {
   try {
     const { searchExternalAPIs } = await import('@/lib/external-apis');
@@ -372,12 +413,13 @@ async function performTier5Recommendations(
   console.log(`   💡 Showing personalized recommendations instead`);
 
   // Strategy: Show trending/popular events in user's preferred categories
-  const preferredCategories = prefs.favoriteCategories || ['MUSIC', 'FOOD_DRINK', 'NIGHTLIFE'];
+  const preferredCategories = filterValidCategories(prefs.favoriteCategories);
+  const categoriesToUse = preferredCategories.length > 0 ? preferredCategories : DEFAULT_RECOMMENDATION_CATEGORIES;
 
   const recommendations = await prisma.event.findMany({
     where: {
       city,
-      category: { in: preferredCategories },
+      ...(categoriesToUse.length ? { category: { in: categoriesToUse } } : {}),
       startTime: { gte: new Date() },
     },
     include: { venue: true },
@@ -396,8 +438,15 @@ async function performTier5Recommendations(
 function deduplicateEvents(events: any[]): any[] {
   const seen = new Set<string>();
   return events.filter((event) => {
-    if (seen.has(event.id)) return false;
-    seen.add(event.id);
+    const key =
+      event.id ||
+      event.sourceUrl ||
+      event.bookingUrl ||
+      `${event.title}-${event.startTime}`;
+
+    if (!key) return true;
+    if (seen.has(key)) return false;
+    seen.add(key);
     return true;
   });
 }

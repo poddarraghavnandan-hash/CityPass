@@ -3,6 +3,9 @@
  * Fetches tours, attractions, and experiences
  */
 
+import { normalizeCategory, categorizeFromText, type EventCategoryValue } from '../categories';
+import { fetchWithTimeout } from './fetchWithTimeout';
+
 interface ViatorProduct {
   productCode: string;
   title: string;
@@ -52,7 +55,7 @@ interface NormalizedEvent {
   priceMin: number | null;
   priceMax: number | null;
   currency: string;
-  category: string;
+  category: EventCategoryValue;
   imageUrl: string | null;
   bookingUrl: string;
   timezone: string;
@@ -92,7 +95,7 @@ export async function searchViator(
       currency: 'USD',
     };
 
-    const response = await fetch(
+    const response = await fetchWithTimeout(
       'https://api.viator.com/partner/products/search',
       {
         method: 'POST',
@@ -103,6 +106,7 @@ export async function searchViator(
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(searchBody),
+        timeoutMs: 7000,
       }
     );
 
@@ -153,7 +157,7 @@ function normalizeViatorProduct(product: ViatorProduct, city: string): Normalize
     priceMin: product.pricing.summary.fromPrice,
     priceMax: product.pricing.summary.fromPriceBeforeDiscount || null,
     currency: product.pricing.currency,
-    category: mapViatorCategory(product.tags),
+    category: mapViatorCategory(product.tags, product.title, product.description),
     imageUrl: product.images[0]?.variants[0]?.url || null,
     bookingUrl: product.productUrl,
     timezone: getCityTimezone(city),
@@ -182,32 +186,13 @@ function getCityDestinationCode(city: string): string | null {
   return cityMap[city] || null;
 }
 
-function mapViatorCategory(tags: Array<{ tag: string; tagId: number }>): string {
-  if (!tags || tags.length === 0) return 'OTHER';
-
-  // Check for relevant category tags
-  const tagText = tags.map(t => t.tag.toLowerCase()).join(' ');
-
-  if (tagText.includes('food') || tagText.includes('culinary') || tagText.includes('wine')) {
-    return 'FOOD_DRINK';
-  }
-  if (tagText.includes('art') || tagText.includes('museum') || tagText.includes('culture')) {
-    return 'ARTS';
-  }
-  if (tagText.includes('music') || tagText.includes('concert') || tagText.includes('show')) {
-    return 'MUSIC';
-  }
-  if (tagText.includes('sport') || tagText.includes('adventure') || tagText.includes('outdoor')) {
-    return 'SPORTS';
-  }
-  if (tagText.includes('wellness') || tagText.includes('spa')) {
-    return 'WELLNESS';
-  }
-  if (tagText.includes('night') || tagText.includes('bar') || tagText.includes('club')) {
-    return 'NIGHTLIFE';
-  }
-
-  return 'OTHER';
+function mapViatorCategory(
+  tags: Array<{ tag: string; tagId: number }>,
+  title: string,
+  description: string
+): EventCategoryValue {
+  const tagStrings = tags?.map(t => t.tag) || [];
+  return categorizeFromText(title, description, tagStrings);
 }
 
 function getCityTimezone(city: string): string {

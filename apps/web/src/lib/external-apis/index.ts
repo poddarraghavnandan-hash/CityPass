@@ -7,6 +7,7 @@ import { searchEventbrite } from './eventbrite';
 import { searchViator } from './viator';
 import { searchClassPass } from './classpass';
 import { prisma } from '@citypass/db';
+import { normalizeCategory, type EventCategoryValue } from '../categories';
 
 interface ExternalEvent {
   sourceUrl: string;
@@ -22,7 +23,7 @@ interface ExternalEvent {
   priceMin: number | null;
   priceMax: number | null;
   currency: string;
-  category: string;
+  category: EventCategoryValue;
   imageUrl: string | null;
   bookingUrl: string;
   timezone: string;
@@ -32,7 +33,7 @@ interface ExternalEvent {
 interface SearchOptions {
   query: string;
   city: string;
-  category?: string | null;
+  category?: EventCategoryValue | null;
   limit?: number;
 }
 
@@ -75,8 +76,11 @@ export async function searchExternalAPIs(options: SearchOptions): Promise<any[]>
     console.error(`   ❌ ClassPass failed:`, classPassResults.reason);
   }
 
-  // Deduplicate by URL
-  const uniqueEvents = deduplicateByUrl(allEvents);
+  // Deduplicate by URL and normalize categories
+  const uniqueEvents = deduplicateByUrl(allEvents).map(event => ({
+    ...event,
+    category: normalizeCategory(event.category) ?? 'OTHER',
+  }));
 
   // Save to database for future searches (async, don't wait)
   saveExternalEventsToDatabase(uniqueEvents).catch(err =>
@@ -84,7 +88,10 @@ export async function searchExternalAPIs(options: SearchOptions): Promise<any[]>
   );
 
   // Return limited results
-  return uniqueEvents.slice(0, limit);
+  return uniqueEvents.slice(0, limit).map(event => ({
+    ...event,
+    id: event.sourceUrl,
+  }));
 }
 
 /**
@@ -105,6 +112,7 @@ function deduplicateByUrl(events: ExternalEvent[]): ExternalEvent[] {
 async function saveExternalEventsToDatabase(events: ExternalEvent[]): Promise<void> {
   for (const event of events) {
     try {
+      const normalizedCategory = normalizeCategory(event.category) ?? 'OTHER';
       // Check if event already exists
       const existing = await prisma.event.findFirst({
         where: { sourceUrl: event.sourceUrl },
@@ -127,7 +135,7 @@ async function saveExternalEventsToDatabase(events: ExternalEvent[]): Promise<vo
             priceMin: event.priceMin,
             priceMax: event.priceMax,
             currency: event.currency,
-            category: event.category,
+            category: normalizedCategory,
             imageUrl: event.imageUrl,
             bookingUrl: event.bookingUrl,
             timezone: event.timezone,
@@ -151,7 +159,7 @@ async function saveExternalEventsToDatabase(events: ExternalEvent[]): Promise<vo
             priceMin: event.priceMin,
             priceMax: event.priceMax,
             currency: event.currency,
-            category: event.category,
+            category: normalizedCategory,
             imageUrl: event.imageUrl,
             bookingUrl: event.bookingUrl,
             timezone: event.timezone,

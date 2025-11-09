@@ -18,6 +18,7 @@
     "jobs:embed": "tsx scripts/embed-events.ts",
     "jobs:learn": "tsx scripts/learn-weights.ts",
     "jobs:reconcile": "tsx scripts/reconcile-budgets.ts",
+    "jobs:cold-start": "tsx scripts/batch-cold-start.ts",
     "jobs:all": "pnpm jobs:embed && pnpm jobs:learn && pnpm jobs:reconcile"
   },
   "devDependencies": {

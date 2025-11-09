@@ -35,7 +35,12 @@
       "Bash(pnpm:*)",
       "Bash(ollama list:*)",
       "Bash(npx tsc:*)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(npx next info)",
+      "Bash(if exist \".next\" rd /s /q \".next\")",
+      "Bash(if exist \".turbo\" rd /s /q \".turbo\")",
+      "Bash(ping:*)",
+      "Bash(del /F /Q \"C:\\Users\\ragha\\citypass\\apps\\web\\.next\\dev\\lock\" 2)"
     ],
     "deny": [],
     "ask": []

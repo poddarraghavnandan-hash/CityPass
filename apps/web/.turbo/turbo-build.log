@@ -2,24 +2,7 @@
 > @citypass/web@1.0.0 build C:\Users\ragha\citypass\apps\web
 > next build
 
- ⚠ The "experimental.esmExternals" option has been modified. experimental.esmExternals is not recommended to be modified as it may disrupt module resolution. It should be removed from your next.config.js.
-   ▲ Next.js 15.1.0
-   - Experiments (use with caution):
-     · esmExternals
+   ▲ Next.js 16.0.1 (Turbopack)
 
+ ⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
    Creating an optimized production build ...
- ✓ Compiled successfully
-   Linting and checking validity of types ...
-Failed to compile.
-
-./src/app/api/preferences/route.ts:31:16
-Type error: Object literal may only specify known properties, and 'sessionId' does not exist in type 'UserProfileWhereUniqueInput'.
-
-[0m [90m 29 |[39m     [90m// Try to find existing preferences[39m[0m
-[0m [90m 30 |[39m     [36mconst[39m profile [33m=[39m [36mawait[39m prisma[33m.[39muserProfile[33m.[39mfindUnique({[0m
-[0m[31m[1m>[22m[39m[90m 31 |[39m       where[33m:[39m { sessionId }[33m,[39m[0m
-[0m [90m    |[39m                [31m[1m^[22m[39m[0m
-[0m [90m 32 |[39m     })[33m;[39m[0m
-[0m [90m 33 |[39m[0m
-[0m [90m 34 |[39m     [36mif[39m ([33m![39mprofile) {[0m
- ELIFECYCLE  Command failed with exit code 1.
