@@ -1,6 +1,5 @@
 {
   "buildCommand": "pnpm build",
-  "outputDirectory": ".next",
   "headers": [
     {
       "source": "/(.*)",
