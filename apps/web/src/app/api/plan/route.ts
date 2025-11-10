@@ -5,9 +5,11 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { randomUUID } from 'crypto';
 import { plan } from '@citypass/agent';
 import { IntentionTokensSchema } from '@citypass/types';
 import { prisma } from '@citypass/db';
+import { checkRateLimit, getRateLimitIdentifier } from '@/lib/rate-limit';
 
 const BodySchema = z.object({
   user: z
@@ -22,6 +24,34 @@ const BodySchema = z.object({
 
 export async function POST(req: NextRequest) {
   const startTime = Date.now();
+  const traceId = randomUUID();
+
+  // Rate limiting: 50 requests per minute per IP (lower limit for compute-heavy planning)
+  const rateLimitId = getRateLimitIdentifier(req);
+  const rateLimit = checkRateLimit({
+    identifier: rateLimitId,
+    limit: 50,
+    windowSeconds: 60,
+  });
+
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      {
+        error: 'Rate limit exceeded',
+        message: 'Too many requests. Please try again later.',
+        traceId,
+      },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(rateLimit.retryAfter),
+          'X-RateLimit-Limit': '50',
+          'X-RateLimit-Remaining': '0',
+          'X-RateLimit-Reset': String(rateLimit.resetAt),
+        },
+      }
+    );
+  }
 
   try {
     const payload = await req.json();
