@@ -45,7 +45,7 @@ export interface RetrievalResult {
 
 // Lazy-initialize clients (don't create at module level to avoid build errors)
 let qdrantClient: QdrantClient | null = null;
-let typesenseClient: Typesense.Client | null = null;
+let typesenseClient: InstanceType<typeof Typesense.Client> | null = null;
 
 function getQdrantClient(): QdrantClient {
   if (!qdrantClient) {
@@ -57,7 +57,7 @@ function getQdrantClient(): QdrantClient {
   return qdrantClient;
 }
 
-function getTypesenseClient(): Typesense.Client {
+function getTypesenseClient(): InstanceType<typeof Typesense.Client> {
   if (!typesenseClient) {
     typesenseClient = new Typesense.Client({
       nodes: [
