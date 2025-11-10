@@ -5,7 +5,7 @@
 
 import { QdrantClient } from '@qdrant/js-client-rest';
 import Typesense from 'typesense';
-import type { Intention } from '@citypass/types/lens';
+import type { Intention } from '@citypass/types';
 
 // Types
 export interface RetrievalCandidate {
@@ -43,23 +43,36 @@ export interface RetrievalResult {
   latencyMs: number;
 }
 
-// Initialize clients
-const qdrantClient = new QdrantClient({
-  url: process.env.QDRANT_URL || 'http://localhost:6333',
-  apiKey: process.env.QDRANT_API_KEY,
-});
+// Lazy-initialize clients (don't create at module level to avoid build errors)
+let qdrantClient: QdrantClient | null = null;
+let typesenseClient: Typesense.Client | null = null;
 
-const typesenseClient = new Typesense.Client({
-  nodes: [
-    {
-      host: process.env.TYPESENSE_HOST || 'localhost',
-      port: parseInt(process.env.TYPESENSE_PORT || '8108'),
-      protocol: (process.env.TYPESENSE_PROTOCOL as 'http' | 'https') || 'http',
-    },
-  ],
-  apiKey: process.env.TYPESENSE_API_KEY || 'xyz',
-  connectionTimeoutSeconds: 2,
-});
+function getQdrantClient(): QdrantClient {
+  if (!qdrantClient) {
+    qdrantClient = new QdrantClient({
+      url: process.env.QDRANT_URL || 'http://localhost:6333',
+      apiKey: process.env.QDRANT_API_KEY,
+    });
+  }
+  return qdrantClient;
+}
+
+function getTypesenseClient(): Typesense.Client {
+  if (!typesenseClient) {
+    typesenseClient = new Typesense.Client({
+      nodes: [
+        {
+          host: process.env.TYPESENSE_HOST || 'localhost',
+          port: parseInt(process.env.TYPESENSE_PORT || '8108'),
+          protocol: (process.env.TYPESENSE_PROTOCOL as 'http' | 'https') || 'http',
+        },
+      ],
+      apiKey: process.env.TYPESENSE_API_KEY || 'xyz',
+      connectionTimeoutSeconds: 2,
+    });
+  }
+  return typesenseClient;
+}
 
 const QDRANT_COLLECTION = 'events_e5';
 const TYPESENSE_COLLECTION = 'events';
@@ -108,8 +121,8 @@ async function generateEmbedding(text: string): Promise<number[]> {
       throw new Error(`Embedding service error: ${response.status}`);
     }
 
-    const data = await response.json();
-    return data.embedding;
+    const data: any = await response.json();
+    return data.embedding as number[];
   } catch (error: any) {
     console.error('Embedding generation failed:', error.message);
     // Graceful degradation: return zero vector
@@ -134,7 +147,7 @@ async function searchQdrant(
       ],
     };
 
-    const searchResult = await qdrantClient.search(QDRANT_COLLECTION, {
+    const searchResult = await getQdrantClient().search(QDRANT_COLLECTION, {
       vector: embedding,
       filter,
       limit: topK,
@@ -193,7 +206,7 @@ async function searchTypesense(
       per_page: topK,
     };
 
-    const searchResult = await typesenseClient
+    const searchResult = await getTypesenseClient()
       .collections(TYPESENSE_COLLECTION)
       .documents()
       .search(searchParams);
@@ -283,8 +296,8 @@ async function rerankCandidates(
       throw new Error(`Reranker service error: ${response.status}`);
     }
 
-    const data = await response.json();
-    const scores = data.scores || [];
+    const data: any = await response.json();
+    const scores: number[] = (data.scores || []) as number[];
 
     // Assign rerank scores
     const reranked = candidates.map((candidate, index) => ({
@@ -425,7 +438,7 @@ export async function healthCheck(): Promise<{
 
   // Check Qdrant
   try {
-    await qdrantClient.getCollections();
+    await getQdrantClient().getCollections();
     qdrantHealthy = true;
   } catch (error) {
     console.error('Qdrant health check failed');
@@ -433,7 +446,7 @@ export async function healthCheck(): Promise<{
 
   // Check Typesense
   try {
-    await typesenseClient.collections().retrieve();
+    await getTypesenseClient().collections().retrieve();
     typesenseHealthy = true;
   } catch (error) {
     console.error('Typesense health check failed');
