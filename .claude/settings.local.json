@@ -80,7 +80,10 @@
       "Bash(vercel --token=NV6pRCdM96cCoorOUPXrd56G env pull .env.check)",
       "Bash(vercel --token=NV6pRCdM96cCoorOUPXrd56G inspect citypass-7j2aqtozy-raghav-poddars-projects.vercel.app --logs)",
       "Bash(vercel --token=NV6pRCdM96cCoorOUPXrd56G inspect citypass-5nre3w40r-raghav-poddars-projects.vercel.app --logs)",
-      "Bash(del NUL)"
+      "Bash(del NUL)",
+      "Bash(if exist \"apps\\web\\.next\" rd /s /q \"apps\\web\\.next\")",
+      "Bash(git diff:*)",
+      "Bash(ls:*)"
     ],
     "deny": [],
     "ask": []
