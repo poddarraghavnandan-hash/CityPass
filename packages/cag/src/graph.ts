@@ -81,10 +81,9 @@ async function executeCypher<T = any>(
       setTimeout(() => reject(new Error('Query timeout')), timeoutMs)
     );
 
-    const queryPromise = session.run(query, params);
-    const result = await Promise.race([queryPromise, timeoutPromise]) as Result;
+    const result = await Promise.race([session.run(query, params), timeoutPromise]);
 
-    return result.records.map(record => record.toObject() as T);
+    return result.records.map((record: any) => record.toObject() as T);
   } catch (error: any) {
     console.error('Cypher query failed:', error.message);
     console.error('Query:', query);

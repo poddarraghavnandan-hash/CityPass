@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import type { RankedItem } from '@citypass/types/lens';
+import type { RankedItem } from '@citypass/types';
 import type { MoodKey } from '@/theme/lensTheme';
 import { HeatBar } from './HeatBar';
 import { PatronBadge } from './PatronBadge';

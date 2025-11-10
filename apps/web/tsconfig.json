@@ -23,9 +23,17 @@
       }
     ],
     "paths": {
-      "@/*": [
-        "./src/*"
-      ]
+      "@/*": ["./src/*"],
+      "@citypass/agent": ["../../packages/agent/src"],
+      "@citypass/analytics": ["../../packages/analytics/src"],
+      "@citypass/cag": ["../../packages/cag/src"],
+      "@citypass/db": ["../../packages/db/src"],
+      "@citypass/llm": ["../../packages/llm/src"],
+      "@citypass/rag": ["../../packages/rag/src"],
+      "@citypass/search": ["../../packages/search/src"],
+      "@citypass/social": ["../../packages/social/src"],
+      "@citypass/types": ["../../packages/types/src"],
+      "@citypass/utils": ["../../packages/utils/src"]
     }
   },
   "include": [

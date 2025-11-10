@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@citypass/db';
+import { prisma, EventCategory } from '@citypass/db';
 import { canonicalUrlHash, contentChecksum } from '@citypass/utils';
 import { indexEvent, ensureEventsCollection } from '@/lib/typesense';
 
@@ -225,6 +225,7 @@ export async function POST(req: NextRequest) {
       const event = await prisma.event.create({
         data: {
           ...eventData,
+          category: eventData.category as EventCategory,
           canonicalUrlHash: canonicalUrlHash(eventData.sourceUrl),
           checksum: contentChecksum({
             title: eventData.title,

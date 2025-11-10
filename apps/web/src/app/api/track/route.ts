@@ -31,7 +31,7 @@ const AnalyticsEventSchema = z.object({
   eventId: z.string().optional(),
   adCampaignId: z.string().optional(),
   adCreativeId: z.string().optional(),
-  props: z.record(z.unknown()).optional(),
+  props: z.record(z.string(), z.any()).optional(),
   city: z.string().optional(),
   occurredAt: z.string().datetime(),
 });
@@ -140,7 +140,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Invalid request', details: error.errors },
+        { error: 'Invalid request', details: error.issues },
         { status: 400 }
       );
     }

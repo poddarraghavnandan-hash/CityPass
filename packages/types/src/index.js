@@ -1,8 +1,6 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.IngestRequestSchema = exports.TypesenseEventSchema = exports.EventsSearchParamsSchema = exports.ApifyWebhookSchema = exports.FirecrawlWebhookSchema = exports.EventSchema = exports.EventCategorySchema = void 0;
-const zod_1 = require("zod");
-exports.EventCategorySchema = zod_1.z.enum([
+import { z } from 'zod';
+export * from './lens';
+export const EventCategorySchema = z.enum([
     'MUSIC',
     'COMEDY',
     'THEATRE',
@@ -14,12 +12,12 @@ exports.EventCategorySchema = zod_1.z.enum([
     'FAMILY',
     'OTHER',
 ]);
-exports.EventSchema = zod_1.z.object({
-    source_url: zod_1.z.string().url(),
-    title: zod_1.z.string().min(1),
-    subtitle: zod_1.z.string().optional(),
-    description: zod_1.z.string().optional(),
-    category: zod_1.z.enum([
+export const EventSchema = z.object({
+    source_url: z.string().url(),
+    title: z.string().min(1),
+    subtitle: z.string().optional(),
+    description: z.string().optional(),
+    category: z.enum([
         'music',
         'comedy',
         'theatre',
@@ -31,88 +29,88 @@ exports.EventSchema = zod_1.z.object({
         'family',
         'other',
     ]).optional(),
-    organizer: zod_1.z.string().optional(),
-    venue_name: zod_1.z.string().optional(),
-    address: zod_1.z.string().optional(),
-    neighborhood: zod_1.z.string().optional(),
-    city: zod_1.z.string(),
-    lat: zod_1.z.number().optional(),
-    lon: zod_1.z.number().optional(),
-    start_time: zod_1.z.string().datetime(),
-    end_time: zod_1.z.string().datetime().optional(),
-    timezone: zod_1.z.string().optional(),
-    price_min: zod_1.z.number().optional(),
-    price_max: zod_1.z.number().optional(),
-    currency: zod_1.z.string().optional(),
-    min_age: zod_1.z.number().int().optional(),
-    tags: zod_1.z.array(zod_1.z.string()).optional().default([]),
-    image_url: zod_1.z.string().url().optional(),
-    booking_url: zod_1.z.string().url().optional(),
-    accessibility: zod_1.z.array(zod_1.z.string()).optional().default([]),
-    source_domain: zod_1.z.string().optional(),
-    checksum: zod_1.z.string().optional(),
-    updated_at: zod_1.z.string().datetime().optional(),
+    organizer: z.string().optional(),
+    venue_name: z.string().optional(),
+    address: z.string().optional(),
+    neighborhood: z.string().optional(),
+    city: z.string(),
+    lat: z.number().optional(),
+    lon: z.number().optional(),
+    start_time: z.string().datetime(),
+    end_time: z.string().datetime().optional(),
+    timezone: z.string().optional(),
+    price_min: z.number().optional(),
+    price_max: z.number().optional(),
+    currency: z.string().optional(),
+    min_age: z.number().int().optional(),
+    tags: z.array(z.string()).optional().default([]),
+    image_url: z.string().url().optional(),
+    booking_url: z.string().url().optional(),
+    accessibility: z.array(z.string()).optional().default([]),
+    source_domain: z.string().optional(),
+    checksum: z.string().optional(),
+    updated_at: z.string().datetime().optional(),
 });
-exports.FirecrawlWebhookSchema = zod_1.z.object({
-    success: zod_1.z.boolean(),
-    data: zod_1.z.object({
-        markdown: zod_1.z.string().optional(),
-        html: zod_1.z.string().optional(),
-        metadata: zod_1.z.object({
-            title: zod_1.z.string().optional(),
-            description: zod_1.z.string().optional(),
-            url: zod_1.z.string(),
+export const FirecrawlWebhookSchema = z.object({
+    success: z.boolean(),
+    data: z.object({
+        markdown: z.string().optional(),
+        html: z.string().optional(),
+        metadata: z.object({
+            title: z.string().optional(),
+            description: z.string().optional(),
+            url: z.string(),
         }).passthrough(),
     }),
-    jobId: zod_1.z.string().optional(),
+    jobId: z.string().optional(),
 });
-exports.ApifyWebhookSchema = zod_1.z.object({
-    eventType: zod_1.z.string(),
-    eventData: zod_1.z.object({
-        actorRunId: zod_1.z.string(),
+export const ApifyWebhookSchema = z.object({
+    eventType: z.string(),
+    eventData: z.object({
+        actorRunId: z.string(),
     }).passthrough(),
-    resource: zod_1.z.object({
-        id: zod_1.z.string(),
-        defaultDatasetId: zod_1.z.string().optional(),
+    resource: z.object({
+        id: z.string(),
+        defaultDatasetId: z.string().optional(),
     }).passthrough(),
 });
-exports.EventsSearchParamsSchema = zod_1.z.object({
-    q: zod_1.z.string().optional(),
-    city: zod_1.z.string().optional(),
-    category: zod_1.z.string().optional(),
-    date_from: zod_1.z.string().optional(),
-    date_to: zod_1.z.string().optional(),
-    price_max: zod_1.z.number().optional(),
-    neighborhood: zod_1.z.string().optional(),
-    page: zod_1.z.number().int().positive().default(1),
-    limit: zod_1.z.number().int().positive().max(100).default(20),
+export const EventsSearchParamsSchema = z.object({
+    q: z.string().optional(),
+    city: z.string().optional(),
+    category: z.string().optional(),
+    date_from: z.string().optional(),
+    date_to: z.string().optional(),
+    price_max: z.number().optional(),
+    neighborhood: z.string().optional(),
+    page: z.number().int().positive().default(1),
+    limit: z.number().int().positive().max(100).default(20),
 });
-exports.TypesenseEventSchema = zod_1.z.object({
-    id: zod_1.z.string(),
-    title: zod_1.z.string(),
-    subtitle: zod_1.z.string().optional(),
-    description: zod_1.z.string().optional(),
-    category: zod_1.z.string().optional(),
-    venue_name: zod_1.z.string().optional(),
-    address: zod_1.z.string().optional(),
-    neighborhood: zod_1.z.string().optional(),
-    city: zod_1.z.string(),
-    lat: zod_1.z.number().optional(),
-    lon: zod_1.z.number().optional(),
-    start_time: zod_1.z.number(),
-    end_time: zod_1.z.number().optional(),
-    price_min: zod_1.z.number().optional(),
-    price_max: zod_1.z.number().optional(),
-    tags: zod_1.z.array(zod_1.z.string()),
-    image_url: zod_1.z.string().optional(),
-    booking_url: zod_1.z.string().optional(),
-    source_domain: zod_1.z.string(),
+export const TypesenseEventSchema = z.object({
+    id: z.string(),
+    title: z.string(),
+    subtitle: z.string().optional(),
+    description: z.string().optional(),
+    category: z.string().optional(),
+    venue_name: z.string().optional(),
+    address: z.string().optional(),
+    neighborhood: z.string().optional(),
+    city: z.string(),
+    lat: z.number().optional(),
+    lon: z.number().optional(),
+    start_time: z.number(),
+    end_time: z.number().optional(),
+    price_min: z.number().optional(),
+    price_max: z.number().optional(),
+    tags: z.array(z.string()),
+    image_url: z.string().optional(),
+    booking_url: z.string().optional(),
+    source_domain: z.string(),
 });
-exports.IngestRequestSchema = zod_1.z.object({
-    sourceId: zod_1.z.string().optional(),
-    url: zod_1.z.string().url(),
-    html: zod_1.z.string().optional(),
-    markdown: zod_1.z.string().optional(),
-    city: zod_1.z.string().default('New York'),
+export const IngestRequestSchema = z.object({
+    sourceId: z.string().optional(),
+    url: z.string().url(),
+    html: z.string().optional(),
+    markdown: z.string().optional(),
+    city: z.string().default('New York'),
 });
 //# sourceMappingURL=index.js.map

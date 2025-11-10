@@ -7,7 +7,7 @@ import { buildIntention, type IntentionOptions } from '@citypass/utils';
 import { retrieve, type RetrievalCandidate } from '@citypass/rag';
 import { noveltyForUser, friendOverlap, diversifyByGraph, getSocialHeat } from '@citypass/cag';
 import { calculateFitScore, type FitScoreResult } from '@citypass/search';
-import type { Intention, IntentionTokens, RankedItem } from '@citypass/types/lens';
+import type { Intention, IntentionTokens, RankedItem } from '@citypass/types';
 import { randomUUID } from 'crypto';
 
 // Agent State

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import type { IntentionTokens, RankedItem } from '@citypass/types/lens';
+import type { IntentionTokens, RankedItem } from '@citypass/types';
 import { MoodRail } from '@/components/lens/MoodRail';
 import { NowBar } from '@/components/lens/NowBar';
 import { FeedCard } from '@/components/lens/FeedCard';

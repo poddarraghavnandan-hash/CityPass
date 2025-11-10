@@ -378,6 +378,9 @@ importers:
       '@citypass/db':
         specifier: workspace:*
         version: link:../db
+      '@citypass/types':
+        specifier: workspace:*
+        version: link:../types
     devDependencies:
       '@types/node':
         specifier: ^24.10.0
@@ -401,7 +404,11 @@ importers:
         specifier: ^4.1.12
         version: 4.1.12
 
-  packages/utils: {}
+  packages/utils:
+    dependencies:
+      '@citypass/types':
+        specifier: workspace:*
+        version: link:../types
 
 packages:
 

@@ -6,14 +6,23 @@
 import OpenAI from 'openai';
 import type { ExtractedEvent } from './extraction';
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
-
 // Singleton client
 let openaiClient: OpenAI | null = null;
 
+export function resetOpenAIClient(): void {
+  console.log('[OpenAI Client] Resetting client singleton');
+  openaiClient = null;
+}
+
 function getOpenAIClient(): OpenAI {
   if (!openaiClient) {
-    openaiClient = new OpenAI({ apiKey: OPENAI_API_KEY });
+    // Read API key lazily to ensure dotenv has loaded
+    const apiKey = process.env.OPENAI_API_KEY || '';
+    console.log(`[OpenAI Client] Creating new client - API key present: ${!!apiKey}, length: ${apiKey.length}`);
+    if (!apiKey) {
+      console.error('[OpenAI Client] WARNING: No API key found in process.env.OPENAI_API_KEY');
+    }
+    openaiClient = new OpenAI({ apiKey });
   }
   return openaiClient;
 }

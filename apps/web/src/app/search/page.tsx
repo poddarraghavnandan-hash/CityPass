@@ -581,11 +581,11 @@ function SearchResults() {
                         <span>Get Tickets</span>
                         <ExternalLink className="w-4 h-4 ml-2" />
                       </motion.a>
-                    ) : event.sourceUrl ? (
+                    ) : event.source ? (
                       <motion.a
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
-                        href={event.sourceUrl}
+                        href={event.source}
                         target="_blank"
                         rel="noopener noreferrer"
                         className={`flex items-center justify-center w-full px-4 py-3 rounded-xl font-medium transition ${

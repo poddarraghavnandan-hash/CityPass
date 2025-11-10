@@ -1,25 +1,15 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.canonicalUrlHash = canonicalUrlHash;
-exports.contentChecksum = contentChecksum;
-exports.canonicalVenueName = canonicalVenueName;
-exports.extractDomain = extractDomain;
-exports.retryWithBackoff = retryWithBackoff;
-exports.normalizeCategory = normalizeCategory;
-exports.sleep = sleep;
-exports.chunk = chunk;
-const crypto_1 = require("crypto");
-function canonicalUrlHash(url) {
+import { createHash } from 'crypto';
+export function canonicalUrlHash(url) {
     try {
         const parsed = new URL(url);
         const canonical = `${parsed.protocol}//${parsed.host}${parsed.pathname}`.toLowerCase();
-        return (0, crypto_1.createHash)('sha256').update(canonical).digest('hex');
+        return createHash('sha256').update(canonical).digest('hex');
     }
     catch {
-        return (0, crypto_1.createHash)('sha256').update(url.toLowerCase()).digest('hex');
+        return createHash('sha256').update(url.toLowerCase()).digest('hex');
     }
 }
-function contentChecksum(data) {
+export function contentChecksum(data) {
     const relevant = {
         title: data.title,
         description: data.description,
@@ -30,9 +20,9 @@ function contentChecksum(data) {
         price_max: data.price_max,
     };
     const normalized = JSON.stringify(relevant, Object.keys(relevant).sort());
-    return (0, crypto_1.createHash)('md5').update(normalized).digest('hex');
+    return createHash('md5').update(normalized).digest('hex');
 }
-function canonicalVenueName(name) {
+export function canonicalVenueName(name) {
     return name
         .toLowerCase()
         .replace(/[^\w\s]/g, '')
@@ -40,7 +30,7 @@ function canonicalVenueName(name) {
         .replace(/^the-/, '')
         .trim();
 }
-function extractDomain(url) {
+export function extractDomain(url) {
     try {
         const parsed = new URL(url);
         return parsed.hostname.replace(/^www\./, '');
@@ -49,7 +39,7 @@ function extractDomain(url) {
         return url;
     }
 }
-async function retryWithBackoff(fn, maxRetries = 3, baseDelayMs = 1000) {
+export async function retryWithBackoff(fn, maxRetries = 3, baseDelayMs = 1000) {
     let lastError;
     for (let i = 0; i < maxRetries; i++) {
         try {
@@ -66,7 +56,7 @@ async function retryWithBackoff(fn, maxRetries = 3, baseDelayMs = 1000) {
     }
     throw lastError;
 }
-function normalizeCategory(cat) {
+export function normalizeCategory(cat) {
     if (!cat)
         return undefined;
     const normalized = cat.toLowerCase();
@@ -101,14 +91,15 @@ function normalizeCategory(cat) {
     }
     return 'OTHER';
 }
-function sleep(ms) {
+export function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
-function chunk(array, size) {
+export function chunk(array, size) {
     const chunks = [];
     for (let i = 0; i < array.length; i += size) {
         chunks.push(array.slice(i, i + size));
     }
     return chunks;
 }
+export * from './intention';
 //# sourceMappingURL=index.js.map

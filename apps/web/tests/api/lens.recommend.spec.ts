@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { describe, it, expect, beforeAll } from '@jest/globals';
 import { POST as recommendHandler } from '@/app/api/lens/recommend/route';
-import type { IntentionTokens } from '@citypass/types/lens';
+import type { IntentionTokens } from '@citypass/types';
 import { requireEnv } from '../helpers/env';
 
 const REQUIRED_ENV = [

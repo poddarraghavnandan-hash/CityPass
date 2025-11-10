@@ -45,6 +45,7 @@ export {
   extractWithOpenAIFunctions,
   calculateOpenAICost,
   tierToOpenAIModel,
+  resetOpenAIClient,
   OPENAI_PRICING,
   type OpenAIModel,
 } from './extraction-openai';

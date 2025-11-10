@@ -1,3 +1,4 @@
+// @ts-expect-error - Missing type definitions for @mapbox/mapbox-sdk
 import mbxGeocoding from '@mapbox/mapbox-sdk/services/geocoding';
 
 let geocodingClient: ReturnType<typeof mbxGeocoding> | null = null;

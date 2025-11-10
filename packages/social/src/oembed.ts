@@ -1,5 +1,6 @@
+// @ts-expect-error - Missing type definitions for sanitize-html
 import sanitizeHtml from 'sanitize-html';
-import type { SocialPlatform } from '@citypass/types/lens';
+import type { SocialPlatform } from '@citypass/types';
 
 interface CacheEntry {
   value: SocialOEmbedResult;
@@ -39,7 +40,7 @@ function sanitizeEmbed(html: string, platform: SocialPlatform): string {
     },
     allowedSchemes: ['https'],
     transformTags: {
-      iframe: (_tagName, attribs) => ({
+      iframe: (_tagName: any, attribs: any) => ({
         tagName: 'iframe',
         attribs: {
           ...attribs,

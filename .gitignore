@@ -42,3 +42,5 @@ prisma/migrations/
 
 # Docker volumes
 infra/data/
+
+.vercel

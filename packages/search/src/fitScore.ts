@@ -1,4 +1,4 @@
-import type { Intention } from '@citypass/types/lens';
+import type { Intention } from '@citypass/types';
 
 export interface FitScoreComponent {
   key: string;

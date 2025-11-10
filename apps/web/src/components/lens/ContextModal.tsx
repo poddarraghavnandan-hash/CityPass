@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import type { RankedItem, SocialPreview } from '@citypass/types/lens';
+import type { RankedItem, SocialPreview } from '@citypass/types';
 import { HeatBar } from './HeatBar';
 import { PlanPanel } from './PlanPanel';
 import { CirclePanel } from './CirclePanel';
@@ -45,7 +45,7 @@ export function ContextModal({ item, companions, onClose }: ContextModalProps) {
       .catch(() => {
         setEmbed({
           html: undefined,
-          posterUrl: preview.posterUrl,
+          posterUrl: preview.posterUrl ?? undefined,
           loading: false,
         });
       });

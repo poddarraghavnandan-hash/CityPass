@@ -13,7 +13,7 @@ import {
   type Intention,
   type RankedItem,
   type SocialPreview,
-} from '@citypass/types/lens';
+} from '@citypass/types';
 import { buildIntention } from '@citypass/utils';
 import { diversifyByGraph } from '@citypass/cag';
 
@@ -237,7 +237,7 @@ async function getCandidates(intention: Intention, limit: number): Promise<Candi
     });
 
   const keywordCandidates: Candidate[] = typesenseCandidates.map(hit => ({
-    id: hit.document.id,
+    id: (hit.document as any).id,
     textual: normalizeScore(hit.text_match),
     semantic: 0.5,
   }));
@@ -341,6 +341,7 @@ async function loadSocialProof(eventIds: string[]) {
   }
 
   rows.forEach(row => {
+    if (!row.eventId) return;
     const current = map[row.eventId] || { views: 0, saves: 0, friends: 0 };
     if (row.type === 'VIEW') current.views = row._count;
     if (row.type === 'SAVE') current.saves = row._count;

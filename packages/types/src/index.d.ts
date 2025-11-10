@@ -1,4 +1,5 @@
 import { z } from 'zod';
+export * from './lens';
 export declare const EventCategorySchema: z.ZodEnum<{
     MUSIC: "MUSIC";
     COMEDY: "COMEDY";
@@ -18,6 +19,7 @@ export declare const EventSchema: z.ZodObject<{
     subtitle: z.ZodOptional<z.ZodString>;
     description: z.ZodOptional<z.ZodString>;
     category: z.ZodOptional<z.ZodEnum<{
+        family: "family";
         music: "music";
         comedy: "comedy";
         theatre: "theatre";
@@ -26,7 +28,6 @@ export declare const EventSchema: z.ZodObject<{
         arts: "arts";
         food: "food";
         networking: "networking";
-        family: "family";
         other: "other";
     }>>;
     organizer: z.ZodOptional<z.ZodString>;

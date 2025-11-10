@@ -4,8 +4,9 @@
   "private": true,
   "packageManager": "pnpm@8.15.0",
   "scripts": {
+    "postinstall": "pnpm db:generate",
     "dev": "turbo run dev --parallel",
-    "build": "turbo run build",
+    "build": "pnpm db:generate && turbo run build",
     "lint": "turbo run lint",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -19,7 +20,11 @@
     "jobs:learn": "tsx scripts/learn-weights.ts",
     "jobs:reconcile": "tsx scripts/reconcile-budgets.ts",
     "jobs:cold-start": "tsx scripts/batch-cold-start.ts",
-    "jobs:all": "pnpm jobs:embed && pnpm jobs:learn && pnpm jobs:reconcile"
+    "jobs:all": "pnpm jobs:embed && pnpm jobs:learn && pnpm jobs:reconcile",
+    "deploy:setup": "tsx scripts/setup-vercel-env.ts",
+    "deploy:preview": "vercel",
+    "deploy:prod": "vercel --prod",
+    "deploy:env": "vercel env pull .env.vercel"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^4.0.8",

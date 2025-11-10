@@ -1,7 +1,7 @@
 'use client';
 
 import { budgetTokens, companionTokens } from '@/theme/lensTheme';
-import type { IntentionTokens } from '@citypass/types/lens';
+import type { IntentionTokens } from '@citypass/types';
 
 interface NowBarProps {
   tokens: IntentionTokens;

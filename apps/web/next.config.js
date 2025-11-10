@@ -1,13 +1,16 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: [
+    '@citypass/agent',
+    '@citypass/analytics',
+    '@citypass/cag',
     '@citypass/db',
+    '@citypass/llm',
+    '@citypass/rag',
+    '@citypass/search',
+    '@citypass/social',
     '@citypass/types',
     '@citypass/utils',
-    '@citypass/llm',
-    '@citypass/search',
-    '@citypass/analytics',
-    '@citypass/social',
   ],
   images: {
     remotePatterns: [
@@ -18,7 +21,7 @@ const nextConfig = {
     ],
   },
   // Externalize Anthropic SDK and OpenAI SDK to avoid bundling issues
-  serverExternalPackages: ['@anthropic-ai/sdk', 'openai'],
+  serverExternalPackages: ['@anthropic-ai/sdk', 'openai', '@mapbox/mapbox-sdk', 'keyv', 'got', 'cacheable-request'],
   env: {
     CITYLENS_ENABLED: process.env.CITYLENS_ENABLED,
   },
@@ -55,6 +58,19 @@ const nextConfig = {
         },
       });
     }
+
+    // Ignore optional keyv adapter dependencies
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@keyv/redis': false,
+      '@keyv/mongo': false,
+      '@keyv/sqlite': false,
+      '@keyv/postgres': false,
+      '@keyv/mysql': false,
+      '@keyv/etcd': false,
+      '@keyv/offline': false,
+      '@keyv/tiered': false,
+    };
 
     return config;
   },

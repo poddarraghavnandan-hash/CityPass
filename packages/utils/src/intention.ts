@@ -6,7 +6,7 @@ import {
   MoodSchema,
   BudgetTierSchema,
   CompanionSchema,
-} from '@citypass/types/lens';
+} from '@citypass/types';
 
 export interface IntentionOptions {
   city?: string;

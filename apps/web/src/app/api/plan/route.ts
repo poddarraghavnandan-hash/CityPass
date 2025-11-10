@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { plan } from '@citypass/agent';
-import { IntentionTokensSchema } from '@citypass/types/lens';
+import { IntentionTokensSchema } from '@citypass/types';
 import { prisma } from '@citypass/db';
 
 const BodySchema = z.object({

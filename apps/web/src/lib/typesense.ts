@@ -46,7 +46,7 @@ export async function ensureEventsCollection() {
   } catch (e: any) {
     if (e.httpStatus === 404) {
       console.log('📦 Creating events collection...');
-      await typesenseClient.collections().create(schema);
+      await typesenseClient.collections().create(schema as any);
       console.log('✅ Events collection created');
     } else {
       throw e;

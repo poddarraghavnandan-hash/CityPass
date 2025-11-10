@@ -63,7 +63,10 @@ export async function POST(req: NextRequest) {
       dayOfWeek: now.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase(),
       deviceType: getDeviceType(req.headers.get('user-agent') || ''),
       query: params.query,
-      prefs: canPersonalize ? prefs : undefined,
+      prefs: canPersonalize && prefs ? {
+        ...prefs,
+        priceMax: prefs.priceMax ?? undefined,
+      } : undefined,
     };
 
     // Step 1: Get candidates from Typesense (keyword search)
@@ -204,7 +207,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Invalid request', details: error.errors },
+        { error: 'Invalid request', details: error.issues },
         { status: 400 }
       );
     }

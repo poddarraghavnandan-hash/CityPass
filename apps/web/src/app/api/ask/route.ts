@@ -5,7 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { understand } from '@citypass/agent';
-import { IntentionTokensSchema } from '@citypass/types/lens';
+import { IntentionTokensSchema } from '@citypass/types';
 
 const BodySchema = z.object({
   freeText: z.string().optional(),

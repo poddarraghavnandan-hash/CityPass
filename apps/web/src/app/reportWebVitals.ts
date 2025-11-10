@@ -12,7 +12,6 @@ export function reportWebVitals(metric: NextWebVitalsMetric) {
       name: metric.name,
       id: metric.id,
       value: metric.value,
-      rating: metric.rating,
     },
   });
 }

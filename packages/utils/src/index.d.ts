@@ -6,4 +6,5 @@ export declare function retryWithBackoff<T>(fn: () => Promise<T>, maxRetries?: n
 export declare function normalizeCategory(cat: string | undefined): string | undefined;
 export declare function sleep(ms: number): Promise<void>;
 export declare function chunk<T>(array: T[], size: number): T[][];
+export * from './intention';
 //# sourceMappingURL=index.d.ts.map

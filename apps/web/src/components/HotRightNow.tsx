@@ -241,7 +241,7 @@ function HotEventCard({ event }: HotEventCardProps) {
 
         {/* Social proof */}
         <div className="flex flex-wrap gap-1">
-          {event.friendSaveCount > 0 && (
+          {(event.friendSaveCount ?? 0) > 0 && (
             <SocialProofBadge
               type="friends_saved"
               count={event.friendSaveCount}

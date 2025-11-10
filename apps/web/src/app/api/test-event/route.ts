@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@citypass/db';
+import { prisma, EventCategory } from '@citypass/db';
 import { canonicalUrlHash, contentChecksum } from '@citypass/utils';
 import { indexEvent, ensureEventsCollection } from '@/lib/typesense';
 
@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
       title: 'Live Music Night at Bowery Ballroom',
       subtitle: 'Featuring Local Artists',
       description: 'Join us for an incredible evening of live music',
-      category: 'MUSIC',
+      category: 'MUSIC' as EventCategory,
       organizer: 'Bowery Presents',
       venueName: 'Bowery Ballroom',
       address: '6 Delancey St, New York, NY 10002',

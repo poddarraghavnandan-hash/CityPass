@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { RankedItem } from '@citypass/types/lens';
+import type { RankedItem } from '@citypass/types';
 
 interface PlanPanelProps {
   item: RankedItem;

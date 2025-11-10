@@ -1,13 +1,21 @@
 import { config } from 'dotenv';
 import { resolve } from 'path';
 
-// Load .env from monorepo root
-config({ path: resolve(__dirname, '../../../.env') });
+// Load .env from monorepo root (go up 3 levels: src -> worker -> apps -> root)
+const envPath = resolve(__dirname, '../../../.env');
+const result = config({ path: envPath });
+console.log(`[Worker] Loading .env from: ${envPath}`);
+console.log(`[Worker] Loaded ${Object.keys(result.parsed || {}).length} environment variables`);
+console.log(`[Worker] OPENAI_API_KEY present: ${!!process.env.OPENAI_API_KEY}`);
 
 import { prisma } from '@citypass/db';
 import { CrawlState } from '@citypass/types';
 import { extractDomain } from '@citypass/utils';
+import { resetOpenAIClient } from '@citypass/llm';
 import { createCrawlGraph } from './graph';
+
+// Reset OpenAI client singleton to pick up the API key from .env
+resetOpenAIClient();
 
 const graph = createCrawlGraph();
 

@@ -1,0 +1,60 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Environment
+.env
+.env.local
+.env*.local
+
+# Build outputs
+dist/
+.next/
+.turbo/
+out/
+
+# Testing
+coverage/
+.nyc_output/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Database
+*.db
+*.db-journal
+*.sqlite
+
+# Docker
+docker-compose*.yml
+Dockerfile*
+.dockerignore
+
+# Local development
+scripts/
+apps/worker/
+packages/db/prisma/migrations/
+
+# Documentation (keep only essential)
+README.md
+DEPLOYMENT.md
+
+# Git
+.git/
+.gitignore
+.gitattributes

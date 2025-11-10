@@ -78,7 +78,7 @@ export default function PrivacyPage() {
       }
 
       // Update analytics SDK
-      setConsent(preferences.analytics, preferences.personalization, preferences.advertising);
+      setConsent(preferences.analytics);
 
       // Reload consent status
       await loadConsent();

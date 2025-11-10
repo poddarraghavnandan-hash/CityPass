@@ -433,6 +433,7 @@ enum AnalyticsEventType {
   AD_CONVERSION
   SEARCH
   FILTER_CHANGE
+  WEB_VITAL
 }
 
 model UserConsent {
