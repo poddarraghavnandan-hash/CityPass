@@ -7,6 +7,8 @@ import { MoodRail } from '@/components/lens/MoodRail';
 import { NowBar } from '@/components/lens/NowBar';
 import { FeedCard } from '@/components/lens/FeedCard';
 import { ContextModal } from '@/components/lens/ContextModal';
+import { PlanDrawer } from '@/components/lens/PlanDrawer';
+import { CirclePanel } from '@/components/lens/CirclePanel';
 import { useAnalytics } from '@citypass/analytics';
 import type { MoodKey } from '@/theme/lensTheme';
 import { useSearchParams } from 'next/navigation';
@@ -14,6 +16,13 @@ import { useSearchParams } from 'next/navigation';
 interface LensResponse {
   items: RankedItem[];
   hasMore: boolean;
+  slates?: PlanSlates | null;
+}
+
+interface PlanSlates {
+  best?: RankedItem[];
+  wildcard?: RankedItem[];
+  closeAndEasy?: RankedItem[];
 }
 
 const DEFAULT_TOKENS: IntentionTokens = {
@@ -40,6 +49,7 @@ export default function CityLensFeedPage() {
   const [city] = useState<string>(derivedCity);
   const [items, setItems] = useState<RankedItem[]>([]);
   const [selected, setSelected] = useState<RankedItem | null>(null);
+  const [slates, setSlates] = useState<PlanSlates | null>(null);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [status, setStatus] = useState<'idle' | 'loading' | 'loadingMore'>('loading');
@@ -102,6 +112,7 @@ export default function CityLensFeedPage() {
       .then((data) => {
         if (cancelled) return;
         setItems(data.items);
+        setSlates(data.slates ?? null);
         setHasMore(data.hasMore);
         setPage(1);
       })
@@ -124,6 +135,9 @@ export default function CityLensFeedPage() {
     fetchPage(page + 1)
       .then((data) => {
         setItems(prev => [...prev, ...data.items]);
+        if (data.slates) {
+          setSlates(data.slates);
+        }
         setHasMore(data.hasMore);
         setPage(prev => prev + 1);
       })
@@ -217,6 +231,8 @@ export default function CityLensFeedPage() {
         )}
       </div>
 
+      <PlanDrawer slates={slates} fallback={items.slice(0, 3)} />
+      <CirclePanel companions={tokens.companions} />
       <NowBar tokens={tokens} onUpdate={handleTokenUpdate} />
 
       <ContextModal item={selected} companions={tokens.companions} onClose={() => setSelected(null)} />

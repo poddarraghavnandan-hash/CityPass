@@ -45,8 +45,7 @@ export async function POST(req: NextRequest) {
 
     const cookieIntention = req.cookies.get('citylens_intention')?.value;
 
-    const result = await understand({
-      freeText: body.freeText,
+    const intention = await understand({
       city: body.context?.city,
       userId: body.context?.userId,
       sessionId: body.context?.sessionId,
@@ -55,8 +54,8 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({
-      tokens: result.tokens,
-      intention: result.intention,
+      tokens: intention.tokens,
+      intention,
       traceId,
       success: true,
     });

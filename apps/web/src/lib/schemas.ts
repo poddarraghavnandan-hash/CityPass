@@ -8,7 +8,7 @@ import {
   IntentionSchema,
   SocialPlatformSchema,
   IntentionTokensSchema,
-} from '@citypass/types/lens';
+} from '@citypass/types';
 
 // ============================================================================
 // POST /api/ask - Natural language intention understanding
