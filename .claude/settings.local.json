@@ -83,7 +83,8 @@
       "Bash(del NUL)",
       "Bash(if exist \"apps\\web\\.next\" rd /s /q \"apps\\web\\.next\")",
       "Bash(git diff:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(git restore:*)"
     ],
     "deny": [],
     "ask": []
