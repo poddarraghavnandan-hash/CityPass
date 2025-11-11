@@ -44,3 +44,4 @@ prisma/migrations/
 infra/data/
 
 .vercel
+vercel-env.txt
