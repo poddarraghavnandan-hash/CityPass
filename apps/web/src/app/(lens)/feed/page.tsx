@@ -3,7 +3,7 @@
 // Force dynamic rendering for this page (uses localStorage and client-side data fetching)
 export const dynamic = 'force-dynamic';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { IntentionTokens, RankedItem } from '@citypass/types';
 import { MoodRail } from '@/components/lens/MoodRail';
@@ -36,7 +36,7 @@ const DEFAULT_TOKENS: IntentionTokens = {
   companions: ['solo'],
 };
 
-export default function CityLensFeedPage() {
+function CityLensFeed() {
   const searchParams = useSearchParams();
   const presetIds = useMemo(() => {
     const idsParam = searchParams.get('ids');
@@ -240,5 +240,13 @@ export default function CityLensFeedPage() {
 
       <ContextModal item={selected} companions={tokens.companions} onClose={() => setSelected(null)} />
     </div>
+  );
+}
+
+export default function CityLensFeedPage() {
+  return (
+    <Suspense fallback={<div className="lens-shell min-h-screen flex items-center justify-center text-white/60">Loading...</div>}>
+      <CityLensFeed />
+    </Suspense>
   );
 }
