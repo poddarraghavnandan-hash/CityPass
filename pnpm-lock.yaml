@@ -133,8 +133,8 @@ importers:
         specifier: ^1.0.7
         version: 1.0.7(tailwindcss@4.1.17)
       typesense:
-        specifier: ^2.1.0
-        version: 2.1.0(@babel/runtime@7.28.4)
+        specifier: ^1.7.0
+        version: 1.8.2(@babel/runtime@7.28.4)
       zod:
         specifier: ^4.1.12
         version: 4.1.12
@@ -12040,20 +12040,6 @@ packages:
       '@babel/runtime': 7.28.4
       axios: 1.13.2
       loglevel: 1.9.2
-    transitivePeerDependencies:
-      - debug
-    dev: false
-
-  /typesense@2.1.0(@babel/runtime@7.28.4):
-    resolution: {integrity: sha512-a/IRTL+dRXlpRDU4UodyGj8hl5xBz3nKihVRd/KfSFAfFPGcpdX6lxIgwdXy3O6VLNNiEsN8YwIsPHQPVT0vNw==}
-    engines: {node: '>=18'}
-    peerDependencies:
-      '@babel/runtime': ^7.23.2
-    dependencies:
-      '@babel/runtime': 7.28.4
-      axios: 1.13.2
-      loglevel: 1.9.2
-      tslib: 2.8.1
     transitivePeerDependencies:
       - debug
     dev: false
