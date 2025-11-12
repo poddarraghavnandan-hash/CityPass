@@ -1,5 +1,8 @@
 'use client';
 
+// Force dynamic rendering for this page (uses localStorage and client-side data fetching)
+export const dynamic = 'force-dynamic';
+
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { IntentionTokens, RankedItem } from '@citypass/types';
