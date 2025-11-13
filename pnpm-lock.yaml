@@ -238,6 +238,9 @@ importers:
       '@citypass/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@citypass/search':
+        specifier: workspace:*
+        version: link:../../packages/search
       '@citypass/types':
         specifier: workspace:*
         version: link:../../packages/types
@@ -390,6 +393,9 @@ importers:
       '@citypass/types':
         specifier: workspace:*
         version: link:../types
+      typesense:
+        specifier: 1.7.0
+        version: 1.7.0(@babel/runtime@7.28.4)
     devDependencies:
       '@types/node':
         specifier: ^24.10.0
@@ -6423,6 +6429,14 @@ packages:
     engines: {node: '>=4'}
     dev: true
 
+  /axios@0.26.1:
+    resolution: {integrity: sha512-fPwcX4EvnSHuInCMItEhAGnaSEXRBjtzh9fOtsE6E1G6p7vl7edEeZe11QHf18+6+9gR5PbKV/sGKNaD8YaMeA==}
+    dependencies:
+      follow-redirects: 1.15.11
+    transitivePeerDependencies:
+      - debug
+    dev: false
+
   /axios@1.13.2:
     resolution: {integrity: sha512-VPk9ebNqPcy5lRGuSlKx752IlDatOjT9paPlm8A7yOuW2Fbvp4X3JznJtT4f0GzGLLiWE9W8onz51SqLYwzGaA==}
     dependencies:
@@ -12030,6 +12044,18 @@ packages:
     resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
     engines: {node: '>=14.17'}
     hasBin: true
+
+  /typesense@1.7.0(@babel/runtime@7.28.4):
+    resolution: {integrity: sha512-g33vkDFr4EpDeP2gVXqt5/9aHL87ivbxiwzu4+nQoJMgKA2sCkzkzmPauLudsXNlBwl/0nIYxf0WuhH7zTSU2A==}
+    peerDependencies:
+      '@babel/runtime': ^7.17.2
+    dependencies:
+      '@babel/runtime': 7.28.4
+      axios: 0.26.1
+      loglevel: 1.9.2
+    transitivePeerDependencies:
+      - debug
+    dev: false
 
   /typesense@1.8.2(@babel/runtime@7.28.4):
     resolution: {integrity: sha512-aBpePjA99Qvo+OP2pJwMpvga4Jrm1Y2oV5NsrWXBxlqUDNEUCPZBIksPv2Hq0jxQxHhLLyJVbjXjByXsvpCDVA==}
