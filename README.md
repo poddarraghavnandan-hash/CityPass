@@ -449,6 +449,7 @@ pnpm i
 # Example (PowerShell):
 setx CITYLENS_ENABLED true
 setx DATABASE_URL "<YOUR_PROD_OR_STAGING_DB_URL>"
+setx DIRECT_URL "<YOUR_PROD_OR_STAGING_DB_URL>"
 setx TYPESENSE_HOST "<host>"
 setx TYPESENSE_API_KEY "<key>"
 setx TYPESENSE_PROTOCOL "https"

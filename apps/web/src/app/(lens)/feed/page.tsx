@@ -57,6 +57,9 @@ function CityLensFeed() {
   const [hasMore, setHasMore] = useState(true);
   const [status, setStatus] = useState<'idle' | 'loading' | 'loadingMore'>('loading');
   const [error, setError] = useState<string | null>(null);
+  const [ingestionStatus, setIngestionStatus] = useState<'idle' | 'requesting' | 'queued' | 'completed' | 'error'>('idle');
+  const [ingestionMessage, setIngestionMessage] = useState<string | null>(null);
+  const [ingestionRequestId, setIngestionRequestId] = useState<string | null>(null);
   const analytics = useAnalytics();
 
   const parentRef = useRef<HTMLDivElement | null>(null);
@@ -107,7 +110,7 @@ function CityLensFeed() {
     [tokens, city, presetIds]
   );
 
-  useEffect(() => {
+  const loadFirstPage = useCallback(() => {
     let cancelled = false;
     setStatus('loading');
     setError(null);
@@ -126,11 +129,15 @@ function CityLensFeed() {
       .finally(() => {
         if (!cancelled) setStatus('idle');
       });
-
     return () => {
       cancelled = true;
     };
   }, [fetchPage]);
+
+  useEffect(() => {
+    const cleanup = loadFirstPage();
+    return cleanup;
+  }, [loadFirstPage]);
 
   const loadMore = useCallback(() => {
     if (status === 'loadingMore' || !hasMore) return;
@@ -167,6 +174,62 @@ function CityLensFeed() {
     setTokens(prev => ({ ...prev, ...partial }));
   };
 
+  const requestIngestion = useCallback(async () => {
+    if (ingestionStatus === 'requesting' || ingestionStatus === 'queued') return;
+    setIngestionStatus('requesting');
+    setIngestionMessage(null);
+    try {
+      const response = await fetch('/api/lens/recommend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          intention: { tokens, city },
+          ingestionRequest: {
+            city,
+            reason: 'citylens-empty-feed',
+            priority: 2,
+          },
+        }),
+      });
+      if (!response.ok) {
+        throw new Error('Unable to queue ingestion request');
+      }
+      const data = await response.json();
+      setIngestionRequestId(data.request?.id ?? null);
+      setIngestionStatus('queued');
+      setIngestionMessage('We are gathering fresh events for you. This usually takes a couple of minutes.');
+    } catch (err: any) {
+      setIngestionStatus('error');
+      setIngestionMessage(err.message ?? 'Failed to queue ingestion request.');
+    }
+  }, [city, tokens, ingestionStatus]);
+
+  useEffect(() => {
+    if (!ingestionRequestId || ingestionStatus !== 'queued') return;
+    const interval = setInterval(async () => {
+      try {
+        const response = await fetch(`/api/lens/recommend?requestId=${ingestionRequestId}`);
+        if (!response.ok) return;
+        const data = await response.json();
+        const status = data.request?.status;
+        if (status === 'COMPLETED') {
+          setIngestionStatus('completed');
+          setIngestionMessage('New recommendations are ready.');
+          loadFirstPage();
+          setIngestionRequestId(null);
+        } else if (status === 'FAILED') {
+          setIngestionStatus('error');
+          setIngestionMessage(data.request?.lastError || 'Unable to complete ingestion request.');
+          setIngestionRequestId(null);
+        }
+      } catch {
+        // ignore polling errors
+      }
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [ingestionRequestId, ingestionStatus, loadFirstPage]);
+
+
   const handleImpression = useCallback(
     (eventId: string) => {
       analytics.track({
@@ -198,6 +261,25 @@ function CityLensFeed() {
       )}
 
       <div ref={parentRef} className="lens-scroll px-4 space-y-6">
+        {status === 'idle' && items.length === 0 && (
+          <div className="text-center text-white/70 py-10 space-y-4 border border-white/10 rounded-lg px-4">
+            <p>No recommendations yet. We can fetch fresh events for {city}.</p>
+            {ingestionMessage && (
+              <p className="text-sm text-white/60">{ingestionMessage}</p>
+            )}
+            <button
+              className="px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 transition text-sm"
+              onClick={requestIngestion}
+              disabled={ingestionStatus === 'requesting' || ingestionStatus === 'queued'}
+            >
+              {ingestionStatus === 'queued'
+                ? 'Ingestion queued'
+                : ingestionStatus === 'requesting'
+                  ? 'Requesting…'
+                  : 'Request fresh events'}
+            </button>
+          </div>
+        )}
         <div
           style={{
             height: `${virtualizer.getTotalSize()}px`,

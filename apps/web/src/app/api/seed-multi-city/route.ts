@@ -1,7 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma, EventCategory } from '@citypass/db';
-import { canonicalUrlHash, contentChecksum } from '@citypass/utils';
-import { indexEvent, ensureEventsCollection } from '@/lib/typesense';
+import { NextResponse } from 'next/server';
 
 const MULTI_CITY_EVENTS = [
   // San Francisco Events
@@ -214,50 +211,11 @@ const MULTI_CITY_EVENTS = [
   },
 ];
 
-export async function POST(req: NextRequest) {
-  try {
-    // Ensure Typesense collection exists
-    await ensureEventsCollection();
-
-    const createdEvents = [];
-
-    for (const eventData of MULTI_CITY_EVENTS) {
-      const event = await prisma.event.create({
-        data: {
-          ...eventData,
-          category: eventData.category as EventCategory,
-          canonicalUrlHash: canonicalUrlHash(eventData.sourceUrl),
-          checksum: contentChecksum({
-            title: eventData.title,
-            description: eventData.description,
-            start_time: eventData.startTime.toISOString(),
-            venue_name: eventData.venueName,
-            price_min: eventData.priceMin,
-            price_max: eventData.priceMax,
-          }),
-        },
-      });
-
-      // Index to Typesense
-      await indexEvent(event);
-      createdEvents.push(event);
-      console.log(`✅ Created and indexed: ${event.title} (${event.city})`);
-    }
-
-    return NextResponse.json({
-      success: true,
-      count: createdEvents.length,
-      cities: ['San Francisco', 'Los Angeles', 'Chicago', 'Boston'],
-      events: createdEvents.map((e) => ({
-        id: e.id,
-        title: e.title,
-        city: e.city,
-        category: e.category,
-        date: e.startTime,
-      })),
-    });
-  } catch (error: any) {
-    console.error('Seed multi-city events error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+export async function POST() {
+  return NextResponse.json(
+    {
+      error: 'Seed ingestion now runs inside the worker. /api/seed-multi-city is disabled.',
+    },
+    { status: 410 }
+  );
 }

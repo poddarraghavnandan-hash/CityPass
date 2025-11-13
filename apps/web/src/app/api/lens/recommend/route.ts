@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { randomUUID } from 'crypto';
+import { prisma } from '@citypass/db';
 import { plan } from '@citypass/agent';
 import { IntentionTokensSchema, type RankedItem } from '@citypass/types';
 import { diversifyByGraph } from '@citypass/cag';
@@ -23,6 +24,14 @@ const BodySchema = z.object({
   limit: z.number().int().min(6).max(30).default(15),
   ids: z.array(z.string()).min(1).optional(),
   graphDiversification: z.boolean().optional().default(false),
+  ingestionRequest: z
+    .object({
+      city: z.string().min(2).optional(),
+      reason: z.string().max(280).optional(),
+      priority: z.number().int().min(0).max(5).optional(),
+      requestedBy: z.string().max(120).optional(),
+    })
+    .optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -58,6 +67,35 @@ export async function POST(req: NextRequest) {
   try {
     const payload = await req.json();
     const body = BodySchema.parse(payload);
+
+    if (body.ingestionRequest) {
+      const fallbackCity =
+        body.ingestionRequest.city ||
+        body.intention?.tokens?.city ||
+        body.intention?.user?.city ||
+        process.env.NEXT_PUBLIC_DEFAULT_CITY ||
+        'New York';
+
+      const request = await prisma.ingestionRequest.create({
+        data: {
+          city: fallbackCity,
+          tokens: body.intention?.tokens ?? {},
+          reason: body.ingestionRequest.reason,
+          priority: body.ingestionRequest.priority ?? 0,
+          requestedBy: body.ingestionRequest.requestedBy ?? body.intention?.user?.id,
+          requesterIp: req.headers.get('x-forwarded-for')?.split(',')[0]?.trim(),
+          requesterAgent: req.headers.get('user-agent') || undefined,
+        },
+      });
+
+      return NextResponse.json(
+        {
+          queued: true,
+          request,
+        },
+        { status: 202 }
+      );
+    }
 
     const limit = body.limit;
     const page = body.page;
@@ -141,4 +179,24 @@ export async function POST(req: NextRequest) {
     console.error('lens/recommend error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
+}
+
+export async function GET(req: NextRequest) {
+  const searchParams = req.nextUrl.searchParams;
+  const requestId = searchParams.get('requestId');
+  const city = searchParams.get('city');
+
+  if (!requestId && !city) {
+    return NextResponse.json(
+      { error: 'Provide requestId or city query param to inspect ingestion status' },
+      { status: 400 }
+    );
+  }
+
+  const request = await prisma.ingestionRequest.findFirst({
+    where: requestId ? { id: requestId } : { city: city ?? '' },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  return NextResponse.json({ request });
 }

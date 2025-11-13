@@ -2,60 +2,19 @@ import { config } from 'dotenv';
 import { resolve } from 'path';
 
 // Load .env from monorepo root (go up 3 levels: src -> worker -> apps -> root)
+// IMPORTANT: Load env BEFORE any imports that use Prisma
 const envPath = resolve(__dirname, '../../../.env');
-const result = config({ path: envPath });
+const result = config({ path: envPath, override: true });
 console.log(`[Worker] Loading .env from: ${envPath}`);
 console.log(`[Worker] Loaded ${Object.keys(result.parsed || {}).length} environment variables`);
 console.log(`[Worker] OPENAI_API_KEY present: ${!!process.env.OPENAI_API_KEY}`);
+console.log(`[Worker] DATABASE_URL present: ${!!process.env.DATABASE_URL}`);
+console.log(`[Worker] DATABASE_URL: ${process.env.DATABASE_URL?.substring(0, 50)}...`);
 
+// Now import Prisma after env is loaded
 import { prisma } from '@citypass/db';
-import { CrawlState } from '@citypass/types';
-import { extractDomain } from '@citypass/utils';
-import { resetOpenAIClient } from '@citypass/llm';
-import { createCrawlGraph } from './graph';
-
-// Reset OpenAI client singleton to pick up the API key from .env
-resetOpenAIClient();
-
-const graph = createCrawlGraph();
-
-/**
- * Process a single source
- */
-async function processSource(sourceId: string) {
-  const source = await prisma.source.findUnique({
-    where: { id: sourceId },
-  });
-
-  if (!source || !source.active) {
-    console.log(`⏭️  Skipping inactive source: ${sourceId}`);
-    return;
-  }
-
-  console.log(`\n🚀 Processing source: ${source.name}`);
-
-  const initialState: CrawlState = {
-    sourceId: source.id,
-    sourceUrl: source.url,
-    sourceDomain: source.domain,
-    city: source.city,
-    crawlMethod: source.crawlMethod as 'FIRECRAWL' | 'APIFY',
-    urls: [],
-    processedUrls: [],
-    rawPages: [],
-    extractedEvents: [],
-    errors: [],
-    shouldRetry: false,
-    shouldSwitchMethod: false,
-  };
-
-  try {
-    await graph.invoke(initialState);
-    console.log(`✅ Completed source: ${source.name}`);
-  } catch (error) {
-    console.error(`❌ Failed source: ${source.name}`, error);
-  }
-}
+import { startCron } from './cron';
+import { processSource } from './processSource';
 
 /**
  * Main worker loop
@@ -86,11 +45,18 @@ async function main() {
   console.log('✅ Worker cycle complete');
 }
 
-// Run worker
 if (require.main === module) {
+  startCron();
   main()
-    .catch(console.error)
-    .finally(() => prisma.$disconnect());
-}
+    .then(() => console.log('🏁 Initial crawl finished'))
+    .catch((error) => console.error('Worker startup failed', error));
 
-export { processSource };
+  const shutdown = async () => {
+    console.log('👋 Shutting down worker...');
+    await prisma.$disconnect();
+    process.exit(0);
+  };
+
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
+}

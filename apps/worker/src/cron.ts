@@ -5,6 +5,8 @@
 
 import { refreshSimilarityEdges } from './graph/refresh-similarity';
 import { embedAndIndexSocial } from './social/embed-index';
+import { ensureSeedInventory } from './seedJob';
+import { processIngestionQueue } from './ingestionQueueJob';
 
 interface CronJob {
   name: string;
@@ -14,6 +16,16 @@ interface CronJob {
 }
 
 const jobs: CronJob[] = [
+  {
+    name: 'seed-events',
+    intervalMs: parseInt(process.env.CITYLENS_SEED_INTERVAL ?? String(10 * 60 * 1000), 10),
+    handler: ensureSeedInventory,
+  },
+  {
+    name: 'ingestion-queue',
+    intervalMs: parseInt(process.env.CITYLENS_QUEUE_INTERVAL ?? String(60 * 1000), 10),
+    handler: processIngestionQueue,
+  },
   {
     name: 'social-embed-index',
     intervalMs: 15 * 60 * 1000, // 15 minutes

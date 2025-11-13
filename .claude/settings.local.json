@@ -84,7 +84,12 @@
       "Bash(if exist \"apps\\web\\.next\" rd /s /q \"apps\\web\\.next\")",
       "Bash(git diff:*)",
       "Bash(ls:*)",
-      "Bash(git restore:*)"
+      "Bash(git restore:*)",
+      "Bash(exit /b 0)",
+      "WebFetch(domain:vercel.com)",
+      "Bash(vercel --token=NV6pRCdM96cCoorOUPXrd56G env rm DATABASE_URL production --yes)",
+      "Bash(vercel --token=NV6pRCdM96cCoorOUPXrd56G env add DATABASE_URL production)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:cityLenspass1@db.nuxkckkkovqhcrgypzin.supabase.co:5432/postgres\" pnpm --filter @citypass/db migrate:deploy:*)"
     ],
     "deny": [],
     "ask": []

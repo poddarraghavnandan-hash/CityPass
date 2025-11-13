@@ -84,7 +84,8 @@ DATABASE_URL="your-production-db-url" pnpm db:push
 ## Environment Variables Checklist
 
 ### Critical (Must Have)
-- [ ] `DATABASE_URL` - Supabase PostgreSQL
+- [ ] `DATABASE_URL` - Supabase PostgreSQL (pooled)
+- [ ] `DIRECT_URL` - Supabase PostgreSQL (direct/non-pooled for Prisma)
 - [ ] `TYPESENSE_HOST` - Typesense Cloud
 - [ ] `TYPESENSE_API_KEY` - Typesense Cloud
 - [ ] `OPENAI_API_KEY` - OpenAI

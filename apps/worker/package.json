@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@citypass/db": "workspace:*",
+    "@citypass/search": "workspace:*",
     "@citypass/types": "workspace:*",
     "@citypass/utils": "workspace:*",
     "@langchain/anthropic": "^1.0.0",

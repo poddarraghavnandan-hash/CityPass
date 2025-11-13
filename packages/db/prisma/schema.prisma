@@ -172,6 +172,28 @@ model IngestJob {
   @@map("ingest_jobs")
 }
 
+model IngestionRequest {
+  id           String                   @id @default(cuid())
+  createdAt    DateTime                 @default(now()) @map("created_at")
+  updatedAt    DateTime                 @updatedAt @map("updated_at")
+  city         String
+  tokens       Json?
+  reason       String?
+  priority     Int                      @default(0)
+  status       IngestionRequestStatus   @default(PENDING)
+  requestedBy  String?                  @map("requested_by")
+  requesterIp  String?                  @map("requester_ip")
+  requesterAgent String?                @map("requester_agent")
+  startedAt    DateTime?                @map("started_at")
+  processedAt  DateTime?                @map("processed_at")
+  lastError    String?                  @map("last_error") @db.Text
+  resultSummary Json?                   @map("result_summary")
+
+  @@index([city, status])
+  @@index([status, priority, createdAt])
+  @@map("ingestion_requests")
+}
+
 enum EventCategory {
   MUSIC
   COMEDY
@@ -206,6 +228,13 @@ enum JobStatus {
   COMPLETED
   FAILED
   RETRYING
+}
+
+enum IngestionRequestStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
 }
 
 model SearchCache {
