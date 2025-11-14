@@ -1,4 +1,23 @@
 import Typesense from 'typesense';
+import type { TypesenseEvent } from '@citypass/types';
+
+export type TypesenseEventDocument = TypesenseEvent;
+
+export interface TypesenseSearchHit<TDoc = Record<string, unknown>> {
+  document: TDoc;
+  text_match_info?: {
+    score?: number;
+  };
+  highlights?: Array<Record<string, unknown>>;
+}
+
+export interface TypesenseSearchResponse<TDoc = Record<string, unknown>> {
+  hits?: TypesenseSearchHit<TDoc>[];
+  found: number;
+  page: number;
+  facet_counts?: unknown;
+  [key: string]: unknown;
+}
 
 export const EVENTS_COLLECTION = 'events';
 
@@ -93,7 +112,9 @@ interface SearchParams {
   limit?: number;
 }
 
-export async function searchEvents(params: SearchParams) {
+export async function searchEvents(
+  params: SearchParams
+): Promise<TypesenseSearchResponse<TypesenseEventDocument>> {
   const {
     q = '*',
     city,
@@ -138,7 +159,7 @@ export async function searchEvents(params: SearchParams) {
   const results = await typesenseClient
     .collections(EVENTS_COLLECTION)
     .documents()
-    .search(searchParams);
+    .search<TypesenseSearchResponse<TypesenseEventDocument>>(searchParams);
 
   return results;
 }

@@ -36,6 +36,7 @@ declare module 'typesense' {
 
   export interface CollectionsResource {
     retrieve(): Promise<unknown>;
+    create(schema: Record<string, unknown>): Promise<unknown>;
   }
 
   export class Client {

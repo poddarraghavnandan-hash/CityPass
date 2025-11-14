@@ -5,7 +5,7 @@
 
 import { QdrantClient } from '@qdrant/js-client-rest';
 import Typesense from 'typesense';
-import type { Intention } from '@citypass/types';
+import type { Intention, TypesenseEvent } from '@citypass/types';
 
 // Types
 export interface RetrievalCandidate {
@@ -42,6 +42,17 @@ export interface RetrievalResult {
   rerankApplied: boolean;
   latencyMs: number;
 }
+
+type TypesenseKeywordHit = {
+  document: TypesenseEvent;
+  text_match_info?: {
+    score?: number;
+  };
+};
+
+type TypesenseKeywordResponse = {
+  hits?: TypesenseKeywordHit[];
+};
 
 // Lazy-initialize clients (don't create at module level to avoid build errors)
 let qdrantClient: QdrantClient | null = null;
@@ -206,12 +217,14 @@ async function searchTypesense(
       per_page: topK,
     };
 
-    const searchResult = await getTypesenseClient()
+    const searchResult: TypesenseKeywordResponse = await getTypesenseClient()
       .collections(TYPESENSE_COLLECTION)
       .documents()
       .search(searchParams);
 
-    return (searchResult.hits || []).map((hit: any) => {
+    const hits = searchResult.hits ?? [];
+
+    return hits.map((hit) => {
       const doc = hit.document;
       return {
         id: doc.id,
@@ -228,7 +241,7 @@ async function searchTypesense(
         tags: doc.tags || null,
         bookingUrl: doc.booking_url || null,
         imageUrl: doc.image_url || null,
-        score: hit.text_match_info?.score || 0,
+        score: hit.text_match_info?.score ?? 0,
         source: 'keyword' as const,
       };
     });
