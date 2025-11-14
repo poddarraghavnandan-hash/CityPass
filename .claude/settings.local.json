@@ -89,7 +89,11 @@
       "WebFetch(domain:vercel.com)",
       "Bash(vercel --token=NV6pRCdM96cCoorOUPXrd56G env rm DATABASE_URL production --yes)",
       "Bash(vercel --token=NV6pRCdM96cCoorOUPXrd56G env add DATABASE_URL production)",
-      "Bash(DATABASE_URL=\"postgresql://postgres:cityLenspass1@db.nuxkckkkovqhcrgypzin.supabase.co:5432/postgres\" pnpm --filter @citypass/db migrate:deploy:*)"
+      "Bash(DATABASE_URL=\"postgresql://postgres:cityLenspass1@db.nuxkckkkovqhcrgypzin.supabase.co:5432/postgres\" pnpm --filter @citypass/db migrate:deploy:*)",
+      "Bash(vercel --token=NV6pRCdM96cCoorOUPXrd56G inspect citypass-411uinigk-raghav-poddars-projects.vercel.app --logs)",
+      "Bash(vercel --token=NV6pRCdM96cCoorOUPXrd56G inspect citypass-elpee1ifk-raghav-poddars-projects.vercel.app --logs)",
+      "Bash(vercel --token=NV6pRCdM96cCoorOUPXrd56G env pull .env.production)",
+      "Bash(vercel --token=NV6pRCdM96cCoorOUPXrd56G inspect citypass-g3ioch5xg-raghav-poddars-projects.vercel.app --logs)"
     ],
     "deny": [],
     "ask": []

@@ -4,4 +4,4 @@ export {
   indexEvent,
   searchEvents,
   typesenseClient,
-} from '@citypass/search/typesense';
+} from '@citypass/search';

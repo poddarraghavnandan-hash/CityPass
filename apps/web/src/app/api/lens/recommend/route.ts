@@ -10,6 +10,7 @@ import { checkRateLimit, getRateLimitIdentifier } from '@/lib/rate-limit';
 const BodySchema = z.object({
   intention: z
     .object({
+      city: z.string().optional(),
       user: z
         .object({
           id: z.string(),
@@ -70,10 +71,10 @@ export async function POST(req: NextRequest) {
 
     if (body.ingestionRequest) {
       const fallbackCity =
-        body.ingestionRequest.city ||
-        body.intention?.tokens?.city ||
-        body.intention?.user?.city ||
-        process.env.NEXT_PUBLIC_DEFAULT_CITY ||
+        body.ingestionRequest.city ??
+        body.intention?.city ??
+        body.intention?.user?.city ??
+        process.env.NEXT_PUBLIC_DEFAULT_CITY ??
         'New York';
 
       const request = await prisma.ingestionRequest.create({

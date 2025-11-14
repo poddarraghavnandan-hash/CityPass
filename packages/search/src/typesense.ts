@@ -46,7 +46,8 @@ export async function ensureEventsCollection() {
   } catch (error: any) {
     if (error?.httpStatus === 404) {
       console.log('📦 Creating events collection...');
-      await typesenseClient.collections().create(schema as any);
+      // @ts-ignore - Typesense API typing issue
+      await typesenseClient.collections().create(schema);
       console.log('✅ Events collection created');
     } else {
       throw error;

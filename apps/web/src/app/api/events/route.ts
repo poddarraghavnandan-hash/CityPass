@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { searchEvents } from '@/lib/typesense';
 import { EventsSearchParamsSchema } from '@citypass/types';
 
+type TypesenseHit<T = Record<string, unknown>> = {
+  document: T;
+};
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -30,8 +34,11 @@ export async function GET(req: NextRequest) {
       limit: params.limit,
     });
 
+    const events =
+      results.hits?.map((hit: TypesenseHit) => hit.document) || [];
+
     return NextResponse.json({
-      events: results.hits?.map((hit) => hit.document) || [],
+      events,
       found: results.found,
       page: results.page,
     });

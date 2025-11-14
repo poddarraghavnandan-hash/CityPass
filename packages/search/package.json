@@ -17,7 +17,7 @@
   "dependencies": {
     "@citypass/db": "workspace:*",
     "@citypass/types": "workspace:*",
-    "typesense": "1.7.0"
+    "typesense": "^2.1.0"
   },
   "devDependencies": {
     "@types/node": "^24.10.0",

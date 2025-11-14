@@ -36,7 +36,8 @@
       "@citypass/search": ["../../packages/search/src"],
       "@citypass/social": ["../../packages/social/src"],
       "@citypass/types": ["../../packages/types/src"],
-      "@citypass/utils": ["../../packages/utils/src"]
+      "@citypass/utils": ["../../packages/utils/src"],
+      "typesense": ["../../packages/search/src/typesense-client"]
     }
   },
   "include": [
