@@ -398,14 +398,23 @@ async function maybeCreateSeedEvent(seed: SeedEventDefinition): Promise<boolean>
     },
   });
 
-  await indexEvent(event);
+  // Index to Typesense (optional - skip if not configured)
+  try {
+    await indexEvent(event);
+  } catch (error) {
+    console.warn('Typesense indexing failed, event saved to DB:', error);
+  }
   return true;
 }
 
 export async function POST(request: Request) {
   try {
-    // Ensure Typesense collection exists
-    await ensureEventsCollection();
+    // Ensure Typesense collection exists (optional - skip if not configured)
+    try {
+      await ensureEventsCollection();
+    } catch (error) {
+      console.warn('Typesense not configured, skipping collection setup:', error);
+    }
 
     let created = 0;
     const now = new Date();
