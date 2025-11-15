@@ -3,9 +3,15 @@ import { z } from 'zod';
 import { randomUUID } from 'crypto';
 import { prisma } from '@citypass/db';
 import { plan } from '@citypass/agent';
-import { IntentionTokensSchema, type RankedItem } from '@citypass/types';
+import {
+  IntentionTokensSchema,
+  type RankedItem,
+  type IntentionTokens,
+  type Intention,
+} from '@citypass/types';
 import { diversifyByGraph } from '@citypass/cag';
 import { checkRateLimit, getRateLimitIdentifier } from '@/lib/rate-limit';
+import type { Event } from '@citypass/db';
 
 const BodySchema = z.object({
   intention: z
@@ -34,6 +40,15 @@ const BodySchema = z.object({
     })
     .optional(),
 });
+
+const DEFAULT_CITY = process.env.NEXT_PUBLIC_DEFAULT_CITY || 'New York';
+const FALLBACK_TOKENS: IntentionTokens = {
+  mood: 'calm',
+  untilMinutes: 150,
+  distanceKm: 5,
+  budget: 'casual',
+  companions: ['solo'],
+};
 
 export async function POST(req: NextRequest) {
   const traceId = randomUUID();
@@ -68,6 +83,10 @@ export async function POST(req: NextRequest) {
   try {
     const payload = await req.json();
     const body = BodySchema.parse(payload);
+    const requestedCity = resolveCity(body);
+    const limit = body.limit;
+    const page = body.page;
+    const offset = (page - 1) * limit;
 
     if (body.ingestionRequest) {
       const fallbackCity =
@@ -98,15 +117,29 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const limit = body.limit;
-    const page = body.page;
-    const offset = (page - 1) * limit;
+    let agentResult: Awaited<ReturnType<typeof plan>> | null = null;
+    try {
+      agentResult = await plan({
+        user: body.intention?.user,
+        tokens: body.intention?.tokens,
+        freeText: body.intention?.freeText,
+      });
+    } catch (error) {
+      console.error('lens/recommend plan error, falling back to DB events', error);
+    }
 
-    const agentResult = await plan({
-      user: body.intention?.user,
-      tokens: body.intention?.tokens,
-      freeText: body.intention?.freeText,
-    });
+    if (!agentResult) {
+      return NextResponse.json(
+        await buildFallbackResponse({
+          city: requestedCity,
+          limit,
+          page,
+          offset,
+          tokens: body.intention?.tokens,
+          traceId,
+        })
+      );
+    }
 
     const slates = agentResult.state.slates || {
       best: [],
@@ -121,13 +154,17 @@ export async function POST(req: NextRequest) {
     ];
 
     if (combined.length === 0) {
-      return NextResponse.json({
-        items: [],
-        intention: agentResult.state.intention,
-        page,
-        hasMore: false,
-        traceId: agentResult.state.traceId,
-      });
+      return NextResponse.json(
+        await buildFallbackResponse({
+          city: requestedCity,
+          limit,
+          page,
+          offset,
+          tokens: body.intention?.tokens,
+          traceId: agentResult.state.traceId,
+          baselineIntention: agentResult.state.intention,
+        })
+      );
     }
 
     // Deduplicate by event id preserving order
@@ -200,4 +237,120 @@ export async function GET(req: NextRequest) {
   });
 
   return NextResponse.json({ request });
+}
+
+function resolveCity(body: z.infer<typeof BodySchema>): string {
+  return (
+    body.intention?.city ||
+    body.intention?.user?.city ||
+    DEFAULT_CITY
+  );
+}
+
+function mergeTokens(partial?: Partial<IntentionTokens>): IntentionTokens {
+  if (!partial) return { ...FALLBACK_TOKENS };
+  return {
+    ...FALLBACK_TOKENS,
+    ...partial,
+    companions: partial.companions ?? FALLBACK_TOKENS.companions,
+  };
+}
+
+function buildIntention(city: string, partialTokens?: Partial<IntentionTokens>): Intention {
+  return {
+    city,
+    nowISO: new Date().toISOString(),
+    tokens: mergeTokens(partialTokens),
+    source: 'inline',
+  };
+}
+
+function toRankedItem(event: Event, fitScore: number): RankedItem {
+  const reasons: string[] = [];
+  if (event.neighborhood) reasons.push(`In ${event.neighborhood}`);
+  if ((event.priceMin ?? 0) === 0) reasons.push('Free entry');
+  if (!reasons.length) reasons.push('Handpicked from CityLens');
+
+  return {
+    id: event.id,
+    title: event.title,
+    subtitle: event.subtitle ?? undefined,
+    description: event.description ?? undefined,
+    category: event.category ?? undefined,
+    venueName: event.venueName ?? undefined,
+    neighborhood: event.neighborhood ?? undefined,
+    city: event.city,
+    startTime: event.startTime.toISOString(),
+    endTime: event.endTime?.toISOString() ?? undefined,
+    priceMin: event.priceMin ?? undefined,
+    priceMax: event.priceMax ?? undefined,
+    imageUrl: event.imageUrl ?? undefined,
+    bookingUrl: event.bookingUrl ?? undefined,
+    distanceKm: null,
+    fitScore,
+    moodScore: null,
+    socialHeat: null,
+    sponsored: false,
+    reasons,
+  };
+}
+
+async function fetchFallbackEvents(city: string, limit: number, offset: number): Promise<Event[]> {
+  const now = new Date();
+  let events = await prisma.event.findMany({
+    where: {
+      city,
+      startTime: { gte: now },
+    },
+    orderBy: { startTime: 'asc' },
+    skip: offset,
+    take: limit,
+  });
+
+  if (events.length === 0 && city !== DEFAULT_CITY) {
+    events = await prisma.event.findMany({
+      where: {
+        city: DEFAULT_CITY,
+        startTime: { gte: now },
+      },
+      orderBy: { startTime: 'asc' },
+      skip: offset,
+      take: limit,
+    });
+  }
+
+  return events;
+}
+
+async function buildFallbackResponse({
+  city,
+  limit,
+  page,
+  offset,
+  tokens,
+  traceId,
+  baselineIntention,
+}: {
+  city: string;
+  limit: number;
+  page: number;
+  offset: number;
+  tokens?: Partial<IntentionTokens>;
+  traceId: string;
+  baselineIntention?: Intention;
+}) {
+  const events = await fetchFallbackEvents(city, limit + 1, offset);
+  const hasMore = events.length > limit;
+  const visibleEvents = events.slice(0, limit);
+  const items = visibleEvents.map((event, index) => toRankedItem(event, 0.45 - index * 0.01));
+
+  return {
+    items,
+    slates: null,
+    page,
+    hasMore,
+    intention: baselineIntention ?? buildIntention(city, tokens),
+    traceId,
+    degraded: 'agent',
+  };
 }

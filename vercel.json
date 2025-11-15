@@ -2,5 +2,11 @@
   "buildCommand": "cd ../.. && pnpm turbo run build --filter=@citypass/web",
   "installCommand": "pnpm install",
   "framework": "nextjs",
-  "outputDirectory": ".next"
+  "outputDirectory": ".next",
+  "crons": [
+    {
+      "path": "/api/cron/seed-events",
+      "schedule": "*/10 * * * *"
+    }
+  ]
 }
