@@ -6,7 +6,7 @@
   "crons": [
     {
       "path": "/api/cron/seed-events",
-      "schedule": "*/10 * * * *"
+      "schedule": "0 8 * * *"
     }
   ]
 }
