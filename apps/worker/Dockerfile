@@ -1,0 +1,76 @@
+# Use Node.js 20 Alpine image
+FROM node:20-alpine AS base
+
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+# Set working directory to monorepo root
+WORKDIR /app
+
+# Copy monorepo package files
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY turbo.json ./
+
+# Copy all package.json files for dependency resolution
+COPY packages/db/package.json ./packages/db/package.json
+COPY packages/types/package.json ./packages/types/package.json
+COPY packages/utils/package.json ./packages/utils/package.json
+COPY packages/search/package.json ./packages/search/package.json
+COPY apps/worker/package.json ./apps/worker/package.json
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile
+
+# Copy source code
+COPY packages/db ./packages/db
+COPY packages/types ./packages/types
+COPY packages/utils ./packages/utils
+COPY packages/search ./packages/search
+COPY apps/worker ./apps/worker
+
+# Generate Prisma Client
+RUN pnpm --filter @citypass/db generate
+
+# Build packages
+RUN pnpm --filter @citypass/utils build
+RUN pnpm --filter @citypass/types build
+RUN pnpm --filter @citypass/search build
+RUN pnpm --filter @citypass/db build
+RUN pnpm --filter @citypass/worker build
+
+# Production stage
+FROM node:20-alpine AS production
+
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+WORKDIR /app
+
+# Copy package files
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY turbo.json ./
+COPY packages/db/package.json ./packages/db/package.json
+COPY packages/types/package.json ./packages/types/package.json
+COPY packages/utils/package.json ./packages/utils/package.json
+COPY packages/search/package.json ./packages/search/package.json
+COPY apps/worker/package.json ./apps/worker/package.json
+
+# Install production dependencies only
+RUN pnpm install --frozen-lockfile --prod
+
+# Copy built artifacts from build stage
+COPY --from=base /app/packages/db/dist ./packages/db/dist
+COPY --from=base /app/packages/db/prisma ./packages/db/prisma
+COPY --from=base /app/packages/types/dist ./packages/types/dist
+COPY --from=base /app/packages/utils/dist ./packages/utils/dist
+COPY --from=base /app/packages/search/dist ./packages/search/dist
+COPY --from=base /app/apps/worker/dist ./apps/worker/dist
+
+# Copy node_modules with Prisma Client
+COPY --from=base /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=base /app/node_modules/@prisma ./node_modules/@prisma
+
+# Set working directory to worker
+WORKDIR /app/apps/worker
+
+# Start the worker
+CMD ["node", "dist/index.js"]
