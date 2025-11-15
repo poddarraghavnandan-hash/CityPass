@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { ConsentBanner } from '@/components/ConsentBanner';
+import { NhostProvider } from '@/components/NhostProvider';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -18,9 +19,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        {children}
-        {/* Temporarily disabled - not working properly */}
-        {/* <ConsentBanner /> */}
+        <NhostProvider>
+          {children}
+          {/* Temporarily disabled - not working properly */}
+          {/* <ConsentBanner /> */}
+        </NhostProvider>
       </body>
     </html>
   );
