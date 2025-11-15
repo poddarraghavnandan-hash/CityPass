@@ -1,6 +1,6 @@
-import { NhostClient } from '@nhost/nhost-js';
+import { createNhostClient } from '@nhost/nhost-js';
 
-export const nhost = new NhostClient({
+export const nhost = createNhostClient({
   subdomain: process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN!,
   region: process.env.NEXT_PUBLIC_NHOST_REGION!,
 });
