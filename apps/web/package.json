@@ -30,7 +30,6 @@
     "@citypass/utils": "workspace:*",
     "@mapbox/mapbox-sdk": "^0.16.2",
     "@nhost/nextjs": "^2.3.1",
-    "@nhost/nhost-js": "^4.1.0",
     "@nhost/react": "^3.11.2",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-label": "^2.1.8",

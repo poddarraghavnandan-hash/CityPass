@@ -96,7 +96,12 @@
       "Bash(vercel --token=NV6pRCdM96cCoorOUPXrd56G inspect citypass-g3ioch5xg-raghav-poddars-projects.vercel.app --logs)",
       "Bash(vercel --token=NV6pRCdM96cCoorOUPXrd56G inspect citypass-2nrj2at9v-raghav-poddars-projects.vercel.app --logs)",
       "Bash(set DATABASE_URL=postgresql://postgres:Raghav123Poddar@db.nuxkckkkovqhcrgypzin.supabase.co:5432/postgres?sslmode=require)",
-      "Bash(set DIRECT_URL=postgresql://postgres:Raghav123Poddar@db.nuxkckkkovqhcrgypzin.supabase.co:5432/postgres?sslmode=require)"
+      "Bash(set DIRECT_URL=postgresql://postgres:Raghav123Poddar@db.nuxkckkkovqhcrgypzin.supabase.co:5432/postgres?sslmode=require)",
+      "Bash(node test-db-connection.js:*)",
+      "WebSearch",
+      "Bash(vercel --token=NV6pRCdM96cCoorOUPXrd56G env add NEXT_PUBLIC_NHOST_SUBDOMAIN production)",
+      "Bash(vercel --token=NV6pRCdM96cCoorOUPXrd56G env add NEXT_PUBLIC_NHOST_REGION production)",
+      "Bash(node test-connection.js:*)"
     ],
     "deny": [],
     "ask": []
