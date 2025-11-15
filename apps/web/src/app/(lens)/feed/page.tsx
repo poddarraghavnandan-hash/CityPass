@@ -12,6 +12,7 @@ import { FeedCard } from '@/components/lens/FeedCard';
 import { ContextModal } from '@/components/lens/ContextModal';
 import { PlanDrawer } from '@/components/lens/PlanDrawer';
 import { CirclePanel } from '@/components/lens/CirclePanel';
+import { PromptComposer } from '@/components/lens/PromptComposer';
 import { useAnalytics } from '@citypass/analytics';
 import type { MoodKey } from '@/theme/lensTheme';
 import { useSearchParams } from 'next/navigation';
@@ -49,7 +50,7 @@ function CityLensFeed() {
     ...DEFAULT_TOKENS,
     mood: queryMood || DEFAULT_TOKENS.mood,
   });
-  const [city] = useState<string>(derivedCity);
+  const [city, setCity] = useState<string>(derivedCity);
   const [items, setItems] = useState<RankedItem[]>([]);
   const [selected, setSelected] = useState<RankedItem | null>(null);
   const [slates, setSlates] = useState<PlanSlates | null>(null);
@@ -60,6 +61,11 @@ function CityLensFeed() {
   const [ingestionStatus, setIngestionStatus] = useState<'idle' | 'requesting' | 'queued' | 'completed' | 'error'>('idle');
   const [ingestionMessage, setIngestionMessage] = useState<string | null>(null);
   const [ingestionRequestId, setIngestionRequestId] = useState<string | null>(null);
+  const [promptSummary, setPromptSummary] = useState<{
+    prompt: string;
+    summary: string;
+    traceId?: string;
+  } | null>(null);
   const analytics = useAnalytics();
 
   const parentRef = useRef<HTMLDivElement | null>(null);
@@ -174,6 +180,29 @@ function CityLensFeed() {
     setTokens(prev => ({ ...prev, ...partial }));
   };
 
+  const handlePromptApply = useCallback(
+    ({
+      tokens: nextTokens,
+      city: nextCity,
+      prompt,
+      summary,
+      traceId,
+    }: {
+      tokens: IntentionTokens;
+      city?: string;
+      prompt: string;
+      summary: string;
+      traceId?: string;
+    }) => {
+      setTokens(nextTokens);
+      if (nextCity && nextCity !== city) {
+        setCity(nextCity);
+      }
+      setPromptSummary({ prompt, summary, traceId });
+    },
+    [city]
+  );
+
   const requestIngestion = useCallback(async () => {
     if (ingestionStatus === 'requesting' || ingestionStatus === 'queued') return;
     setIngestionStatus('requesting');
@@ -254,11 +283,20 @@ function CityLensFeed() {
 
   return (
     <div className="lens-shell">
-      <MoodRail value={mood} onChange={handleMoodChange} />
-
-      {error && (
-        <div className="px-4 text-red-300">{error}</div>
-      )}
+      <div className="px-4 space-y-4 pb-4">
+        <MoodRail value={mood} onChange={handleMoodChange} />
+        <PromptComposer city={city} defaultMood={mood} onApply={handlePromptApply} />
+        {promptSummary && (
+          <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80">
+            <p className="font-semibold text-white">{promptSummary.summary}</p>
+            <p className="text-white/60 text-xs mt-1">Prompt: “{promptSummary.prompt}”</p>
+            {promptSummary.traceId && (
+              <p className="text-white/40 text-[11px] mt-1">Trace {promptSummary.traceId}</p>
+            )}
+          </div>
+        )}
+        {error && <div className="text-red-300 text-sm">{error}</div>}
+      </div>
 
       <div ref={parentRef} className="lens-scroll px-4 space-y-6">
         {status === 'idle' && items.length === 0 && (
