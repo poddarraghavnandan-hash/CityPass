@@ -1,0 +1,15 @@
+[phases.setup]
+nixPkgs = ["nodejs-20_x", "pnpm"]
+
+[phases.install]
+cmds = [
+  "cd ../.. && pnpm install --frozen-lockfile"
+]
+
+[phases.build]
+cmds = [
+  "cd ../.. && pnpm --filter @citypass/worker build"
+]
+
+[start]
+cmd = "cd ../.. && pnpm --filter @citypass/worker start"
