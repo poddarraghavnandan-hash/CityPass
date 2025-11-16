@@ -1,0 +1,15 @@
+# Don't ignore anything critical
+!apps/
+!packages/
+!*.json
+!*.yaml
+
+# Ignore dev files
+node_modules/.cache
+.turbo
+.next
+*.log
+.env.local
+.DS_Store
+
+# But keep worker node_modules for now during build
