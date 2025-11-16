@@ -54,7 +54,7 @@ COPY packages/utils/package.json ./packages/utils/package.json
 COPY packages/search/package.json ./packages/search/package.json
 COPY apps/worker/package.json ./apps/worker/package.json
 
-# Install production dependencies only
+# Install production dependencies (including Prisma)
 RUN pnpm install --frozen-lockfile --prod
 
 # Copy built artifacts from build stage
@@ -65,9 +65,8 @@ COPY --from=base /app/packages/utils/dist ./packages/utils/dist
 COPY --from=base /app/packages/search/dist ./packages/search/dist
 COPY --from=base /app/apps/worker/dist ./apps/worker/dist
 
-# Copy node_modules with Prisma Client
-COPY --from=base /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=base /app/node_modules/@prisma ./node_modules/@prisma
+# Regenerate Prisma Client in production environment
+RUN pnpm --filter @citypass/db generate
 
 # Set working directory to worker
 WORKDIR /app/apps/worker
