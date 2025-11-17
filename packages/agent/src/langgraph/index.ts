@@ -279,7 +279,7 @@ async function answerNode(state: AgentState): Promise<Partial<AgentState>> {
 
     const eventsContext = [
       ...bestEvents.map((e, i) =>
-        `${i + 1}. ${e.title} at ${e.venueName} (${e.category.toLowerCase()}, $${e.priceMin || 0}-${e.priceMax || 0})`
+        `${i + 1}. ${e.title} at ${e.venueName} (${e.category?.toLowerCase() || 'event'}, $${e.priceMin || 0}-${e.priceMax || 0})`
       ),
       ...(wildcardEvents.length > 0 ? [
         '\nWildcard options:',
