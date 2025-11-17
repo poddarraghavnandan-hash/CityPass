@@ -14,7 +14,7 @@ import {
 
 interface NormalizedEvent {
   id: string;
-  urlHash: string;
+  canonicalUrlHash: string;
   contentHash: string;
   sourceId: string;
   sourceUrl: string;
@@ -86,7 +86,7 @@ export function normalizeEvent(raw: RawEvent): NormalizedEvent | null {
       : undefined;
 
     // Generate hashes for deduplication
-    const urlHash = canonicalUrlHash(raw.sourceUrl);
+    const canonicalUrlHash = canonicalUrlHash(raw.sourceUrl);
     const contentHash = contentChecksum({
       title: raw.title,
       description: raw.description,
@@ -98,8 +98,8 @@ export function normalizeEvent(raw: RawEvent): NormalizedEvent | null {
     });
 
     return {
-      id: `${raw.sourceId}-${urlHash}`.substring(0, 255),
-      urlHash,
+      id: `${raw.sourceId}-${canonicalUrlHash}`.substring(0, 255),
+      canonicalUrlHash,
       contentHash,
       sourceId: raw.sourceId,
       sourceUrl: raw.sourceUrl,
@@ -172,14 +172,14 @@ export async function persistEvents(
 
   if (skipDuplicates) {
     // Check for existing events by URL hash
-    const urlHashes = normalized.map(e => e.urlHash);
+    const canonicalUrlHashes = normalized.map(e => e.canonicalUrlHash);
     const existing = await prisma.event.findMany({
-      where: { urlHash: { in: urlHashes } },
-      select: { id: true, urlHash: true, contentHash: true },
+      where: { canonicalUrlHash: { in: canonicalUrlHashes } },
+      select: { id: true, canonicalUrlHash: true, contentHash: true },
     });
 
     const existingMap = new Map(
-      existing.map(e => [e.urlHash, e])
+      existing.map(e => [e.canonicalUrlHash, e])
     );
 
     // Separate new events from updates
@@ -187,7 +187,7 @@ export async function persistEvents(
     const toUpdate: NormalizedEvent[] = [];
 
     for (const event of normalized) {
-      const existingEvent = existingMap.get(event.urlHash);
+      const existingEvent = existingMap.get(event.canonicalUrlHash);
 
       if (!existingEvent) {
         toCreate.push(event);
@@ -210,7 +210,7 @@ export async function persistEvents(
         await prisma.event.createMany({
           data: batch.map(e => ({
             id: e.id,
-            urlHash: e.urlHash,
+            canonicalUrlHash: e.canonicalUrlHash,
             contentHash: e.contentHash,
             sourceId: e.sourceId,
             sourceUrl: e.sourceUrl,
@@ -249,7 +249,7 @@ export async function persistEvents(
 
       for (const event of batch) {
         try {
-          const existingId = existingMap.get(event.urlHash)!.id;
+          const existingId = existingMap.get(event.canonicalUrlHash)!.id;
 
           await prisma.event.update({
             where: { id: existingId },
@@ -289,7 +289,7 @@ export async function persistEvents(
         await prisma.event.createMany({
           data: batch.map(e => ({
             id: e.id,
-            urlHash: e.urlHash,
+            canonicalUrlHash: e.canonicalUrlHash,
             contentHash: e.contentHash,
             sourceId: e.sourceId,
             sourceUrl: e.sourceUrl,

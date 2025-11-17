@@ -5,11 +5,16 @@
 
 import { ensureSeedInventory } from './seedJob';
 import { processIngestionQueue } from './ingestionQueueJob';
+import { runVenueIngestionForAllCities } from './venueIngestion';
 
 // Optional imports - gracefully handle if modules don't compile
 let refreshSimilarityEdges: (() => Promise<any>) | undefined;
 let embedAndIndexSocial: (() => Promise<any>) | undefined;
 let runScraperCycle: (() => Promise<any>) | undefined;
+let updateTasteVectors: ((hours?: number) => Promise<any>) | undefined;
+let updateBanditPolicies: ((hours?: number) => Promise<any>) | undefined;
+let trainRanker: (() => Promise<any>) | undefined;
+let processAllSources: (() => Promise<any>) | undefined;
 
 try {
   const graphModule = require('./graph/refresh-similarity');
@@ -32,6 +37,23 @@ try {
   console.warn('Scraper module not available');
 }
 
+try {
+  const learnerModule = require('./learner');
+  updateTasteVectors = learnerModule.updateTasteVectors;
+  updateBanditPolicies = learnerModule.updateBanditPolicies;
+  trainRanker = learnerModule.trainRanker;
+} catch (e) {
+  console.warn('Learner module not available:', e);
+}
+
+try {
+  // Import the new Firecrawl + Ollama extraction system
+  const crawlerModule = require('../../web/src/lib/event-crawler');
+  processAllSources = crawlerModule.processAllSources;
+} catch (e) {
+  console.warn('Event crawler module not available:', e);
+}
+
 interface CronJob {
   name: string;
   intervalMs: number;
@@ -40,9 +62,28 @@ interface CronJob {
 }
 
 const jobs: CronJob[] = [
+  // Venue Knowledge Graph Ingestion - FULL run (weekly)
+  {
+    name: 'venue-ingestion-full',
+    intervalMs: parseInt(process.env.VENUE_INGESTION_FULL_INTERVAL ?? String(7 * 24 * 60 * 60 * 1000), 10), // Weekly
+    handler: () => runVenueIngestionForAllCities('FULL'),
+  },
+  // Venue Knowledge Graph Ingestion - INCREMENTAL run (hourly)
+  {
+    name: 'venue-ingestion-incremental',
+    intervalMs: parseInt(process.env.VENUE_INGESTION_INCREMENTAL_INTERVAL ?? String(60 * 60 * 1000), 10), // Hourly
+    handler: () => runVenueIngestionForAllCities('INCREMENTAL'),
+  },
+  // New Firecrawl + Ollama extraction for direct venue scraping
+  processAllSources && {
+    name: 'extract-venue-events',
+    intervalMs: parseInt(process.env.EXTRACT_INTERVAL ?? String(60 * 60 * 1000), 10), // 60 minutes (hourly)
+    handler: processAllSources,
+  },
+  // Legacy Apify-based scraping (Eventbrite, Meetup, ResidentAdvisor)
   runScraperCycle && {
     name: 'scrape-events',
-    intervalMs: 60 * 60 * 1000, // 60 minutes (hourly scraping)
+    intervalMs: parseInt(process.env.SCRAPE_INTERVAL ?? String(60 * 60 * 1000), 10), // 60 minutes (hourly scraping)
     handler: runScraperCycle,
   },
   {
@@ -64,6 +105,22 @@ const jobs: CronJob[] = [
     name: 'graph-similarity-refresh',
     intervalMs: 24 * 60 * 60 * 1000, // 24 hours
     handler: refreshSimilarityEdges,
+  },
+  // Learning system tasks
+  updateTasteVectors && {
+    name: 'update-taste-vectors',
+    intervalMs: 15 * 60 * 1000, // 15 minutes
+    handler: () => updateTasteVectors(24), // Process last 24 hours
+  },
+  updateBanditPolicies && {
+    name: 'update-bandit-policies',
+    intervalMs: 60 * 60 * 1000, // 1 hour
+    handler: () => updateBanditPolicies(24), // Analyze last 24 hours
+  },
+  trainRanker && {
+    name: 'train-ranker',
+    intervalMs: 24 * 60 * 60 * 1000, // 24 hours (daily training)
+    handler: trainRanker,
   },
 ].filter(Boolean) as CronJob[];
 

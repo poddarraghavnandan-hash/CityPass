@@ -47,3 +47,4 @@ infra/data/
 vercel-env.txt
 
 .env*.local
+NUL

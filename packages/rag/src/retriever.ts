@@ -1,10 +1,12 @@
 /**
  * RAG Retriever: Hybrid search with Qdrant (vector) + Typesense (keyword)
  * Implements E5 embeddings, BGE reranking, and robust error handling
+ * Falls back to direct database queries when search services unavailable
  */
 
 import { QdrantClient } from '@qdrant/js-client-rest';
 import Typesense from 'typesense';
+import { prisma } from '@citypass/db';
 import type { Intention, TypesenseEvent } from '@citypass/types';
 
 // Types
@@ -351,6 +353,88 @@ async function fetchWithTimeout(
 }
 
 /**
+ * Database fallback: Direct Prisma query when search services are unavailable
+ */
+async function searchDatabase(
+  queryText: string,
+  intention: Intention,
+  topK: number = 50
+): Promise<RetrievalCandidate[]> {
+  try {
+    console.log('💾 [database-fallback] Searching directly in database...');
+
+    const now = new Date(intention.nowISO);
+    const untilMinutes = intention.tokens.untilMinutes || 4320; // Default to 72 hours if not set
+    const untilDate = new Date(now.getTime() + untilMinutes * 60000);
+
+    console.log('💾 [database-fallback] Query params:', {
+      city: intention.city,
+      queryText,
+      now: now.toISOString(),
+      untilDate: untilDate.toISOString(),
+      untilMinutes,
+    });
+
+    // For now, just return all events in city+timeframe (text search can be added later)
+    // TODO: Add full-text search support when available
+    const events = await prisma.event.findMany({
+      where: {
+        city: intention.city,
+        startTime: {
+          gte: isNaN(now.getTime()) ? new Date() : now,
+          lte: isNaN(untilDate.getTime()) ? new Date(Date.now() + 72 * 60 * 60 * 1000) : untilDate,
+        },
+      },
+      take: topK,
+      orderBy: [
+        { startTime: 'asc' },
+      ],
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        category: true,
+        startTime: true,
+        endTime: true,
+        venueName: true,
+        city: true,
+        lat: true,
+        lon: true,
+        priceMin: true,
+        priceMax: true,
+        tags: true,
+        imageUrl: true,
+        bookingUrl: true,
+      },
+    });
+
+    console.log(`💾 [database-fallback] Found ${events.length} events`);
+
+    return events.map(event => ({
+      id: event.id,
+      title: event.title,
+      description: event.description,
+      category: event.category,
+      startTime: event.startTime,
+      priceMin: event.priceMin,
+      priceMax: event.priceMax,
+      venueName: event.venueName,
+      city: event.city,
+      lat: event.lat,
+      lon: event.lon,
+      tags: event.tags,
+      bookingUrl: event.bookingUrl,
+      imageUrl: event.imageUrl,
+      score: 0.5, // Default score for database results
+      source: 'keyword' as const,
+    }));
+  } catch (error: any) {
+    console.error('💾 [database-fallback] Database search failed:', error.message);
+    return [];
+  }
+}
+
+/**
  * Main retrieval function: Hybrid search with optional reranking
  */
 export async function retrieve(
@@ -402,6 +486,13 @@ export async function retrieve(
 
   // Union results
   let candidates = unionCandidates(vectorCandidates, keywordCandidates);
+
+  // Fallback to database if no candidates found from search services
+  if (candidates.length === 0) {
+    console.warn('⚠️  No candidates from search services, falling back to database');
+    const dbCandidates = await searchDatabase(queryText, intention, topK);
+    candidates = dbCandidates;
+  }
 
   // Rerank if enabled and reranker is configured
   let rerankApplied = false;

@@ -4,7 +4,7 @@
  */
 
 import { prisma, EventCategory } from '@citypass/db';
-import { extractEventsWithOpenAI } from '@citypass/utils';
+import { extractEventsWithFallback } from '@citypass/utils/src/event-extraction';
 import { canonicalUrlHash, contentChecksum } from '@citypass/utils';
 
 interface FirecrawlResponse {
@@ -93,14 +93,23 @@ export async function processSource(sourceId: string): Promise<{
 
     console.log(`✓ Scraped ${content.length} characters from ${source.name}`);
 
-    // 3. Extract events with OpenAI
-    const extraction = await extractEventsWithOpenAI(content, {
+    // 3. Extract events with automatic LLM fallback (OpenAI → Claude → Ollama → HuggingFace)
+    const extraction = await extractEventsWithFallback(content, {
       city: source.city,
       sourceUrl: source.url,
       maxEvents: 50,
+      openaiApiKey: process.env.OPENAI_API_KEY,
+      anthropicApiKey: process.env.ANTHROPIC_API_KEY,
+      ollamaHost: process.env.OLLAMA_HOST,
+      ollamaApiKey: process.env.OLLAMA_API_KEY,
+      huggingfaceApiKey: process.env.HUGGINGFACE_API_KEY,
     });
 
-    console.log(`✓ Extracted ${extraction.events.length} events`);
+    if (extraction.provider) {
+      console.log(`✓ Extracted ${extraction.events.length} events using ${extraction.provider}`);
+    } else {
+      console.log(`✓ Extracted ${extraction.events.length} events`);
+    }
 
     // 4. Save events to database
     for (const extracted of extraction.events) {

@@ -63,11 +63,16 @@ function extractTimeWindow(text: string, now: Date = new Date()): ExtractedToken
     friday.setDate(now.getDate() + daysUntilFriday);
     friday.setHours(18, 0, 0, 0);
 
+    const sunday = new Date(friday);
+    sunday.setDate(friday.getDate() + 2);
+    sunday.setHours(23, 59, 59, 999);
+
     const fromMinutes = Math.max(0, (friday.getTime() - now.getTime()) / 60000);
+    const untilMinutes = Math.max(0, (sunday.getTime() - now.getTime()) / 60000);
 
     return {
       fromMinutes: Math.round(fromMinutes),
-      untilMinutes: Math.round(fromMinutes + 3 * 24 * 60), // 3 days
+      untilMinutes: Math.round(untilMinutes),
       humanReadable: 'this weekend',
     };
   }

@@ -88,25 +88,200 @@ model Venue {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
+  // Core identification
   name         String
+  canonicalName String  @map("canonical_name")
+  normalizedName String @map("normalized_name") // Lowercase, no punctuation for matching
+
+  // Location
   address      String?
   neighborhood String?
   city         String
   lat          Float?
   lon          Float?
 
+  // Categorization
+  primaryCategory String @map("primary_category")
+  subcategories   String[] @default([])
+
+  // Pricing & Capacity
+  priceBand    VenuePriceBand? @map("price_band")
+  capacity     Int?
+
+  // Contact & Web
   website      String?
+  phone        String?
   description  String?  @db.Text
   imageUrl     String?  @map("image_url")
 
-  // Normalization
-  canonicalName String  @map("canonical_name")
+  // Status
+  isActive     Boolean  @default(true) @map("is_active")
 
-  events Event[]
+  // Relations
+  events         Event[]
+  sources        VenueSource[]
+  aliases        VenueAlias[]
+  signals        VenueSignal[]
+  heatIndex      VenueHeatIndex?
 
   @@unique([canonicalName, city])
   @@index([city])
+  @@index([normalizedName, city])
+  @@index([primaryCategory, city])
+  @@index([isActive, city])
   @@map("venues")
+}
+
+enum VenuePriceBand {
+  FREE
+  LOW      // $, under $20
+  MID      // $$, $20-50
+  HIGH     // $$$, $50-100
+  LUXE     // $$$$, over $100
+}
+
+model VenueSource {
+  id               String   @id @default(cuid())
+  venueId          String   @map("venue_id")
+  venue            Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  source           VenueSourceType
+  sourceExternalId String   @map("source_external_id")
+  sourceUrl        String?  @map("source_url")
+  rawPayload       Json     @map("raw_payload")
+
+  confidence       Float    @default(1.0) // 0.0 to 1.0
+
+  firstSeenAt      DateTime @default(now()) @map("first_seen_at")
+  lastSeenAt       DateTime @updatedAt @map("last_seen_at")
+
+  @@unique([source, sourceExternalId])
+  @@index([venueId])
+  @@index([source])
+  @@map("venue_sources")
+}
+
+enum VenueSourceType {
+  OSM
+  FOURSQUARE
+  YELP
+  EVENTBRITE
+  MEETUP
+  FEVER
+  DICE
+  RA           // Resident Advisor
+  NYC_DATA
+  TIKTOK
+  INSTAGRAM
+  SNAPCHAT
+  REDDIT
+  OTHER
+}
+
+model VenueAlias {
+  id               String   @id @default(cuid())
+  venueId          String   @map("venue_id")
+  venue            Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  alias            String
+  aliasNormalized  String   @map("alias_normalized")
+  source           String?  // Where this alias came from
+
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  @@index([venueId])
+  @@index([aliasNormalized])
+  @@map("venue_aliases")
+}
+
+model VenueSignal {
+  id          String   @id @default(cuid())
+  venueId     String   @map("venue_id")
+  venue       Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  signalType  VenueSignalType @map("signal_type")
+  value       Float
+  window      SignalWindow
+  meta        Json?
+
+  computedAt  DateTime @default(now()) @map("computed_at")
+
+  @@index([venueId, signalType, window])
+  @@index([computedAt])
+  @@map("venue_signals")
+}
+
+enum VenueSignalType {
+  EVENT_ACTIVITY      // Number of events
+  SOCIAL_HEAT         // Social media mentions/engagement
+  USER_TRAFFIC        // User views/interactions
+  RATING              // Aggregated rating
+  RISK                // Risk score (low activity, closure risk)
+}
+
+enum SignalWindow {
+  HOURLY
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+model VenueHeatIndex {
+  venueId          String   @id @map("venue_id")
+  venue            Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  compositeScore   Float    @map("composite_score") // Overall heat 0.0-100.0
+  lastComputedAt   DateTime @map("last_computed_at")
+
+  @@index([compositeScore])
+  @@map("venue_heat_index")
+}
+
+model IngestionRun {
+  id          String   @id @default(cuid())
+  runType     IngestionRunType @map("run_type")
+  city        String
+
+  startedAt   DateTime @default(now()) @map("started_at")
+  finishedAt  DateTime? @map("finished_at")
+
+  status      IngestionRunStatus
+  statsJson   Json?    @map("stats_json") // Counts per source, dedupe stats, etc.
+
+  errors      IngestionError[]
+
+  @@index([city, startedAt])
+  @@index([status, startedAt])
+  @@map("ingestion_runs")
+}
+
+enum IngestionRunType {
+  FULL
+  INCREMENTAL
+}
+
+enum IngestionRunStatus {
+  RUNNING
+  SUCCESS
+  FAILED
+  PARTIAL
+}
+
+model IngestionError {
+  id              String   @id @default(cuid())
+  ingestionRunId  String   @map("ingestion_run_id")
+  ingestionRun    IngestionRun @relation(fields: [ingestionRunId], references: [id], onDelete: Cascade)
+
+  agentName       String   @map("agent_name")
+  source          String
+  message         String   @db.Text
+  payload         Json?
+
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([ingestionRunId])
+  @@index([agentName])
+  @@map("ingestion_errors")
 }
 
 model Source {
@@ -781,4 +956,105 @@ enum AdPolicyStatus {
   APPROVED
   REJECTED
   FLAGGED
+}
+
+// ============================================
+// Learning System Models
+// ============================================
+
+model ModelVersion {
+  id        String   @id @default(cuid())
+  name      String   // e.g., "ranker_v1", "taste_vector_v2", "slate_bandit_v1"
+  type      ModelType
+  version   String   // Semantic version (e.g., "1.0.0")
+  config    Json?    // Model-specific configuration
+  createdAt DateTime @default(now()) @map("created_at")
+
+  rankerSnapshots RankerSnapshot[]
+
+  @@index([name, version])
+  @@index([type])
+  @@map("model_versions")
+}
+
+enum ModelType {
+  LLM
+  RANKER
+  BANDIT
+  EMBEDDING
+  TASTE_VECTOR
+}
+
+model EventLog {
+  id          String   @id @default(cuid())
+  userId      String?  @map("user_id")
+  anonId      String?  @map("anon_id")
+  sessionId   String   @map("session_id")
+  traceId     String   @map("trace_id")
+  eventType   EventLogType @map("event_type")
+  payload     Json     // Flexible payload for different event types
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([userId, createdAt])
+  @@index([sessionId, createdAt])
+  @@index([traceId])
+  @@index([eventType, createdAt])
+  @@index([createdAt])
+  @@map("event_logs")
+}
+
+enum EventLogType {
+  QUERY
+  SLATE_IMPRESSION
+  CARD_VIEW
+  CLICK_ROUTE
+  CLICK_BOOK
+  SAVE
+  HIDE
+  REASK
+  ERROR
+  FEEDBACK_POSITIVE
+  FEEDBACK_NEGATIVE
+}
+
+model TasteVector {
+  id        String   @id @default(cuid())
+  userId    String   @unique @map("user_id")
+  vector    Json     // JSON array of floats [0.1, 0.2, ...]
+  dimension Int      @default(768) // Embedding dimension
+  version   String   @default("bge-m3-v1") // Embedding version
+  metadata  Json?    // Additional metadata (decay rate, update count, etc.)
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([version])
+  @@map("taste_vectors")
+}
+
+model SlatePolicy {
+  id        String   @id @default(cuid())
+  name      String   @unique // e.g., "80safe-20novel", "epsilon-greedy-0.15"
+  params    Json     // Policy-specific parameters
+  isActive  Boolean  @default(false) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([isActive])
+  @@map("slate_policies")
+}
+
+model RankerSnapshot {
+  id             String   @id @default(cuid())
+  modelVersionId String   @map("model_version_id")
+  modelVersion   ModelVersion @relation(fields: [modelVersionId], references: [id], onDelete: Cascade)
+
+  weights        Json     // Feature weights
+  metricsJson    Json?    @map("metrics_json") // NDCG, CTR uplift, etc.
+  trainingStats  Json?    @map("training_stats") // Training metadata
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([modelVersionId])
+  @@index([createdAt])
+  @@map("ranker_snapshots")
 }

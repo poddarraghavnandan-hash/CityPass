@@ -40,8 +40,12 @@
       "@citypass/db": ["./packages/db/src"],
       "@citypass/llm": ["./packages/llm/src"],
       "@citypass/rag": ["./packages/rag/src"],
+      "@citypass/ranker": ["./packages/ranker/src"],
       "@citypass/search": ["./packages/search/src"],
+      "@citypass/slate": ["./packages/slate/src"],
+      "@citypass/slate/bandit": ["./packages/slate/src/bandit"],
       "@citypass/social": ["./packages/social/src"],
+      "@citypass/taste": ["./packages/taste/src"],
       "@citypass/types": ["./packages/types/src"],
       "@citypass/utils": ["./packages/utils/src"],
       "typesense": ["./packages/search/src/typesense-client"]

@@ -146,3 +146,4 @@ export * from './intention';
 export * from './intent';
 export * from './llm-intent';
 export * from './event-extraction';
+export * from './distance';

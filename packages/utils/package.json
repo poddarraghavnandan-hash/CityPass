@@ -7,6 +7,18 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./llm-intent": {
+      "types": "./src/llm-intent.ts",
+      "default": "./src/llm-intent.ts"
+    },
+    "./distance": {
+      "types": "./src/distance.ts",
+      "default": "./src/distance.ts"
+    },
+    "./src/event-extraction": {
+      "types": "./src/event-extraction.ts",
+      "default": "./src/event-extraction.ts"
     }
   },
   "dependencies": {

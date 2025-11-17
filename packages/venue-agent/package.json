@@ -1,0 +1,23 @@
+{
+  "name": "@citypass/venue-agent",
+  "version": "1.0.0",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "dependencies": {
+    "@citypass/db": "workspace:*",
+    "@citypass/types": "workspace:*",
+    "node-fetch": "^3.3.2",
+    "neo4j-driver": "^5.14.0",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.4",
+    "typescript": "^5.3.3"
+  }
+}

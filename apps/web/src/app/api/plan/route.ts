@@ -6,14 +6,55 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { randomUUID } from 'crypto';
-import { plan } from '@citypass/agent';
-import { IntentionTokensSchema, type IntentionTokens } from '@citypass/types';
+import { askAgent } from '@citypass/agent'; // New graph implementation
+import { IntentionTokensSchema, type IntentionTokens, type RankedItem } from '@citypass/types';
 import { prisma } from '@citypass/db';
 import { checkRateLimit, getRateLimitIdentifier } from '@/lib/rate-limit';
 import { cookies } from 'next/headers';
 import { getServerSession } from 'next-auth';
 import { parsePreferencesCookie } from '@/lib/preferences';
 import { authOptions } from '@/lib/auth';
+
+/**
+ * Adapter: Convert new Slate format to legacy RankedItem[] format
+ * TODO: Remove once UI is updated to consume Slate objects directly
+ */
+function slateToRankedItems(slate: any): RankedItem[] {
+  // If slate is already an array (old format), return as-is
+  if (Array.isArray(slate)) {
+    return slate;
+  }
+
+  // If slate is new format (has events property), convert
+  if (slate && Array.isArray(slate.events)) {
+    return slate.events.map((item: any) => ({
+      id: item.eventId || item.id,
+      title: item.title,
+      venueName: item.venueName,
+      city: item.city,
+      startTime: item.startTime,
+      priceMin: item.priceMin,
+      priceMax: item.priceMax,
+      imageUrl: item.imageUrl,
+      bookingUrl: item.bookingUrl,
+      category: item.category,
+      fitScore: item.score || item.fitScore || 0,
+      moodScore: item.moodScore || null,
+      socialHeat: item.socialHeat || null,
+      reasons: item.reasons || [],
+      sponsored: false,
+      // Fill in missing fields with nulls
+      subtitle: item.subtitle || null,
+      description: item.description || null,
+      neighborhood: item.neighborhood || null,
+      endTime: item.endTime || null,
+      distanceKm: item.distanceKm || null,
+    }));
+  }
+
+  // Fallback: empty array
+  return [];
+}
 
 const BodySchema = z.object({
   user: z
@@ -77,17 +118,28 @@ export async function POST(req: NextRequest) {
       ...(body.tokens || {}),
     };
 
-    const result = await plan({
-      user: body.user || (userId ? { id: userId } : undefined),
-      freeText: body.freeText,
-      tokens: mergedTokens,
+    const result = await askAgent({
+      freeText: body.freeText || '',
+      userId: userId,
+      sessionId: randomUUID(),
+      traceId,
+      city: body.user?.city || preferences?.city || 'New York',
     });
 
     const latency = Date.now() - startTime;
 
+    // Normalize slates to RankedItem[] format (handles both old and new graph)
+    const normalizedSlates = result.state.slates
+      ? {
+          best: slateToRankedItems(result.state.slates.best),
+          wildcard: slateToRankedItems(result.state.slates.wildcard),
+          closeAndEasy: slateToRankedItems(result.state.slates.closeAndEasy),
+        }
+      : { best: [], wildcard: [], closeAndEasy: [] };
+
     return NextResponse.json({
-      slates: result.state.slates,
-      reasons: result.state.reasons,
+      slates: normalizedSlates,
+      reasons: result.state.reasons || [],
       intention: result.state.intention,
       logs: result.logs,
       latencyMs: latency,

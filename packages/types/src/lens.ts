@@ -14,7 +14,7 @@ export type SocialPlatform = z.infer<typeof SocialPlatformSchema>;
 
 export const IntentionTokensSchema = z.object({
   mood: MoodSchema,
-  untilMinutes: z.number().int().min(15).max(720).default(120),
+  untilMinutes: z.number().int().min(15).max(10080).default(120), // Max 7 days
   distanceKm: z.number().min(0).max(50).default(4),
   budget: BudgetTierSchema.default('casual'),
   companions: z.array(CompanionSchema).default(['solo']),
