@@ -144,7 +144,11 @@
       "Bash(exit 0)",
       "Bash(if exist \"NUL\" del /F /Q \"NUL\" 2)",
       "Bash(nul)",
-      "Bash(.gitignore)"
+      "Bash(.gitignore)",
+      "Bash(wsl --list --verbose:*)",
+      "Bash(cmd.exe /c \"taskkill /F /PID 13016\")",
+      "Bash(pkill:*)",
+      "Bash(tskill:*)"
     ],
     "deny": [],
     "ask": []
