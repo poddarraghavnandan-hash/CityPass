@@ -10,6 +10,7 @@ WORKDIR /app
 # Copy monorepo package files
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY turbo.json ./
+COPY tsconfig.json ./
 
 # Copy all package.json files for dependency resolution
 COPY packages/db/package.json ./packages/db/package.json
