@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { searchEvents } from '@/lib/typesense';
+import { searchEventsInDatabase } from '@citypass/db';
 import { EventsSearchParamsSchema } from '@citypass/types';
 import type {
   TypesenseEventDocument,
@@ -22,25 +23,52 @@ export async function GET(req: NextRequest) {
       limit: searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 20,
     });
 
-    const results = await searchEvents({
-      q: params.q,
-      city: params.city,
-      category: params.category,
-      dateFrom: params.date_from ? new Date(params.date_from) : undefined,
-      dateTo: params.date_to ? new Date(params.date_to) : undefined,
-      priceMax: params.price_max,
-      neighborhood: params.neighborhood,
-      page: params.page,
-      limit: params.limit,
-    });
+    // Try Typesense first, fallback to database search
+    let events: any[] = [];
+    let found = 0;
+    let searchMethod = 'typesense';
 
-    const hits: TypesenseSearchHit<TypesenseEventDocument>[] = results.hits ?? [];
-    const events = hits.map((hit) => hit.document);
+    try {
+      const results = await searchEvents({
+        q: params.q,
+        city: params.city,
+        category: params.category,
+        dateFrom: params.date_from ? new Date(params.date_from) : undefined,
+        dateTo: params.date_to ? new Date(params.date_to) : undefined,
+        priceMax: params.price_max,
+        neighborhood: params.neighborhood,
+        page: params.page,
+        limit: params.limit,
+      });
+
+      const hits: TypesenseSearchHit<TypesenseEventDocument>[] = results.hits ?? [];
+      events = hits.map((hit) => hit.document);
+      found = results.found;
+    } catch (typesenseError) {
+      // Fallback to database search
+      console.warn('Typesense unavailable, using database search:', typesenseError);
+      searchMethod = 'database';
+
+      const dbResults = await searchEventsInDatabase({
+        q: params.q,
+        city: params.city,
+        category: params.category as any,
+        dateFrom: params.date_from ? new Date(params.date_from) : undefined,
+        dateTo: params.date_to ? new Date(params.date_to) : undefined,
+        priceMax: params.price_max,
+        limit: params.limit,
+        offset: (params.page - 1) * params.limit,
+      });
+
+      events = dbResults.events;
+      found = dbResults.total;
+    }
 
     return NextResponse.json({
       events,
-      found: results.found,
-      page: results.page,
+      found,
+      page: params.page,
+      searchMethod, // Indicate which search method was used
     });
   } catch (error: any) {
     console.error('Events API error:', error);

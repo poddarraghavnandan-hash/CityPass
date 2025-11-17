@@ -16,6 +16,13 @@ CityPass automatically discovers, extracts, and indexes events from venues, prom
 - **Multi-City Ready**: Built to scale from NYC to any city
 - **Automated Workflows**: n8n orchestrates scheduled crawls and webhook routing
 
+### CityLens Chat (`/chat`)
+
+- Voice or text prompts that stream grounded answers from `/api/plan`
+- Inline slate tabs (Best, Wildcard, Close & Easy) with “Why this?” reasons
+- Actions for save/route/calendar plus deep links back to the `/feed` experience
+- Mic button uses Web Speech API and falls back to typing automatically
+
 ---
 
 ## 🏗️ Architecture

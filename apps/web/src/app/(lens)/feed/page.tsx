@@ -3,6 +3,7 @@
 // Force dynamic rendering for this page (uses localStorage and client-side data fetching)
 export const dynamic = 'force-dynamic';
 
+import Link from 'next/link';
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { IntentionTokens, RankedItem } from '@citypass/types';
@@ -286,6 +287,23 @@ function CityLensFeed() {
       <div className="px-4 space-y-4 pb-4">
         <MoodRail value={mood} onChange={handleMoodChange} />
         <PromptComposer city={city} defaultMood={mood} onApply={handlePromptApply} />
+        <Link
+          href={{
+            pathname: '/chat',
+            query: {
+              city,
+              mood: tokens.mood,
+              untilMinutes: tokens.untilMinutes?.toString(),
+              distanceKm: tokens.distanceKm?.toString(),
+              budget: tokens.budget,
+              companions: tokens.companions?.join(','),
+              prompt: `Find ${tokens.mood} plans in ${city}`,
+            },
+          }}
+          className="inline-flex items-center justify-center rounded-full border border-white/30 px-4 py-2 text-sm text-white hover:bg-white/10 transition"
+        >
+          Open in Chat
+        </Link>
         {promptSummary && (
           <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80">
             <p className="font-semibold text-white">{promptSummary.summary}</p>

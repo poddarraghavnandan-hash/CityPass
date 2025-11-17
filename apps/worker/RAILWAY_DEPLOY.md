@@ -36,8 +36,9 @@
    ```
 
 3. **Deploy**
-   - Railway will automatically detect the `railway.json` and `nixpacks.toml`
-   - Click "Deploy"
+   - Railway will automatically detect the `railway.json` and use the `Dockerfile`
+   - The build uses a multi-stage Docker build optimized for monorepo structure
+   - Click "Deploy" (or trigger redeploy if already deployed)
    - Monitor logs in Railway dashboard
 
 4. **Verify Deployment**

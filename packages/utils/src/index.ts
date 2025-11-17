@@ -143,3 +143,6 @@ export function chunk<T>(array: T[], size: number): T[][] {
 }
 
 export * from './intention';
+export * from './intent';
+export * from './llm-intent';
+export * from './event-extraction';

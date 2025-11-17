@@ -19,7 +19,23 @@ const nextConfig = {
         hostname: '**',
       },
     ],
+    formats: ['image/avif', 'image/webp'],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    minimumCacheTTL: 60,
   },
+  // Enable compression
+  compress: true,
+  // Performance optimizations
+  swcMinify: true,
+  // Optimize font loading
+  optimizeFonts: true,
+  // Production source maps for better debugging
+  productionBrowserSourceMaps: false,
+  // Strict mode for better development experience
+  reactStrictMode: true,
+  // Power-intensive optimizations
+  poweredByHeader: false,
   // Externalize Anthropic SDK and OpenAI SDK to avoid bundling issues
   serverExternalPackages: ['@anthropic-ai/sdk', 'openai', '@mapbox/mapbox-sdk', 'keyv', 'got', 'cacheable-request'],
   env: {

@@ -7,7 +7,13 @@
       "esnext",
       "ES2022"
     ],
-    "types": ["node", "react", "react-dom", "jest", "jest-image-snapshot"],
+    "types": [
+      "node",
+      "react",
+      "react-dom",
+      "jest",
+      "jest-image-snapshot"
+    ],
     "baseUrl": ".",
     "allowJs": true,
     "skipLibCheck": true,
@@ -26,18 +32,42 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"],
-      "@citypass/agent": ["../../packages/agent/src"],
-      "@citypass/analytics": ["../../packages/analytics/src"],
-      "@citypass/cag": ["../../packages/cag/src"],
-      "@citypass/db": ["../../packages/db/src"],
-      "@citypass/llm": ["../../packages/llm/src"],
-      "@citypass/rag": ["../../packages/rag/src"],
-      "@citypass/search": ["../../packages/search/src"],
-      "@citypass/social": ["../../packages/social/src"],
-      "@citypass/types": ["../../packages/types/src"],
-      "@citypass/utils": ["../../packages/utils/src"],
-      "typesense": ["../../packages/search/src/typesense-client"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@citypass/agent": [
+        "../../packages/agent/src"
+      ],
+      "@citypass/analytics": [
+        "../../packages/analytics/src"
+      ],
+      "@citypass/cag": [
+        "../../packages/cag/src"
+      ],
+      "@citypass/db": [
+        "../../packages/db/src"
+      ],
+      "@citypass/llm": [
+        "../../packages/llm/src"
+      ],
+      "@citypass/rag": [
+        "../../packages/rag/src"
+      ],
+      "@citypass/search": [
+        "../../packages/search/src"
+      ],
+      "@citypass/social": [
+        "../../packages/social/src"
+      ],
+      "@citypass/types": [
+        "../../packages/types/src"
+      ],
+      "@citypass/utils": [
+        "../../packages/utils/src"
+      ],
+      "typesense": [
+        "../../packages/search/src/typesense-client"
+      ]
     }
   },
   "include": [
@@ -45,6 +75,7 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
+    "types/**/*.d.ts",
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [

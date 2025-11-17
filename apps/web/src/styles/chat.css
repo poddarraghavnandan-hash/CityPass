@@ -1,0 +1,8 @@
+.chat-shell {
+  background: radial-gradient(circle at top, rgba(79, 70, 229, 0.4), rgba(2, 6, 23, 0.95));
+  color: #f5f6ff;
+}
+
+.chat-shell .rounded-3xl {
+  backdrop-filter: blur(18px);
+}

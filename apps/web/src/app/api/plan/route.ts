@@ -136,45 +136,74 @@ export async function GET(req: NextRequest) {
 }
 
 /**
- * Generate ICS calendar file
+ * Generate ICS calendar file with proper UTC timezone handling
  */
 function generateICS(event: any): string {
   const now = new Date();
-  const formatDate = (date: Date) => {
+
+  /**
+   * Format date in UTC for ICS (YYYYMMDDTHHMMSSZ)
+   * Ensures timezone-correct calendar entries
+   */
+  const formatDateUTC = (date: Date): string => {
     return date
       .toISOString()
       .replace(/[-:]/g, '')
-      .replace(/\.\d{3}/, '');
+      .replace(/\.\d{3}Z/, 'Z');
   };
 
-  const startTime = formatDate(event.startTime);
-  const endTime = event.endTime
-    ? formatDate(event.endTime)
-    : formatDate(new Date(event.startTime.getTime() + 2 * 60 * 60 * 1000)); // +2 hours default
+  // Ensure dates are Date objects
+  const startTimeDate = event.startTime instanceof Date
+    ? event.startTime
+    : new Date(event.startTime);
+
+  const endTimeDate = event.endTime
+    ? (event.endTime instanceof Date ? event.endTime : new Date(event.endTime))
+    : new Date(startTimeDate.getTime() + 2 * 60 * 60 * 1000); // +2 hours default
+
+  const startTime = formatDateUTC(startTimeDate);
+  const endTime = formatDateUTC(endTimeDate);
+  const timestamp = formatDateUTC(now);
 
   const location = [event.venueName, event.address, event.city]
     .filter(Boolean)
     .join(', ');
 
-  const description = event.description || event.title;
+  // Escape special characters in description per RFC 5545
+  const description = (event.description || event.title)
+    .replace(/\\/g, '\\\\')
+    .replace(/\n/g, '\\n')
+    .replace(/,/g, '\\,')
+    .replace(/;/g, '\\;');
+
+  const summary = event.title
+    .replace(/\\/g, '\\\\')
+    .replace(/,/g, '\\,')
+    .replace(/;/g, '\\;');
+
   const url = event.bookingUrl || event.sourceUrl || '';
 
-  return `BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//CityPass//Event Calendar//EN
-CALSCALE:GREGORIAN
-METHOD:PUBLISH
-BEGIN:VEVENT
-UID:${event.id}@citypass.app
-DTSTAMP:${formatDate(now)}
-DTSTART:${startTime}
-DTEND:${endTime}
-SUMMARY:${event.title}
-DESCRIPTION:${description.replace(/\n/g, '\\n')}
-LOCATION:${location}
-URL:${url}
-STATUS:CONFIRMED
-SEQUENCE:0
-END:VEVENT
-END:VCALENDAR`;
+  // Generate ICS with proper line wrapping (75 chars per RFC 5545)
+  const icsLines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//CityPass//Event Calendar//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    'BEGIN:VEVENT',
+    `UID:${event.id}@citypass.app`,
+    `DTSTAMP:${timestamp}`,
+    `DTSTART:${startTime}`,
+    `DTEND:${endTime}`,
+    `SUMMARY:${summary}`,
+    `DESCRIPTION:${description}`,
+    `LOCATION:${location}`,
+    ...(url ? [`URL:${url}`] : []),
+    'STATUS:CONFIRMED',
+    'SEQUENCE:0',
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ];
+
+  return icsLines.join('\r\n');
 }

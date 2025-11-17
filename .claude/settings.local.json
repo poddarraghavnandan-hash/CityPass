@@ -101,7 +101,18 @@
       "WebSearch",
       "Bash(vercel --token=NV6pRCdM96cCoorOUPXrd56G env add NEXT_PUBLIC_NHOST_SUBDOMAIN production)",
       "Bash(vercel --token=NV6pRCdM96cCoorOUPXrd56G env add NEXT_PUBLIC_NHOST_REGION production)",
-      "Bash(node test-connection.js:*)"
+      "Bash(node test-connection.js:*)",
+      "Bash(vercel --token=NV6pRCdM96cCoorOUPXrd56G inspect citypass-87v7i70ky-raghav-poddars-projects.vercel.app --logs)",
+      "Bash(vercel --token=NV6pRCdM96cCoorOUPXrd56G inspect citypass-as4j7bnf2-raghav-poddars-projects.vercel.app --logs)",
+      "Bash(npm install:*)",
+      "Bash(railway login:*)",
+      "Bash(export RAILWAY_TOKEN=7fec8207-faed-4ebe-83d7-276f010f3b2a)",
+      "Bash(railway whoami:*)",
+      "Bash(node seed-db-now.js:*)",
+      "Bash(node:*)",
+      "Bash(del:*)",
+      "Bash(mkdir:*)",
+      "Bash(apps/web/.env.local)"
     ],
     "deny": [],
     "ask": []

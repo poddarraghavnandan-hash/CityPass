@@ -132,6 +132,18 @@ export default function HomePage() {
               >
                 Explore
               </button>
+              <button
+                onClick={() => router.push('/about')}
+                className={`transition ${darkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
+              >
+                About
+              </button>
+              <button
+                onClick={() => router.push('/investors')}
+                className={`transition ${darkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
+              >
+                Investors
+              </button>
               <motion.button
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
@@ -145,6 +157,7 @@ export default function HomePage() {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
+                onClick={() => router.push('/feed')}
                 className="px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-full font-medium shadow-lg hover:shadow-xl transition"
               >
                 Get Started
@@ -194,6 +207,22 @@ export default function HomePage() {
                   }`}
                 >
                   Explore
+                </button>
+                <button
+                  onClick={() => router.push('/about')}
+                  className={`block w-full text-left px-4 py-2 rounded-lg transition ${
+                    darkMode ? 'text-gray-300 hover:bg-white/10' : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  About
+                </button>
+                <button
+                  onClick={() => router.push('/investors')}
+                  className={`block w-full text-left px-4 py-2 rounded-lg transition ${
+                    darkMode ? 'text-gray-300 hover:bg-white/10' : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  Investors
                 </button>
                 <button
                   onClick={() => setDarkMode(!darkMode)}
@@ -497,6 +526,68 @@ export default function HomePage() {
         </div>
       </motion.div>
 
+      {/* Social Proof / Testimonials */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true }}
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20"
+      >
+        <div className="text-center mb-12">
+          <h2 className={`text-4xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+            Loved by Explorers
+          </h2>
+          <p className={`text-xl ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+            Hear from people who discovered their new favorite spots
+          </p>
+        </div>
+        <div className="grid md:grid-cols-3 gap-6">
+          {[
+            {
+              quote: "I found a secret jazz club I never would have discovered on Google. This app is magic.",
+              author: "Sarah M.",
+              location: "Brooklyn, NY",
+            },
+            {
+              quote: "Finally, an events app that doesn't just show me the same corporate venues everyone knows about.",
+              author: "James T.",
+              location: "San Francisco",
+            },
+            {
+              quote: "The AI actually understands my vibe. It's like having a friend who knows every cool spot in the city.",
+              author: "Maya P.",
+              location: "Los Angeles",
+            },
+          ].map((testimonial, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: index * 0.1 }}
+              className={`p-6 rounded-2xl backdrop-blur-xl border ${
+                darkMode ? 'bg-white/5 border-white/10' : 'bg-white/60 border-gray-200'
+              }`}
+            >
+              <div className="mb-4">
+                <div className="flex gap-1 mb-3">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                  ))}
+                </div>
+                <p className={`text-sm italic ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  "{testimonial.quote}"
+                </p>
+              </div>
+              <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                <div className="font-medium">{testimonial.author}</div>
+                <div className="text-xs">{testimonial.location}</div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </motion.div>
+
       {/* Stats Section */}
       <motion.div
         initial={{ opacity: 0 }}
@@ -592,15 +683,114 @@ export default function HomePage() {
           : 'bg-white/60 border-gray-200'
       }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center space-x-2">
-              <Sparkles className={`w-6 h-6 ${darkMode ? 'text-purple-400' : 'text-purple-600'}`} />
-              <span className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                CityPass
-              </span>
+          <div className="grid md:grid-cols-3 gap-8 mb-8">
+            {/* Brand */}
+            <div>
+              <div className="flex items-center space-x-2 mb-4">
+                <Sparkles className={`w-6 h-6 ${darkMode ? 'text-purple-400' : 'text-purple-600'}`} />
+                <span className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                  CityPass
+                </span>
+              </div>
+              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                AI-powered event discovery for independent culture
+              </p>
             </div>
-            <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-              Built with AI • Powered by Llama 3.1 & Advanced ML
+
+            {/* Product */}
+            <div>
+              <h3 className={`font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                Product
+              </h3>
+              <div className="space-y-2">
+                <button
+                  onClick={() => router.push('/feed')}
+                  className={`block text-sm transition ${
+                    darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'
+                  }`}
+                >
+                  CityLens
+                </button>
+                <button
+                  onClick={() => router.push('/search')}
+                  className={`block text-sm transition ${
+                    darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'
+                  }`}
+                >
+                  Search Events
+                </button>
+                <button
+                  onClick={() => router.push('/about')}
+                  className={`block text-sm transition ${
+                    darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'
+                  }`}
+                >
+                  How It Works
+                </button>
+              </div>
+            </div>
+
+            {/* Company */}
+            <div>
+              <h3 className={`font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                Company
+              </h3>
+              <div className="space-y-2">
+                <button
+                  onClick={() => router.push('/about')}
+                  className={`block text-sm transition ${
+                    darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'
+                  }`}
+                >
+                  About Us
+                </button>
+                <button
+                  onClick={() => router.push('/investors')}
+                  className={`block text-sm transition ${
+                    darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'
+                  }`}
+                >
+                  Investors
+                </button>
+                <button
+                  onClick={() => router.push('/privacy')}
+                  className={`block text-sm transition ${
+                    darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'
+                  }`}
+                >
+                  Privacy
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className={`pt-8 border-t ${darkMode ? 'border-white/10' : 'border-gray-200'}`}>
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                © 2024 CityPass. Built with AI • Powered by Llama 3.1 & Advanced ML
+              </div>
+              <div className="flex gap-4">
+                <a
+                  href="https://twitter.com/citypass"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`text-sm transition ${
+                    darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'
+                  }`}
+                >
+                  Twitter
+                </a>
+                <a
+                  href="https://instagram.com/citypass"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`text-sm transition ${
+                    darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'
+                  }`}
+                >
+                  Instagram
+                </a>
+              </div>
             </div>
           </div>
         </div>

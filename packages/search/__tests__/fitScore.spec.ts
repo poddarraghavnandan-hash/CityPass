@@ -1,10 +1,15 @@
 /**
  * Tests for fitScore calculation
- * Edge cases + reasons text validation
+ * Edge cases + reasons text validation + ε-greedy + diversity
  */
 
 import { describe, it, expect } from 'vitest';
-import { calculateFitScore, type FitScoreArgs } from '../src/fitScore';
+import {
+  calculateFitScore,
+  applyEpsilonGreedy,
+  calculateSlateOverlap,
+  type FitScoreArgs,
+} from '../src/fitScore';
 import type { Intention } from '@citypass/types/lens';
 
 const mockIntention: Intention = {
@@ -275,6 +280,112 @@ describe('FitScore', () => {
 
       const total = result.components.reduce((sum, c) => sum + c.contribution, 0);
       expect(total).toBeCloseTo(result.score, 2);
+    });
+
+    it('should include novelty score when provided', () => {
+      const args: FitScoreArgs = {
+        event: {
+          id: '1',
+          category: 'MUSIC',
+          startTime: new Date('2025-01-09T14:00:00Z'),
+          priceMin: null,
+          priceMax: null,
+          lat: null,
+          lon: null,
+          tags: [],
+        },
+        intention: mockIntention,
+        textualSimilarity: 0.5,
+        semanticSimilarity: 0.5,
+        novelty: 0.9,
+      };
+
+      const result = calculateFitScore(args);
+
+      expect(result.novelty).toBe(0.9);
+      expect(result.components.find(c => c.key === 'novelty')).toBeDefined();
+    });
+  });
+
+  describe('applyEpsilonGreedy', () => {
+    const mockCandidates = Array.from({ length: 50 }, (_, i) => ({
+      id: `event-${i}`,
+      fitScore: 1 - i * 0.01,
+    }));
+
+    it('should select top K candidates with epsilon=0', () => {
+      const result = applyEpsilonGreedy(mockCandidates, 10, 0);
+
+      expect(result).toHaveLength(10);
+      expect(result[0].fitScore).toBeGreaterThanOrEqual(result[9].fitScore);
+      expect(result.exploredIndices).toHaveLength(0);
+    });
+
+    it('should include exploration with epsilon > 0', () => {
+      const result = applyEpsilonGreedy(mockCandidates, 10, 0.3);
+
+      expect(result).toHaveLength(10);
+      expect(result.exploredIndices).toBeDefined();
+      expect(result.exploredIndices!.length).toBeGreaterThan(0);
+      expect(result.exploredIndices!.length).toBeLessThanOrEqual(3); // ~30% of 10
+    });
+
+    it('should handle empty candidates', () => {
+      const result = applyEpsilonGreedy([], 10, 0.2);
+
+      expect(result).toHaveLength(0);
+    });
+
+    it('should handle fewer candidates than topK', () => {
+      const fewCandidates = mockCandidates.slice(0, 5);
+      const result = applyEpsilonGreedy(fewCandidates, 10, 0.2);
+
+      expect(result.length).toBeLessThanOrEqual(5);
+    });
+  });
+
+  describe('calculateSlateOverlap', () => {
+    it('should return 1 for identical slates', () => {
+      const slate1 = [{ id: '1' }, { id: '2' }, { id: '3' }];
+      const slate2 = [{ id: '1' }, { id: '2' }, { id: '3' }];
+
+      const overlap = calculateSlateOverlap(slate1, slate2);
+
+      expect(overlap).toBe(1);
+    });
+
+    it('should calculate partial overlap correctly', () => {
+      const slate1 = [{ id: '1' }, { id: '2' }, { id: '3' }];
+      const slate2 = [{ id: '2' }, { id: '3' }, { id: '4' }];
+
+      const overlap = calculateSlateOverlap(slate1, slate2);
+
+      expect(overlap).toBeGreaterThan(0);
+      expect(overlap).toBeLessThan(1);
+    });
+
+    it('should return 0 for completely different slates', () => {
+      const slate1 = [{ id: '1' }, { id: '2' }];
+      const slate2 = [{ id: '3' }, { id: '4' }];
+
+      const overlap = calculateSlateOverlap(slate1, slate2);
+
+      expect(overlap).toBe(0);
+    });
+
+    it('should meet diversity target of <40% overlap', () => {
+      // Simulating 3 diverse slates
+      const best = [{ id: '1' }, { id: '2' }, { id: '3' }, { id: '4' }, { id: '5' }];
+      const wildcard = [{ id: '6' }, { id: '7' }, { id: '8' }, { id: '9' }, { id: '2' }];
+      const closeAndEasy = [{ id: '10' }, { id: '11' }, { id: '12' }, { id: '3' }, { id: '7' }];
+
+      const overlap1 = calculateSlateOverlap(best, wildcard);
+      const overlap2 = calculateSlateOverlap(best, closeAndEasy);
+      const overlap3 = calculateSlateOverlap(wildcard, closeAndEasy);
+
+      expect(overlap1).toBeLessThan(0.4);
+      expect(overlap2).toBeLessThan(0.4);
+      expect(overlap3).toBeLessThan(0.4);
     });
   });
 });

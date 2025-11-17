@@ -50,6 +50,91 @@ const FALLBACK_TOKENS: IntentionTokens = {
   companions: ['solo'],
 };
 
+type EventLike = Pick<Event, 'id' | 'title' | 'city' | 'startTime'> &
+  Partial<
+    Pick<
+      Event,
+      | 'subtitle'
+      | 'description'
+      | 'category'
+      | 'venueName'
+      | 'neighborhood'
+      | 'priceMin'
+      | 'priceMax'
+      | 'imageUrl'
+      | 'bookingUrl'
+      | 'endTime'
+    >
+  >;
+
+const STATIC_FALLBACK_EVENTS: EventLike[] = [
+  {
+    id: 'static-salsa-pier',
+    title: 'Sunset Salsa on the Pier',
+    city: 'New York',
+    startTime: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+    category: 'DANCE' as any,
+    venueName: 'Pier 15',
+    neighborhood: 'Seaport District',
+    description: 'Free-spirited salsa session with DJs + sunset views.',
+    priceMin: 0,
+    priceMax: 15,
+    bookingUrl: 'https://houseofyes.org/events/sunset-salsa',
+  },
+  {
+    id: 'static-hadestown-matinee',
+    title: 'Broadway Matinee: Hadestown',
+    city: 'New York',
+    startTime: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000),
+    category: 'THEATRE' as any,
+    venueName: 'Walter Kerr Theatre',
+    neighborhood: 'Midtown',
+    description: 'Tony-winning musical retelling of Orpheus & Eurydice.',
+    priceMin: 129,
+    priceMax: 289,
+    bookingUrl: 'https://www.broadway.com/shows/hadestown/tickets',
+  },
+  {
+    id: 'static-liberty-playoffs',
+    title: 'NY Liberty Playoff Game',
+    city: 'New York',
+    startTime: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+    category: 'OTHER' as any,
+    venueName: 'Barclays Center',
+    neighborhood: 'Prospect Heights',
+    description: 'WNBA Eastern Conference showdown. High energy crowd.',
+    priceMin: 45,
+    priceMax: 160,
+    bookingUrl: 'https://www.nycliberty.com/tickets/playoffs',
+  },
+  {
+    id: 'static-rooftop-yoga',
+    title: 'Sunrise Rooftop Yoga Flow',
+    city: 'New York',
+    startTime: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000 + 7 * 60 * 60 * 1000),
+    category: 'FITNESS' as any,
+    venueName: 'The William Vale Rooftop',
+    neighborhood: 'Williamsburg',
+    description: 'Guided vinyasa with skyline views + live ambient DJ.',
+    priceMin: 20,
+    priceMax: 35,
+    bookingUrl: 'https://www.nycgovparks.org/events/sunrise-rooftop-yoga',
+  },
+  {
+    id: 'static-queens-night-market',
+    title: 'Queens Night Market',
+    city: 'New York',
+    startTime: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000),
+    category: 'FOOD' as any,
+    venueName: 'Flushing Meadows Park',
+    neighborhood: 'Corona',
+    description: 'Open-air market with 50+ vendors, DJs, and art pop-ups.',
+    priceMin: 5,
+    priceMax: 25,
+    bookingUrl: 'https://www.timeout.com/newyork/things-to-do/queens-night-market',
+  },
+];
+
 export async function POST(req: NextRequest) {
   const traceId = randomUUID();
 
@@ -265,7 +350,7 @@ function buildIntention(city: string, partialTokens?: Partial<IntentionTokens>):
   };
 }
 
-function toRankedItem(event: Event, fitScore: number): RankedItem {
+function toRankedItem(event: EventLike, fitScore: number): RankedItem {
   const reasons: string[] = [];
   if (event.neighborhood) reasons.push(`In ${event.neighborhood}`);
   if ((event.priceMin ?? 0) === 0) reasons.push('Free entry');
@@ -295,7 +380,7 @@ function toRankedItem(event: Event, fitScore: number): RankedItem {
   };
 }
 
-async function fetchFallbackEvents(city: string, limit: number, offset: number): Promise<Event[]> {
+async function fetchFallbackEvents(city: string, limit: number, offset: number): Promise<EventLike[]> {
   const now = new Date();
   let events = await prisma.event.findMany({
     where: {
@@ -317,6 +402,12 @@ async function fetchFallbackEvents(city: string, limit: number, offset: number):
       skip: offset,
       take: limit,
     });
+  }
+
+  if (events.length === 0) {
+    const base = STATIC_FALLBACK_EVENTS.filter((event) => event.city === city);
+    const fallbackPool = base.length ? base : STATIC_FALLBACK_EVENTS;
+    return fallbackPool.slice(offset, offset + limit);
   }
 
   return events;

@@ -45,12 +45,26 @@ export async function POST(req: NextRequest) {
 
     const cookieIntention = req.cookies.get('citylens_intention')?.value;
 
+    // Use LLM/pattern extraction to parse free text
+    const { extractIntentWithFallback } = await import('@citypass/utils');
+
+    const useLLM = process.env.DISABLE_LLM_INTENT !== 'true';
+    const llmModel = (process.env.LLM_INTENT_MODEL || 'auto') as 'claude' | 'gpt' | 'auto';
+
+    const extractionResult = await extractIntentWithFallback(body.freeText, {
+      useLLM,
+      llmModel,
+      baseTokens: body.context?.overrides,
+    });
+
+    console.log(`✨ [${traceId}] Intent extracted via ${extractionResult.method}`);
+
     const intention = await understand({
       city: body.context?.city,
       userId: body.context?.userId,
       sessionId: body.context?.sessionId,
       cookie: cookieIntention,
-      overrides: body.context?.overrides,
+      overrides: extractionResult.tokens,
     });
 
     return NextResponse.json({
@@ -58,6 +72,10 @@ export async function POST(req: NextRequest) {
       intention,
       traceId,
       success: true,
+      meta: {
+        extractionMethod: extractionResult.method,
+        extractionMetadata: extractionResult.metadata,
+      },
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

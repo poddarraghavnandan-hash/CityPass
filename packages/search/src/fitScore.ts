@@ -18,6 +18,8 @@ export interface FitScoreArgs {
     lat?: number | null;
     lon?: number | null;
     tags?: string[] | null;
+    venueName?: string | null;
+    description?: string | null;
   };
   intention: Intention;
   textualSimilarity: number;
@@ -28,6 +30,8 @@ export interface FitScoreArgs {
     saves: number;
     friends: number;
   };
+  novelty?: number; // From graph analysis
+  graphDiversification?: boolean;
 }
 
 const BUDGET_THRESHOLDS: Record<Intention['tokens']['budget'], number> = {
@@ -45,13 +49,14 @@ const MOOD_CATEGORY_MAP: Record<Intention['tokens']['mood'], string[]> = {
 };
 
 const COMPONENT_WEIGHTS: Record<string, number> = {
-  textual: 0.25,
-  semantic: 0.2,
-  mood: 0.2,
-  social: 0.15,
-  budget: 0.1,
-  distance: 0.05,
-  recency: 0.05,
+  textual: 0.22,
+  semantic: 0.18,
+  mood: 0.18,
+  social: 0.14,
+  novelty: 0.12,
+  budget: 0.08,
+  distance: 0.04,
+  recency: 0.04,
 };
 
 export interface FitScoreResult {
@@ -60,6 +65,8 @@ export interface FitScoreResult {
   socialHeat: number;
   reasons: string[];
   components: FitScoreComponent[];
+  novelty?: number;
+  isExploration?: boolean; // True if selected via ε-greedy
 }
 
 export function calculateFitScore(args: FitScoreArgs): FitScoreResult {
@@ -78,7 +85,7 @@ export function calculateFitScore(args: FitScoreArgs): FitScoreResult {
   const semantic = clamp(args.semanticSimilarity, 0, 1);
   components.push({
     key: 'semantic',
-    label: 'Feels similar to what you watched',
+    label: 'Similar to what you like',
     value: semantic,
     weight: COMPONENT_WEIGHTS.semantic,
     contribution: semantic * COMPONENT_WEIGHTS.semantic,
@@ -100,6 +107,15 @@ export function calculateFitScore(args: FitScoreArgs): FitScoreResult {
     value: socialHeat,
     weight: COMPONENT_WEIGHTS.social,
     contribution: socialHeat * COMPONENT_WEIGHTS.social,
+  });
+
+  const novelty = args.novelty ?? 0.5;
+  components.push({
+    key: 'novelty',
+    label: 'Something new for you',
+    value: novelty,
+    weight: COMPONENT_WEIGHTS.novelty,
+    contribution: novelty * COMPONENT_WEIGHTS.novelty,
   });
 
   const budgetScore = calculateBudgetScore(args.event, intention);
@@ -130,16 +146,19 @@ export function calculateFitScore(args: FitScoreArgs): FitScoreResult {
   });
 
   const score = components.reduce((sum, component) => sum + component.contribution, 0);
-  const reasons = components
-    .filter(component => component.value >= 0.6)
-    .sort((a, b) => b.contribution - a.contribution)
-    .slice(0, 3)
-    .map(component => component.label);
+
+  // Generate enhanced human-readable reasons
+  const reasons = generateReasons(args, components, {
+    moodScore,
+    socialHeat,
+    novelty,
+  });
 
   return {
     score,
     moodScore,
     socialHeat,
+    novelty,
     reasons,
     components,
   };
@@ -199,4 +218,146 @@ function clamp(value: number, min: number, max: number): number {
 
 function sigmoid(x: number): number {
   return 1 / (1 + Math.exp(-x));
+}
+
+/**
+ * Generate human-readable reasons with specific details
+ */
+function generateReasons(
+  args: FitScoreArgs,
+  components: FitScoreComponent[],
+  scores: { moodScore: number; socialHeat: number; novelty: number }
+): string[] {
+  const reasons: string[] = [];
+
+  // Distance-based reason
+  if (args.distanceKm !== null && args.distanceKm !== undefined) {
+    if (args.distanceKm <= 1) {
+      reasons.push(`${Math.round(args.distanceKm * 10) / 10} km walk`);
+    } else if (args.distanceKm <= 3) {
+      const walkMinutes = Math.round(args.distanceKm * 12);
+      reasons.push(`${walkMinutes} min walk`);
+    } else if (args.distanceKm <= 10) {
+      reasons.push(`${Math.round(args.distanceKm)} km away`);
+    }
+  }
+
+  // Price-based reason
+  if (args.event.priceMin !== null && args.event.priceMin !== undefined) {
+    if (args.event.priceMin === 0) {
+      reasons.push('Free entry');
+    } else if (args.event.priceMin < 30) {
+      reasons.push(`Under $${args.event.priceMin}`);
+    }
+  }
+
+  // Mood match
+  if (scores.moodScore >= 0.7) {
+    const moodLabel = args.intention.tokens.mood;
+    if (args.event.category) {
+      reasons.push(`Matches ${moodLabel}`);
+    }
+  }
+
+  // Social proof
+  if (args.socialProof) {
+    const { views, saves, friends } = args.socialProof;
+    if (friends > 0) {
+      reasons.push(`${friends} friend${friends > 1 ? 's' : ''} interested`);
+    } else if (saves > 10) {
+      reasons.push(`${saves} saves nearby`);
+    } else if (views > 50) {
+      reasons.push(`${views} views nearby`);
+    }
+  }
+
+  // Novelty
+  if (scores.novelty >= 0.8) {
+    reasons.push('Novel for you');
+  }
+
+  // Time-based reason
+  const now = new Date(args.intention.nowISO);
+  const eventTime = args.event.startTime;
+  const hoursUntil = (eventTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+  if (hoursUntil < 1) {
+    reasons.push('Starting soon');
+  } else if (hoursUntil < 3) {
+    reasons.push(`In ${Math.round(hoursUntil)}h`);
+  }
+
+  // Venue-based reason (if highly rated/known)
+  if (args.event.venueName && args.socialProof && args.socialProof.views > 100) {
+    reasons.push(`At ${args.event.venueName}`);
+  }
+
+  // Limit to top 3-4 reasons
+  return reasons.slice(0, 4);
+}
+
+/**
+ * Apply ε-greedy exploration to top-k candidates
+ * With probability ε, select a random candidate from top 20%
+ * Otherwise, select top candidates deterministically
+ */
+export function applyEpsilonGreedy<T extends { fitScore: number }>(
+  candidates: T[],
+  topK: number = 10,
+  epsilon: number = 0.15
+): T[] & { exploredIndices?: number[] } {
+  if (candidates.length === 0) return candidates as any;
+
+  // Sort by fit score descending
+  const sorted = [...candidates].sort((a, b) => b.fitScore - a.fitScore);
+
+  // Determine exploration count
+  const exploreCount = Math.min(
+    Math.floor(topK * epsilon),
+    Math.floor(sorted.length * 0.2)
+  );
+
+  const selected: T[] = [];
+  const exploredIndices: number[] = [];
+
+  // Select top (topK - exploreCount) deterministically
+  const deterministicCount = topK - exploreCount;
+  selected.push(...sorted.slice(0, deterministicCount));
+
+  // Select remaining from exploration pool (indices 10-30)
+  if (exploreCount > 0) {
+    const explorationPool = sorted.slice(10, Math.min(30, sorted.length));
+
+    for (let i = 0; i < exploreCount && explorationPool.length > 0; i++) {
+      const randomIndex = Math.floor(Math.random() * explorationPool.length);
+      const candidate = explorationPool.splice(randomIndex, 1)[0];
+      selected.push(candidate);
+      exploredIndices.push(randomIndex + 10); // Adjust index
+    }
+  }
+
+  const result = selected.slice(0, topK) as T[] & { exploredIndices?: number[] };
+  result.exploredIndices = exploredIndices;
+
+  return result;
+}
+
+/**
+ * Calculate diversity overlap between two slates
+ * Returns percentage of overlap (0-1)
+ */
+export function calculateSlateOverlap(
+  slate1: Array<{ id: string }>,
+  slate2: Array<{ id: string }>
+): number {
+  const ids1 = new Set(slate1.map(item => item.id));
+  const ids2 = new Set(slate2.map(item => item.id));
+
+  const intersection = new Set(
+    [...ids1].filter(id => ids2.has(id))
+  );
+
+  const union = new Set([...ids1, ...ids2]);
+
+  return union.size > 0 ? intersection.size / union.size : 0;
 }
