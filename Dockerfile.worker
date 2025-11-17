@@ -54,10 +54,7 @@ COPY packages/utils/package.json ./packages/utils/package.json
 COPY packages/search/package.json ./packages/search/package.json
 COPY apps/worker/package.json ./apps/worker/package.json
 
-# Install production dependencies (including Prisma)
-RUN pnpm install --frozen-lockfile --prod
-
-# Copy built artifacts from build stage
+# Copy built artifacts from build stage first
 COPY --from=base /app/packages/db/dist ./packages/db/dist
 COPY --from=base /app/packages/db/prisma ./packages/db/prisma
 COPY --from=base /app/packages/types/dist ./packages/types/dist
@@ -65,7 +62,10 @@ COPY --from=base /app/packages/utils/dist ./packages/utils/dist
 COPY --from=base /app/packages/search/dist ./packages/search/dist
 COPY --from=base /app/apps/worker/dist ./apps/worker/dist
 
-# Regenerate Prisma Client in production environment
+# Install all dependencies (monorepo requires workspace links)
+RUN pnpm install --frozen-lockfile
+
+# Generate Prisma Client in production environment
 RUN pnpm --filter @citypass/db generate
 
 # Set working directory to worker
