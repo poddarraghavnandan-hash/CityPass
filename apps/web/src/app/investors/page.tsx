@@ -64,9 +64,15 @@ export default function InvestorsPage() {
           </NeonCard>
         </div>
 
-        <InvestorStory />
+        <div className="grid gap-6 md:grid-cols-3">
+          <NeonCard className="p-0 overflow-hidden">
+            <img src="/mockups/dark-neon.png" alt="Chat + slate UI" className="h-full w-full object-cover" />
+          </NeonCard>
+          <InvestorStory />
+          <MetricTiles />
+        </div>
+
         <ArchitectureDiagram />
-        <MetricTiles />
       </div>
     </PageShell>
   );
