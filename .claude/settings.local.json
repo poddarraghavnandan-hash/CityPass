@@ -113,7 +113,13 @@
       "Bash(del:*)",
       "Bash(mkdir:*)",
       "Bash(apps/web/.env.local)",
-      "Bash(npx next lint:*)"
+      "Bash(npx next lint:*)",
+      "Bash(git mv:*)",
+      "Bash(vercel --token=NV6pRCdM96cCoorOUPXrd56G ls --prod)",
+      "Bash(vercel --token=NV6pRCdM96cCoorOUPXrd56G inspect citypass-4dp7106pf-raghav-poddars-projects.vercel.app --logs)",
+      "WebFetch(domain:citypass-4dp7106pf-raghav-poddars-projects.vercel.app)",
+      "WebFetch(domain:citypass-nqoc408sn-raghav-poddars-projects.vercel.app)",
+      "Bash(vercel --token=NV6pRCdM96cCoorOUPXrd56G inspect citypass-nqoc408sn-raghav-poddars-projects.vercel.app --logs)"
     ],
     "deny": [],
     "ask": []

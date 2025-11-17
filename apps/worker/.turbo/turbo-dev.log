@@ -6428,3 +6428,50 @@ Unknown argument `urlHash`. Available options are marked with ?.
       durationMs: 0
     }
   }
+}
+
+🚀 [2025-11-17T03:56:07.926Z] Running job: ingestion-queue
+✅ [2025-11-17T03:56:08.201Z] Job completed: ingestion-queue
+   Result: { processed: 0 }
+
+🚀 [2025-11-17T03:57:07.946Z] Running job: ingestion-queue
+✅ [2025-11-17T03:57:08.136Z] Job completed: ingestion-queue
+   Result: { processed: 0 }
+
+🚀 [2025-11-17T03:58:07.949Z] Running job: ingestion-queue
+✅ [2025-11-17T03:58:08.134Z] Job completed: ingestion-queue
+   Result: { processed: 0 }
+
+🚀 [2025-11-17T03:59:07.957Z] Running job: ingestion-queue
+✅ [2025-11-17T03:59:08.145Z] Job completed: ingestion-queue
+   Result: { processed: 0 }
+
+🚀 [2025-11-17T04:00:07.965Z] Running job: ingestion-queue
+✅ [2025-11-17T04:00:08.151Z] Job completed: ingestion-queue
+   Result: { processed: 0 }
+
+🚀 [2025-11-17T04:01:07.978Z] Running job: ingestion-queue
+✅ [2025-11-17T04:01:08.983Z] Job completed: ingestion-queue
+   Result: { processed: 0 }
+
+🚀 [2025-11-17T04:02:07.981Z] Running job: ingestion-queue
+✅ [2025-11-17T04:02:08.167Z] Job completed: ingestion-queue
+   Result: { processed: 0 }
+
+🚀 [2025-11-17T04:03:07.991Z] Running job: ingestion-queue
+✅ [2025-11-17T04:03:08.196Z] Job completed: ingestion-queue
+   Result: { processed: 0 }
+
+🚀 [2025-11-17T04:04:07.994Z] Running job: ingestion-queue
+✅ [2025-11-17T04:04:08.174Z] Job completed: ingestion-queue
+   Result: { processed: 0 }
+
+🚀 [2025-11-17T04:05:07.923Z] Running job: seed-events
+
+🚀 [2025-11-17T04:05:08.004Z] Running job: ingestion-queue
+✅ [2025-11-17T04:05:09.621Z] Job completed: seed-events
+   Result: { created: 0, minPerCity: 12 }
+
+🚀 [2025-11-17T04:06:08.022Z] Running job: ingestion-queue
+✅ [2025-11-17T04:06:08.286Z] Job completed: ingestion-queue
+   Result: { processed: 0 }

@@ -1,0 +1,30 @@
+@layer utilities {
+  .glow-ring {
+    box-shadow: 0 0 25px rgba(77, 123, 255, 0.4);
+  }
+
+  .hero-grid {
+    background-image:
+      radial-gradient(circle at 20% 20%, rgba(77, 123, 255, 0.4), transparent 35%),
+      radial-gradient(circle at 80% 0%, rgba(244, 91, 255, 0.25), transparent 35%),
+      radial-gradient(circle at 50% 80%, rgba(34, 255, 211, 0.2), transparent 30%);
+  }
+
+  .neon-divider {
+    background: linear-gradient(90deg, rgba(77, 123, 255, 0), rgba(77, 123, 255, 0.7), rgba(244, 91, 255, 0));
+    height: 1px;
+    width: 100%;
+  }
+
+  .card-outline {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(8, 10, 24, 0.85);
+    backdrop-filter: blur(24px);
+  }
+
+  .gradient-text {
+    background: linear-gradient(120deg, #f45bff, #4d7bff, #22ffd3);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+}

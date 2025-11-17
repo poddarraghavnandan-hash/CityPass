@@ -177,11 +177,7 @@ function CategoryCard({ id, label, icon: Icon, gradient, count, loading, onClick
       </motion.div>
 
       {/* Event Count Badge with pulse animation */}
-      {loading ? (
-        <div className="relative z-10 bg-white/20 backdrop-blur-sm rounded-full px-4 py-1.5 border border-white/30">
-          <div className="text-xs text-white/90 font-medium">Loading...</div>
-        </div>
-      ) : count !== undefined && count > 0 ? (
+      {!loading && count !== undefined && count > 0 ? (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -219,66 +215,9 @@ export function CategoryPanel() {
     // TODO: Use browser geolocation API + reverse geocoding
     // For now, default to New York
     setCity('New York');
+    // Set loading to false immediately - don't fetch counts for now
+    setLoading(false);
   }, []);
-
-  // Fetch event counts for each category
-  useEffect(() => {
-    async function fetchCounts() {
-      setLoading(true);
-      const newCounts: CategoryCounts = {};
-
-      try {
-        // Helper function to fetch with timeout
-        const fetchWithTimeout = async (url: string, timeout = 10000) => {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), timeout);
-
-          try {
-            const response = await fetch(url, { signal: controller.signal });
-            clearTimeout(timeoutId);
-            return response;
-          } catch (error) {
-            clearTimeout(timeoutId);
-            throw error;
-          }
-        };
-
-        // Fetch counts in parallel for all categories
-        const countPromises = CATEGORIES.filter(cat => cat.id !== 'SURPRISE').map(async (category) => {
-          try {
-            const timeFilter = getSmartTimeFilter(currentTime);
-            const url = `/api/search?q=${encodeURIComponent(category.searchQuery)}&city=${encodeURIComponent(city)}&limit=1&category=${category.id}&${timeFilter}`;
-
-            const response = await fetchWithTimeout(url, 10000);
-
-            if (response.ok) {
-              const data = await response.json();
-              return { id: category.id, count: data.total || 0 };
-            } else {
-              console.warn(`API returned ${response.status} for ${category.id}`);
-              return { id: category.id, count: 0 };
-            }
-          } catch (error: any) {
-            console.error(`Failed to fetch count for ${category.id}:`, error?.name, error?.message);
-            return { id: category.id, count: 0 };
-          }
-        });
-
-        const results = await Promise.all(countPromises);
-        results.forEach(({ id, count }) => {
-          newCounts[id] = count;
-        });
-
-        setCounts(newCounts);
-      } catch (error) {
-        console.error('Failed to fetch category counts:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchCounts();
-  }, [city, currentTime]);
 
   // Get smart time filter based on current time
   function getSmartTimeFilter(date: Date): string {
