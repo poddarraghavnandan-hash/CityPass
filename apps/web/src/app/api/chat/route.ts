@@ -63,6 +63,7 @@ export async function POST(req: NextRequest) {
           slates: planPayload.slates,
           reasons: planPayload.reasons,
           intention: planPayload.intention,
+          traceId: planPayload.traceId,
         });
       } catch (error: any) {
         send('error', error?.message || 'Chat failed');

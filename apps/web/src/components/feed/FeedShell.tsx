@@ -75,6 +75,7 @@ export function FeedShell({ city, defaultMood, presetIds, initialTokens }: FeedS
           traceId: payload.traceId,
           slateLabel: 'feed_primary',
           eventIds: payload.items.map((item) => item.id),
+          scores: payload.items.map((item: any) => item.fitScore).filter((v) => typeof v === 'number'),
           position: 0,
           intention: tokens,
         });
