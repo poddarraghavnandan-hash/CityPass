@@ -1,3 +1,5 @@
+'use client';
+
 import { useEffect, useRef, useState } from 'react';
 import type { Intention, IntentionTokens, RankedItem } from '@citypass/types';
 import { streamChat } from '@/lib/chat/streamClient';
