@@ -11,10 +11,6 @@ import { Button } from '@/components/ui/button';
 import { MoodStep } from '@/components/onboarding/MoodStep';
 import type { Preferences } from '@/lib/preferences';
 
-export const metadata = {
-  title: 'CityLens Profile',
-};
-
 export default function ProfilePage() {
   const [socialProof, setSocialProof] = useState(true);
   const [soloFriendly, setSoloFriendly] = useState(false);
