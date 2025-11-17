@@ -8,7 +8,7 @@ const NYC_EVENT_SOURCES = [
     url: 'https://www.boweryballroom.com/events',
     domain: 'boweryballroom.com',
     city: 'New York',
-    sourceType: SourceType.VENUE_CALENDAR,
+    sourceType: SourceType.VENUE,
     category: EventCategory.MUSIC,
   },
   {
@@ -16,7 +16,7 @@ const NYC_EVENT_SOURCES = [
     url: 'https://www.brooklynbowl.com/brooklyn/events',
     domain: 'brooklynbowl.com',
     city: 'New York',
-    sourceType: SourceType.VENUE_CALENDAR,
+    sourceType: SourceType.VENUE,
     category: EventCategory.MUSIC,
   },
   {
@@ -24,7 +24,7 @@ const NYC_EVENT_SOURCES = [
     url: 'https://www.musichallofwilliamsburg.com/events',
     domain: 'musichallofwilliamsburg.com',
     city: 'New York',
-    sourceType: SourceType.VENUE_CALENDAR,
+    sourceType: SourceType.VENUE,
     category: EventCategory.MUSIC,
   },
   {
@@ -32,7 +32,7 @@ const NYC_EVENT_SOURCES = [
     url: 'https://www.bluenotejazz.com/newyork/',
     domain: 'bluenotejazz.com',
     city: 'New York',
-    sourceType: SourceType.VENUE_CALENDAR,
+    sourceType: SourceType.VENUE,
     category: EventCategory.MUSIC,
   },
   {
@@ -40,7 +40,7 @@ const NYC_EVENT_SOURCES = [
     url: 'https://www.roughtradenyc.com/events',
     domain: 'roughtradenyc.com',
     city: 'New York',
-    sourceType: SourceType.VENUE_CALENDAR,
+    sourceType: SourceType.VENUE,
     category: EventCategory.MUSIC,
   },
   // Comedy Venues
@@ -49,7 +49,7 @@ const NYC_EVENT_SOURCES = [
     url: 'https://www.comedycellar.com/shows',
     domain: 'comedycellar.com',
     city: 'New York',
-    sourceType: SourceType.VENUE_CALENDAR,
+    sourceType: SourceType.VENUE,
     category: EventCategory.COMEDY,
   },
   {
@@ -57,7 +57,7 @@ const NYC_EVENT_SOURCES = [
     url: 'https://gothamcomedyclub.com/shows',
     domain: 'gothamcomedyclub.com',
     city: 'New York',
-    sourceType: SourceType.VENUE_CALENDAR,
+    sourceType: SourceType.VENUE,
     category: EventCategory.COMEDY,
   },
   // Arts & Culture
@@ -66,7 +66,7 @@ const NYC_EVENT_SOURCES = [
     url: 'https://www.moma.org/calendar/events',
     domain: 'moma.org',
     city: 'New York',
-    sourceType: SourceType.VENUE_CALENDAR,
+    sourceType: SourceType.VENUE,
     category: EventCategory.ARTS,
   },
   {
@@ -74,7 +74,7 @@ const NYC_EVENT_SOURCES = [
     url: 'https://www.brooklynmuseum.org/calendar',
     domain: 'brooklynmuseum.org',
     city: 'New York',
-    sourceType: SourceType.VENUE_CALENDAR,
+    sourceType: SourceType.VENUE,
     category: EventCategory.ARTS,
   },
   {
@@ -82,7 +82,7 @@ const NYC_EVENT_SOURCES = [
     url: 'https://www.metmuseum.org/events',
     domain: 'metmuseum.org',
     city: 'New York',
-    sourceType: SourceType.VENUE_CALENDAR,
+    sourceType: SourceType.VENUE,
     category: EventCategory.ARTS,
   },
   // Outdoor/Parks
@@ -91,7 +91,7 @@ const NYC_EVENT_SOURCES = [
     url: 'https://www.prospectpark.org/events/',
     domain: 'prospectpark.org',
     city: 'New York',
-    sourceType: SourceType.VENUE_CALENDAR,
+    sourceType: SourceType.VENUE,
     category: EventCategory.OTHER,
   },
   {
@@ -99,7 +99,7 @@ const NYC_EVENT_SOURCES = [
     url: 'https://www.centralparknyc.org/events',
     domain: 'centralparknyc.org',
     city: 'New York',
-    sourceType: SourceType.VENUE_CALENDAR,
+    sourceType: SourceType.VENUE,
     category: EventCategory.OTHER,
   },
   // Food & Markets
@@ -108,7 +108,7 @@ const NYC_EVENT_SOURCES = [
     url: 'https://www.smorgasburg.com/',
     domain: 'smorgasburg.com',
     city: 'New York',
-    sourceType: SourceType.VENUE_CALENDAR,
+    sourceType: SourceType.VENUE,
     category: EventCategory.FOOD,
   },
   {
@@ -116,7 +116,7 @@ const NYC_EVENT_SOURCES = [
     url: 'https://brooklynflea.com/markets/',
     domain: 'brooklynflea.com',
     city: 'New York',
-    sourceType: SourceType.VENUE_CALENDAR,
+    sourceType: SourceType.VENUE,
     category: EventCategory.OTHER,
   },
 ];
