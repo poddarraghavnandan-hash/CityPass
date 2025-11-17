@@ -1,0 +1,111 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import type { IntentionTokens } from '@citypass/types';
+import { Button } from '@/components/ui/button';
+import { MoodStep } from './MoodStep';
+import { InterestStep } from './InterestStep';
+import { ScheduleStep } from './ScheduleStep';
+import { PreferenceToggles } from '@/components/profile/PreferenceToggles';
+import type { Preferences } from '@/lib/preferences';
+
+export function OnboardingExperience() {
+  const [mood, setMood] = useState<IntentionTokens['mood']>('electric');
+  const [interests, setInterests] = useState<string[]>(['Nightlife']);
+  const [distance, setDistance] = useState(5);
+  const [budget, setBudget] = useState('casual');
+  const [socialProof, setSocialProof] = useState(true);
+  const [soloFriendly, setSoloFriendly] = useState(false);
+  const [status, setStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const response = await fetch('/api/preferences');
+        if (!response.ok) throw new Error('Unable to load preferences');
+        const payload = await response.json();
+        if (payload?.preferences) {
+          const prefs: Preferences = payload.preferences;
+          setMood(prefs.mood);
+          setInterests(prefs.interests || []);
+          setDistance(prefs.distanceKm ?? 5);
+          setBudget(prefs.budget ?? 'casual');
+          setSocialProof(prefs.socialProof ?? true);
+          setSoloFriendly(prefs.soloFriendly ?? false);
+        }
+      } catch (err) {
+        console.warn('Onboarding preferences load failed', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
+
+  const toggleInterest = (value: string) => {
+    setInterests((prev) => (prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value]));
+  };
+
+  const handleSave = async () => {
+    setStatus('saving');
+    setError(null);
+    try {
+      const payload = {
+        mood,
+        interests,
+        distanceKm: distance,
+        budget,
+        socialProof,
+        soloFriendly,
+      };
+      const response = await fetch('/api/preferences', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) {
+        throw new Error('Unable to save preferences');
+      }
+      const data = await response.json();
+      setStatus('saved');
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('citylens:intention', JSON.stringify({ mood, distanceKm: distance, budget, untilMinutes: 180, companions: ['solo'] }));
+        localStorage.setItem('citylens:preferences', JSON.stringify(data.preferences));
+      }
+      setTimeout(() => setStatus('idle'), 1500);
+    } catch (err: any) {
+      setStatus('idle');
+      setError(err?.message || 'Save failed');
+    }
+  };
+
+  return (
+    <div className="space-y-8 rounded-[40px] border border-white/10 bg-white/5 p-8">
+      {loading ? (
+        <div className="animate-pulse text-white/60">Loading preferences…</div>
+      ) : (
+        <>
+          <MoodStep value={mood} onChange={setMood} />
+          <InterestStep values={interests} onToggle={toggleInterest} />
+          <ScheduleStep distanceKm={distance} onDistanceChange={setDistance} budget={budget} onBudgetChange={setBudget} />
+          <PreferenceToggles social={soloFriendly} setSocial={setSoloFriendly} proof={socialProof} setProof={setSocialProof} />
+          {error && <p className="text-sm text-red-400">{error}</p>}
+          <div className="flex flex-wrap gap-3">
+            <Button
+              onClick={handleSave}
+              className="rounded-full bg-white text-black hover:bg-white/80"
+              disabled={status === 'saving'}
+            >
+              {status === 'saving' ? 'Saving' : status === 'saved' ? 'Saved ✓' : 'Save profile'}
+            </Button>
+            <Button asChild variant="ghost" className="rounded-full border border-white/20 text-white hover:bg-white/10">
+              <a href="/feed">Skip to feed</a>
+            </Button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}

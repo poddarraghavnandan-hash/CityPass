@@ -3,6 +3,8 @@ import type { IntentionTokens } from '@citypass/types';
 import { ChatUI } from '@/components/chat/ChatUI';
 import { PageShell } from '@/components/layout/PageShell';
 import { GlowBadge } from '@/components/ui/GlowBadge';
+import { cookies } from 'next/headers';
+import { parsePreferencesCookie } from '@/lib/preferences';
 
 export const metadata = {
   title: 'CityLens Copilot',
@@ -18,11 +20,13 @@ const companions: IntentionTokens['companions'][number][] = ['solo', 'partner', 
 
 export default function ChatPage({ searchParams }: ChatPageProps) {
   const city = (searchParams?.city as string) || process.env.NEXT_PUBLIC_DEFAULT_CITY || 'New York';
+  const prefCookie = cookies().get('citylens_prefs')?.value;
+  const prefs = parsePreferencesCookie(prefCookie);
   const defaultTokens: IntentionTokens = {
-    mood: parseMood(searchParams?.mood as string),
+    mood: prefs?.mood ?? parseMood(searchParams?.mood as string),
     untilMinutes: searchParams?.untilMinutes ? Number(searchParams.untilMinutes) : 180,
-    distanceKm: searchParams?.distanceKm ? Number(searchParams.distanceKm) : 6,
-    budget: parseBudget(searchParams?.budget as string),
+    distanceKm: prefs?.distanceKm ?? (searchParams?.distanceKm ? Number(searchParams.distanceKm) : 6),
+    budget: prefs?.budget ?? parseBudget(searchParams?.budget as string),
     companions: parseCompanions(searchParams?.companions as string),
   };
 

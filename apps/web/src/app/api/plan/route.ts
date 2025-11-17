@@ -7,9 +7,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { randomUUID } from 'crypto';
 import { plan } from '@citypass/agent';
-import { IntentionTokensSchema } from '@citypass/types';
+import { IntentionTokensSchema, type IntentionTokens } from '@citypass/types';
 import { prisma } from '@citypass/db';
 import { checkRateLimit, getRateLimitIdentifier } from '@/lib/rate-limit';
+import { cookies } from 'next/headers';
+import { getServerSession } from 'next-auth';
+import { parsePreferencesCookie } from '@/lib/preferences';
+import { authOptions } from '@/lib/auth';
 
 const BodySchema = z.object({
   user: z
@@ -56,11 +60,27 @@ export async function POST(req: NextRequest) {
   try {
     const payload = await req.json();
     const body = BodySchema.parse(payload);
+    const cookieStore = cookies();
+    const prefCookie = cookieStore.get('citylens_prefs')?.value;
+    const preferences = parsePreferencesCookie(prefCookie);
+    const session = await getServerSession(authOptions);
+    const userId = session?.user && 'id' in session.user ? (session.user as any).id : undefined;
+
+    const mergedTokens: IntentionTokens | undefined = {
+      ...(preferences
+        ? {
+            mood: preferences.mood,
+            distanceKm: preferences.distanceKm,
+            budget: preferences.budget,
+          }
+        : {}),
+      ...(body.tokens || {}),
+    };
 
     const result = await plan({
-      user: body.user,
+      user: body.user || (userId ? { id: userId } : undefined),
       freeText: body.freeText,
-      tokens: body.tokens,
+      tokens: mergedTokens,
     });
 
     const latency = Date.now() - startTime;

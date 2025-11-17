@@ -11,6 +11,10 @@ import {
 } from '@citypass/types';
 import { diversifyByGraph } from '@citypass/cag';
 import { checkRateLimit, getRateLimitIdentifier } from '@/lib/rate-limit';
+import { cookies } from 'next/headers';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { parsePreferencesCookie } from '@/lib/preferences';
 import type { Event } from '@citypass/db';
 
 const BodySchema = z.object({
@@ -168,6 +172,25 @@ export async function POST(req: NextRequest) {
   try {
     const payload = await req.json();
     const body = BodySchema.parse(payload);
+    const cookieStore = cookies();
+    const prefCookie = cookieStore.get('citylens_prefs')?.value;
+    const cookiePrefs = parsePreferencesCookie(prefCookie);
+    const session = await getServerSession(authOptions);
+    const userId = session?.user && 'id' in session.user ? (session.user as any).id : undefined;
+    const profile = userId ? await prisma.userProfile.findUnique({ where: { userId } }) : null;
+    const mergedPrefs = parsePreferencesCookie(
+      JSON.stringify({ ...(cookiePrefs || {}), ...(profile?.meta || {}) })
+    ) || cookiePrefs;
+    const mergedTokens: IntentionTokens | undefined = {
+      ...(mergedPrefs
+        ? {
+            mood: mergedPrefs.mood,
+            distanceKm: mergedPrefs.distanceKm,
+            budget: mergedPrefs.budget,
+          }
+        : {}),
+      ...(body.intention?.tokens || {}),
+    };
     const requestedCity = resolveCity(body);
     const limit = body.limit;
     const page = body.page;
@@ -205,8 +228,8 @@ export async function POST(req: NextRequest) {
     let agentResult: Awaited<ReturnType<typeof plan>> | null = null;
     try {
       agentResult = await plan({
-        user: body.intention?.user,
-        tokens: body.intention?.tokens,
+        user: body.intention?.user || (userId ? { id: userId } : undefined),
+        tokens: mergedTokens,
         freeText: body.intention?.freeText,
       });
     } catch (error) {
@@ -220,7 +243,7 @@ export async function POST(req: NextRequest) {
           limit,
           page,
           offset,
-          tokens: body.intention?.tokens,
+          tokens: mergedTokens,
           traceId,
         })
       );
