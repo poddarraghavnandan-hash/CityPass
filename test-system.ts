@@ -3,6 +3,7 @@
  * Tests database, events, and new agentic graph
  */
 
+import 'dotenv/config';
 import { PrismaClient } from '@citypass/db';
 import { askAgent } from '@citypass/agent';
 
