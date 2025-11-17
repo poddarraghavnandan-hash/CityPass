@@ -10,6 +10,7 @@ import { BudgetAndDistance } from '@/components/profile/BudgetAndDistance';
 import { Button } from '@/components/ui/button';
 import { MoodStep } from '@/components/onboarding/MoodStep';
 import type { Preferences } from '@/lib/preferences';
+import { useToast } from '@/components/ui/toast';
 
 export default function ProfilePage() {
   const [socialProof, setSocialProof] = useState(true);
@@ -20,6 +21,7 @@ export default function ProfilePage() {
   const [interests, setInterests] = useState<string[]>([]);
   const [status, setStatus] = useState<'idle' | 'loading' | 'saving' | 'error' | 'saved'>('loading');
   const [error, setError] = useState<string | null>(null);
+  const { success, error: errorToast } = useToast();
 
   useEffect(() => {
     const load = async () => {
@@ -70,9 +72,11 @@ export default function ProfilePage() {
       if (!response.ok) throw new Error('Failed to save profile');
       setStatus('saved');
       setTimeout(() => setStatus('idle'), 1500);
+      success('Profile saved', 'Preferences stored for chat and feed.');
     } catch (err: any) {
       setStatus('error');
       setError(err?.message || 'Save failed');
+      errorToast('Save failed', err?.message || 'Unable to save preferences');
     }
   };
 

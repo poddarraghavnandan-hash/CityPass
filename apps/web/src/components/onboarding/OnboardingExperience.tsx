@@ -9,6 +9,7 @@ import { ScheduleStep } from './ScheduleStep';
 import { PreferenceToggles } from '@/components/profile/PreferenceToggles';
 import type { Preferences } from '@/lib/preferences';
 import { OnboardingStepper } from './OnboardingStepper';
+import { useToast } from '@/components/ui/toast';
 
 export function OnboardingExperience() {
   const [mood, setMood] = useState<IntentionTokens['mood']>('electric');
@@ -21,6 +22,7 @@ export function OnboardingExperience() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState(1);
+  const { success, error: errorToast } = useToast();
 
   useEffect(() => {
     const load = async () => {
@@ -77,9 +79,11 @@ export function OnboardingExperience() {
         localStorage.setItem('citylens:preferences', JSON.stringify(data.preferences));
       }
       setTimeout(() => setStatus('idle'), 1500);
+      success('Profile saved', 'Preferences stored for chat and feed.');
     } catch (err: any) {
       setStatus('idle');
       setError(err?.message || 'Save failed');
+      errorToast('Save failed', err?.message || 'Unable to save preferences');
     }
   };
 

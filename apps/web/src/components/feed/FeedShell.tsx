@@ -102,7 +102,11 @@ export function FeedShell({ city, defaultMood, presetIds, initialTokens }: FeedS
         budget={tokens.budget}
         onBudgetChange={(budget) => setTokens((prev) => ({ ...prev, budget }))}
         timeWindow={timeWindow}
-        onTimeWindowChange={setTimeWindow}
+        onTimeWindowChange={(value) => {
+          setTimeWindow(value);
+          const until = value === 'now' ? 90 : value === 'this weekend' ? 72 * 60 : 6 * 60;
+          setTokens((prev) => ({ ...prev, untilMinutes: until }));
+        }}
       />
       {status === 'error' && <ErrorState description={error ?? undefined} onRetry={fetchFeed} />}
       {isLoading && (
