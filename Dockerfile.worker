@@ -41,32 +41,31 @@ RUN pnpm --filter @citypass/worker build
 # Production stage
 FROM node:20-alpine AS production
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
 WORKDIR /app
 
-# Copy package files
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY turbo.json ./
-COPY packages/db/package.json ./packages/db/package.json
-COPY packages/types/package.json ./packages/types/package.json
-COPY packages/utils/package.json ./packages/utils/package.json
-COPY packages/search/package.json ./packages/search/package.json
-COPY apps/worker/package.json ./apps/worker/package.json
+# Copy everything from build stage (simpler and more reliable for monorepos)
+COPY --from=base /app/package.json ./package.json
+COPY --from=base /app/pnpm-lock.yaml ./pnpm-lock.yaml
+COPY --from=base /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=base /app/turbo.json ./turbo.json
 
-# Copy built artifacts from build stage first
+# Copy all node_modules from build stage
+COPY --from=base /app/node_modules ./node_modules
+
+# Copy package.json files
+COPY --from=base /app/packages/db/package.json ./packages/db/package.json
+COPY --from=base /app/packages/types/package.json ./packages/types/package.json
+COPY --from=base /app/packages/utils/package.json ./packages/utils/package.json
+COPY --from=base /app/packages/search/package.json ./packages/search/package.json
+COPY --from=base /app/apps/worker/package.json ./apps/worker/package.json
+
+# Copy built artifacts
 COPY --from=base /app/packages/db/dist ./packages/db/dist
 COPY --from=base /app/packages/db/prisma ./packages/db/prisma
 COPY --from=base /app/packages/types/dist ./packages/types/dist
 COPY --from=base /app/packages/utils/dist ./packages/utils/dist
 COPY --from=base /app/packages/search/dist ./packages/search/dist
 COPY --from=base /app/apps/worker/dist ./apps/worker/dist
-
-# Install all dependencies (monorepo requires workspace links)
-RUN pnpm install --frozen-lockfile
-
-# Generate Prisma Client in production environment
-RUN pnpm --filter @citypass/db generate
 
 # Set working directory to worker
 WORKDIR /app/apps/worker
