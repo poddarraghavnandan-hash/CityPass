@@ -1,4 +1,5 @@
 import type { IntentionTokens } from '@citypass/types';
+import { cn } from '@/lib/utils';
 
 type MoodKey = IntentionTokens['mood'];
 
@@ -23,9 +24,11 @@ export function MoodRail({ value, onChange }: MoodRailProps) {
           key={mood.key}
           type="button"
           onClick={() => onChange(mood.key)}
-          className={`min-w-[150px] rounded-[26px] border px-4 py-3 text-left transition ${
+          className={cn(
+            'min-w-[150px] rounded-[26px] border px-4 py-3 text-left transition',
             value === mood.key ? 'border-white bg-white/10 text-white' : 'border-white/10 text-white/70 hover:border-white/40'
-          }`}
+          )}
+          aria-pressed={value === mood.key}
         >
           <p className="text-sm font-semibold uppercase tracking-[0.3em]">{mood.label}</p>
           <p className="text-xs text-white/60">{mood.description}</p>

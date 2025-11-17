@@ -30,14 +30,15 @@ export function TopNav() {
               key={link.href}
               href={link.href}
               className={cn(
-                'transition hover:text-white',
+                'relative transition hover:text-white',
                 pathname === link.href && 'text-white'
               )}
             >
               {link.label}
+              {pathname === link.href && <span className="absolute -bottom-2 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white to-transparent" />}
             </Link>
           ))}
-          <Button asChild variant="secondary" className="rounded-full border border-white/30 bg-white/10 text-white hover:bg-white/20">
+          <Button asChild className="rounded-full border border-white/30 bg-white text-black hover:bg-white/90 shadow-[0_8px_30px_rgba(77,123,255,0.35)]">
             <Link href="/chat">Launch Copilot</Link>
           </Button>
         </nav>

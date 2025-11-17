@@ -8,6 +8,7 @@ import { InterestStep } from './InterestStep';
 import { ScheduleStep } from './ScheduleStep';
 import { PreferenceToggles } from '@/components/profile/PreferenceToggles';
 import type { Preferences } from '@/lib/preferences';
+import { OnboardingStepper } from './OnboardingStepper';
 
 export function OnboardingExperience() {
   const [mood, setMood] = useState<IntentionTokens['mood']>('electric');
@@ -19,6 +20,7 @@ export function OnboardingExperience() {
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [step, setStep] = useState(1);
 
   useEffect(() => {
     const load = async () => {
@@ -81,25 +83,55 @@ export function OnboardingExperience() {
     }
   };
 
+  const nextStep = () => setStep((prev) => Math.min(3, prev + 1));
+  const previousStep = () => setStep((prev) => Math.max(1, prev - 1));
+
+  const renderStep = () => {
+    switch (step) {
+      case 1:
+        return <MoodStep value={mood} onChange={setMood} />;
+      case 2:
+        return <InterestStep values={interests} onToggle={toggleInterest} />;
+      case 3:
+      default:
+        return (
+          <>
+            <ScheduleStep distanceKm={distance} onDistanceChange={setDistance} budget={budget} onBudgetChange={setBudget} />
+            <PreferenceToggles social={soloFriendly} setSocial={setSoloFriendly} proof={socialProof} setProof={setSocialProof} />
+          </>
+        );
+    }
+  };
+
   return (
     <div className="space-y-8 rounded-[40px] border border-white/10 bg-white/5 p-8">
       {loading ? (
         <div className="animate-pulse text-white/60">Loading preferences…</div>
       ) : (
         <>
-          <MoodStep value={mood} onChange={setMood} />
-          <InterestStep values={interests} onToggle={toggleInterest} />
-          <ScheduleStep distanceKm={distance} onDistanceChange={setDistance} budget={budget} onBudgetChange={setBudget} />
-          <PreferenceToggles social={soloFriendly} setSocial={setSoloFriendly} proof={socialProof} setProof={setSocialProof} />
+          <OnboardingStepper step={step} total={3} />
+          {renderStep()}
           {error && <p className="text-sm text-red-400">{error}</p>}
           <div className="flex flex-wrap gap-3">
-            <Button
-              onClick={handleSave}
-              className="rounded-full bg-white text-black hover:bg-white/80"
-              disabled={status === 'saving'}
-            >
-              {status === 'saving' ? 'Saving' : status === 'saved' ? 'Saved ✓' : 'Save profile'}
-            </Button>
+            {step > 1 && (
+              <Button variant="ghost" className="rounded-full border border-white/20 text-white hover:bg-white/10" onClick={previousStep}>
+                Back
+              </Button>
+            )}
+            {step < 3 && (
+              <Button className="rounded-full bg-white text-black hover:bg-white/80" onClick={nextStep}>
+                Next
+              </Button>
+            )}
+            {step === 3 && (
+              <Button
+                onClick={handleSave}
+                className="rounded-full bg-white text-black hover:bg-white/80"
+                disabled={status === 'saving'}
+              >
+                {status === 'saving' ? 'Saving' : status === 'saved' ? 'Saved ✓' : 'Save profile'}
+              </Button>
+            )}
             <Button asChild variant="ghost" className="rounded-full border border-white/20 text-white hover:bg-white/10">
               <a href="/feed">Skip to feed</a>
             </Button>

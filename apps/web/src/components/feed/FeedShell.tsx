@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { IntentionTokens, RankedItem } from '@citypass/types';
 import { MoodRail } from './MoodRail';
 import { NowBar } from './NowBar';
+import { FilterBar } from './FilterBar';
 import { StoryRow } from './StoryRow';
 import { ContextModal } from './ContextModal';
 import { SkeletonStoryCard } from './SkeletonStoryCard';
@@ -27,6 +28,7 @@ type FeedShellProps = {
 
 export function FeedShell({ city, defaultMood, presetIds, initialTokens }: FeedShellProps) {
   const [tokens, setTokens] = useState<IntentionTokens>({ ...DEFAULT_TOKENS, ...initialTokens, mood: initialTokens?.mood ?? defaultMood });
+  const [timeWindow, setTimeWindow] = useState('tonight');
   const [items, setItems] = useState<RankedItem[]>([]);
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('loading');
   const [error, setError] = useState<string | null>(null);
@@ -94,6 +96,14 @@ export function FeedShell({ city, defaultMood, presetIds, initialTokens }: FeedS
     <div className="space-y-8">
       <MoodRail value={tokens.mood} onChange={(mood) => setTokens((prev) => ({ ...prev, mood }))} />
       <NowBar city={city} tokens={tokens} />
+      <FilterBar
+        distanceKm={tokens.distanceKm}
+        onDistanceChange={(distanceKm) => setTokens((prev) => ({ ...prev, distanceKm }))}
+        budget={tokens.budget}
+        onBudgetChange={(budget) => setTokens((prev) => ({ ...prev, budget }))}
+        timeWindow={timeWindow}
+        onTimeWindowChange={setTimeWindow}
+      />
       {status === 'error' && <ErrorState description={error ?? undefined} onRetry={fetchFeed} />}
       {isLoading && (
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
