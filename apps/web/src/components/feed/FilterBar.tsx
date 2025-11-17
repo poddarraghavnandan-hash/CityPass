@@ -8,11 +8,12 @@ type FilterBarProps = {
   onBudgetChange: (value: 'free' | 'casual' | 'splurge') => void;
   timeWindow: string;
   onTimeWindowChange: (value: string) => void;
+  onLog?: (payload: { budget?: string; timeWindow?: string; distanceKm?: number }) => void;
 };
 
 const timeOptions = ['now', 'tonight', 'this weekend'];
 
-export function FilterBar({ distanceKm, onDistanceChange, budget, onBudgetChange, timeWindow, onTimeWindowChange }: FilterBarProps) {
+export function FilterBar({ distanceKm, onDistanceChange, budget, onBudgetChange, timeWindow, onTimeWindowChange, onLog }: FilterBarProps) {
   const budgetOptions = useMemo(() => ['free', 'casual', 'splurge'] as const, []);
 
   return (
@@ -26,7 +27,11 @@ export function FilterBar({ distanceKm, onDistanceChange, budget, onBudgetChange
             min={1}
             max={20}
             value={distanceKm}
-            onChange={(event) => onDistanceChange(Number(event.target.value))}
+            onChange={(event) => {
+              const val = Number(event.target.value);
+              onDistanceChange(val);
+              onLog?.({ distanceKm: val });
+            }}
             className="accent-white"
           />
           <span className="text-white/70">{distanceKm} km</span>
@@ -38,7 +43,10 @@ export function FilterBar({ distanceKm, onDistanceChange, budget, onBudgetChange
             <button
               key={option}
               type="button"
-              onClick={() => onBudgetChange(option)}
+              onClick={() => {
+                onBudgetChange(option);
+                onLog?.({ budget: option });
+              }}
               className={cn(
                 'rounded-full px-3 py-1 capitalize transition',
                 budget === option ? 'bg-white text-black' : 'text-white/70'
@@ -53,7 +61,10 @@ export function FilterBar({ distanceKm, onDistanceChange, budget, onBudgetChange
             <button
               key={option}
               type="button"
-              onClick={() => onTimeWindowChange(option)}
+              onClick={() => {
+                onTimeWindowChange(option);
+                onLog?.({ timeWindow: option });
+              }}
               className={cn(
                 'rounded-full px-3 py-1 capitalize transition',
                 timeWindow === option ? 'bg-white text-black' : 'text-white/70'

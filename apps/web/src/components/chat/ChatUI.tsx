@@ -8,6 +8,8 @@ import { ChatInput } from './ChatInput';
 import { SlateTabs } from './SlateTabs';
 import { ErrorState } from '@/components/common/ErrorState';
 import { SkeletonStoryCard } from '@/components/feed/SkeletonStoryCard';
+import { logClientEvent } from '@/lib/analytics/logClientEvent';
+import { logClientEvent } from '@/lib/analytics/logClientEvent';
 
 interface ChatUIProps {
   city: string;
@@ -27,6 +29,7 @@ export function ChatUI({ city, defaultTokens, initialPrompt }: ChatUIProps) {
   const [activeTab, setActiveTab] = useState<SlateKey>('best');
   const [error, setError] = useState<string | null>(null);
   const [intention, setIntention] = useState<Intention | null>(null);
+  const [traceId, setTraceId] = useState<string | undefined>(undefined);
   const streamCancel = useRef<ReturnType<typeof streamChat> | null>(null);
 
   useEffect(() => {
@@ -39,6 +42,9 @@ export function ChatUI({ city, defaultTokens, initialPrompt }: ChatUIProps) {
     const text = (prompt ?? input).trim();
     if (!text) return;
 
+    if (traceId) {
+      logClientEvent('reask', { screen: 'chat', traceId, freeText: text });
+    }
     setInput('');
     setError(null);
     setIsLoading(true);
@@ -63,6 +69,28 @@ export function ChatUI({ city, defaultTokens, initialPrompt }: ChatUIProps) {
           setSlates(payload?.slates ?? null);
           setActiveTab('best');
           setIntention(payload?.intention ?? null);
+          setTraceId(payload?.traceId);
+          logClientEvent('query', {
+            screen: 'chat',
+            traceId: payload?.traceId,
+            intention: payload?.intention,
+            freeText: text,
+            source: 'chat',
+          });
+          if (payload?.slates) {
+            (Object.keys(payload.slates) as SlateKey[]).forEach((key) => {
+              const slateItems = payload.slates?.[key];
+              if (!slateItems?.length) return;
+              logClientEvent('slate_impression', {
+                screen: 'chat',
+                traceId: payload?.traceId,
+                slateLabel: key,
+                eventIds: slateItems.map((item) => item.id),
+                position: 0,
+                intention: payload?.intention,
+              });
+            });
+          }
           if (payload?.summary) {
             setMessages((prev) =>
               prev.map((msg) => (msg.id === assistantId ? { ...msg, meta: payload.summary } : msg))
@@ -72,6 +100,11 @@ export function ChatUI({ city, defaultTokens, initialPrompt }: ChatUIProps) {
         onError: (err) => {
           setIsLoading(false);
           setError(err.message || 'Unable to complete request.');
+          logClientEvent('error', {
+            screen: 'chat',
+            traceId,
+            message: err.message,
+          });
         },
       }
     );
@@ -112,7 +145,7 @@ export function ChatUI({ city, defaultTokens, initialPrompt }: ChatUIProps) {
           ))}
         </div>
       )}
-      <SlateTabs slates={slates} activeTab={activeTab} onTabChange={setActiveTab} intention={intention} />
+      <SlateTabs slates={slates} activeTab={activeTab} onTabChange={setActiveTab} intention={intention} traceId={traceId} />
     </div>
   );
 }

@@ -10,6 +10,7 @@ import { ContextModal } from './ContextModal';
 import { SkeletonStoryCard } from './SkeletonStoryCard';
 import { FeedEmptyState } from './EmptyState';
 import { ErrorState } from '@/components/common/ErrorState';
+import { logClientEvent } from '@/lib/analytics/logClientEvent';
 
 const DEFAULT_TOKENS: IntentionTokens = {
   mood: 'electric',
@@ -33,6 +34,7 @@ export function FeedShell({ city, defaultMood, presetIds, initialTokens }: FeedS
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('loading');
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<RankedItem | null>(null);
+  const [traceId, setTraceId] = useState<string | undefined>(undefined);
 
   const idsKey = useMemo(() => JSON.stringify(presetIds ?? []), [presetIds]);
   const resolvedIds = useMemo(() => {
@@ -47,6 +49,11 @@ export function FeedShell({ city, defaultMood, presetIds, initialTokens }: FeedS
   const fetchFeed = useCallback(async () => {
     setStatus('loading');
     setError(null);
+    logClientEvent('query', {
+      screen: 'feed',
+      intention: tokens,
+      source: 'feed',
+    });
     try {
       const response = await fetch('/api/lens/recommend', {
         method: 'POST',
@@ -59,12 +66,24 @@ export function FeedShell({ city, defaultMood, presetIds, initialTokens }: FeedS
       if (!response.ok) {
         throw new Error('Unable to load CityLens feed');
       }
-      const payload = (await response.json()) as { items: RankedItem[] };
+      const payload = (await response.json()) as { items: RankedItem[]; traceId?: string };
       setItems(payload.items);
+      setTraceId(payload.traceId);
+      if (payload.items?.length) {
+        logClientEvent('slate_impression', {
+          screen: 'feed',
+          traceId: payload.traceId,
+          slateLabel: 'feed_primary',
+          eventIds: payload.items.map((item) => item.id),
+          position: 0,
+          intention: tokens,
+        });
+      }
       setStatus('idle');
     } catch (err) {
       setStatus('error');
       setError(err instanceof Error ? err.message : 'Unknown error');
+      logClientEvent('error', { screen: 'feed', message: err instanceof Error ? err.message : 'Unknown', intention: tokens });
     }
   }, [city, tokens, resolvedIds]);
 
@@ -94,7 +113,17 @@ export function FeedShell({ city, defaultMood, presetIds, initialTokens }: FeedS
 
   return (
     <div className="space-y-8">
-      <MoodRail value={tokens.mood} onChange={(mood) => setTokens((prev) => ({ ...prev, mood }))} />
+      <MoodRail
+        value={tokens.mood}
+        onChange={(mood) => setTokens((prev) => ({ ...prev, mood }))}
+        onLog={(mood) =>
+          logClientEvent('query', {
+            screen: 'feed',
+            intention: { ...tokens, mood },
+            source: 'feed',
+          })
+        }
+      />
       <NowBar city={city} tokens={tokens} />
       <FilterBar
         distanceKm={tokens.distanceKm}
@@ -107,6 +136,13 @@ export function FeedShell({ city, defaultMood, presetIds, initialTokens }: FeedS
           const until = value === 'now' ? 90 : value === 'this weekend' ? 72 * 60 : 6 * 60;
           setTokens((prev) => ({ ...prev, untilMinutes: until }));
         }}
+        onLog={(payload) =>
+          logClientEvent('query', {
+            screen: 'feed',
+            intention: { ...tokens, ...payload },
+            source: 'feed',
+          })
+        }
       />
       {status === 'error' && <ErrorState description={error ?? undefined} onRetry={fetchFeed} />}
       {isLoading && (
@@ -117,8 +153,10 @@ export function FeedShell({ city, defaultMood, presetIds, initialTokens }: FeedS
         </div>
       )}
       {!isLoading && !error && items.length === 0 && <FeedEmptyState />}
-      {!isLoading && items.length > 0 && <StoryRow items={items} onOpen={setSelected} />}
-      <ContextModal item={selected} onClose={() => setSelected(null)} />
+      {!isLoading && items.length > 0 && (
+        <StoryRow items={items} onOpen={setSelected} traceId={traceId} slateLabel="feed_primary" />
+      )}
+      <ContextModal item={selected} onClose={() => setSelected(null)} traceId={traceId} slateLabel="feed_primary" />
     </div>
   );
 }

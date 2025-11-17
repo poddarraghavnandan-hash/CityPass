@@ -1,8 +1,9 @@
 type ReasonChipsProps = {
   reasons?: string[];
+  onHide?: () => void;
 };
 
-export function ReasonChips({ reasons }: ReasonChipsProps) {
+export function ReasonChips({ reasons, onHide }: ReasonChipsProps) {
   if (!reasons?.length) return null;
 
   return (
@@ -12,6 +13,11 @@ export function ReasonChips({ reasons }: ReasonChipsProps) {
           {reason}
         </span>
       ))}
+      {onHide && (
+        <button type="button" onClick={onHide} className="rounded-full border border-white/20 px-3 py-1 text-white/50 hover:border-white/40">
+          Not interested
+        </button>
+      )}
     </div>
   );
 }

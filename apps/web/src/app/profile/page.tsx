@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { MoodStep } from '@/components/onboarding/MoodStep';
 import type { Preferences } from '@/lib/preferences';
 import { useToast } from '@/components/ui/toast';
+import { logClientEvent } from '@/lib/analytics/logClientEvent';
 
 export default function ProfilePage() {
   const [socialProof, setSocialProof] = useState(true);
@@ -73,10 +74,20 @@ export default function ProfilePage() {
       setStatus('saved');
       setTimeout(() => setStatus('idle'), 1500);
       success('Profile saved', 'Preferences stored for chat and feed.');
+      logClientEvent('profile_update', {
+        screen: 'profile',
+        mood,
+        interests,
+        distanceKm,
+        budget,
+        socialProof,
+        soloFriendly,
+      });
     } catch (err: any) {
       setStatus('error');
       setError(err?.message || 'Save failed');
       errorToast('Save failed', err?.message || 'Unable to save preferences');
+      logClientEvent('error', { screen: 'profile', message: err?.message || 'Save failed' });
     }
   };
 

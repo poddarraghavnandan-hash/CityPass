@@ -3,6 +3,7 @@ import type { Intention, RankedItem } from '@citypass/types';
 import { ReasonChips } from './ReasonChips';
 import { Button } from '@/components/ui/button';
 import { GlowBadge } from '@/components/ui/GlowBadge';
+import { logClientEvent } from '@/lib/analytics/logClientEvent';
 
 const tabLabels = {
   best: 'Best',
@@ -17,9 +18,10 @@ type SlateTabsProps = {
   activeTab: SlateKey;
   onTabChange: (tab: SlateKey) => void;
   intention?: Intention | null;
+  traceId?: string;
 };
 
-export function SlateTabs({ slates, activeTab, onTabChange, intention }: SlateTabsProps) {
+export function SlateTabs({ slates, activeTab, onTabChange, intention, traceId }: SlateTabsProps) {
   if (!slates) {
     return (
       <div className="rounded-[32px] border border-white/10 bg-white/5 p-6 text-white/70">
@@ -51,7 +53,7 @@ export function SlateTabs({ slates, activeTab, onTabChange, intention }: SlateTa
       )}
       <div className="mt-6 grid gap-4 md:grid-cols-3">
         {slates[activeTab]?.map((item) => (
-          <SlateCard key={item.id} item={item} />
+          <SlateCard key={item.id} item={item} slateLabel={activeTab} traceId={traceId} intention={intention} />
         )) || <p className="text-white/70">No matches for this tab.</p>}
       </div>
     </div>
@@ -60,9 +62,12 @@ export function SlateTabs({ slates, activeTab, onTabChange, intention }: SlateTa
 
 type SlateCardProps = {
   item: RankedItem;
+  slateLabel: SlateKey;
+  traceId?: string;
+  intention?: Intention | null;
 };
 
-function SlateCard({ item }: SlateCardProps) {
+function SlateCard({ item, slateLabel, traceId, intention }: SlateCardProps) {
   const eventTime = new Date(item.startTime);
   const icsContent = [
     'BEGIN:VCALENDAR',
@@ -98,28 +103,31 @@ function SlateCard({ item }: SlateCardProps) {
           <h3 className="text-xl font-semibold">{item.title}</h3>
           <p className="text-sm text-white/60">{eventTime.toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })}</p>
         </div>
-        <ReasonChips reasons={item.reasons} />
+        <ReasonChips
+          reasons={item.reasons}
+          onHide={() => logClientEvent('hide', { screen: 'chat', traceId, slateLabel, eventId: item.id })}
+        />
         <div className="mt-auto flex flex-col gap-2 text-sm text-white/70">
           {mapUrl && (
-            <Button asChild className="rounded-full bg-white text-black hover:bg-white/90">
+            <Button asChild className="rounded-full bg-white text-black hover:bg-white/90" onClick={() => logClientEvent('click_route', { screen: 'chat', traceId, slateLabel, eventId: item.id })}>
               <a href={mapUrl} target="_blank" rel="noreferrer">
                 Route
               </a>
             </Button>
           )}
           {item.bookingUrl && (
-            <Button asChild variant="ghost" className="rounded-full border border-white/30 text-white hover:bg-white/10">
+            <Button asChild variant="ghost" className="rounded-full border border-white/30 text-white hover:bg-white/10" onClick={() => logClientEvent('click_book', { screen: 'chat', traceId, slateLabel, eventId: item.id })}>
               <a href={item.bookingUrl} target="_blank" rel="noreferrer">
                 Save / Book
               </a>
             </Button>
           )}
-          <Button asChild variant="ghost" className="rounded-full border border-white/20 text-white hover:bg-white/10">
+          <Button asChild variant="ghost" className="rounded-full border border-white/20 text-white hover:bg-white/10" onClick={() => logClientEvent('save', { screen: 'chat', traceId, slateLabel, eventId: item.id })}>
             <a href={`data:text/calendar;charset=utf-8,${encodeURIComponent(icsContent)}`} download={`${item.title}.ics`}>
               Add to calendar
             </a>
           </Button>
-          <Button asChild variant="ghost" className="rounded-full border border-white/20 text-white hover:bg-white/10">
+          <Button asChild variant="ghost" className="rounded-full border border-white/20 text-white hover:bg-white/10" onClick={() => logClientEvent('card_view', { screen: 'chat', traceId, slateLabel, eventId: item.id, viewType: 'open_in_feed' })}>
             <Link href={`/feed?ids=${item.id}`}>Open in Feed</Link>
           </Button>
         </div>

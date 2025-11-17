@@ -10,6 +10,7 @@ import { PreferenceToggles } from '@/components/profile/PreferenceToggles';
 import type { Preferences } from '@/lib/preferences';
 import { OnboardingStepper } from './OnboardingStepper';
 import { useToast } from '@/components/ui/toast';
+import { logClientEvent } from '@/lib/analytics/logClientEvent';
 
 export function OnboardingExperience() {
   const [mood, setMood] = useState<IntentionTokens['mood']>('electric');
@@ -80,10 +81,12 @@ export function OnboardingExperience() {
       }
       setTimeout(() => setStatus('idle'), 1500);
       success('Profile saved', 'Preferences stored for chat and feed.');
+      logClientEvent('onboarding_update', { screen: 'onboarding', ...payload });
     } catch (err: any) {
       setStatus('idle');
       setError(err?.message || 'Save failed');
       errorToast('Save failed', err?.message || 'Unable to save preferences');
+      logClientEvent('error', { screen: 'onboarding', message: err?.message || 'Save failed' });
     }
   };
 

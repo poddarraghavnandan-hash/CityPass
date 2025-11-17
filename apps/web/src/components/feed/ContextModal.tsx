@@ -1,13 +1,17 @@
 import { useEffect } from 'react';
 import type { RankedItem } from '@citypass/types';
 import { ReasonChips } from '@/components/chat/ReasonChips';
+import { logClientEvent } from '@/lib/analytics/logClientEvent';
 
 type ContextModalProps = {
   item: RankedItem | null;
   onClose: () => void;
+  traceId?: string;
+  slateLabel?: string;
+  position?: number;
 };
 
-export function ContextModal({ item, onClose }: ContextModalProps) {
+export function ContextModal({ item, onClose, traceId, slateLabel = 'feed_primary', position = 0 }: ContextModalProps) {
   useEffect(() => {
     if (!item) return;
     const onKey = (event: KeyboardEvent) => {
@@ -29,6 +33,7 @@ export function ContextModal({ item, onClose }: ContextModalProps) {
           onClick={onClose}
           className="absolute right-6 top-6 rounded-full border border-white/20 px-3 py-1 text-sm text-white/70"
           aria-label="Close modal"
+          onClick={() => logClientEvent('card_view', { screen: 'feed', traceId, slateLabel, eventId: item.id, position, viewType: 'modal_close' })}
         >
           Close
         </button>
@@ -45,7 +50,10 @@ export function ContextModal({ item, onClose }: ContextModalProps) {
             <h3 className="text-3xl font-semibold">{item.title}</h3>
             <p className="text-sm text-white/70">{item.description}</p>
           </div>
-          <ReasonChips reasons={item.reasons} />
+          <ReasonChips
+            reasons={item.reasons}
+            onHide={() => logClientEvent('hide', { screen: 'feed', traceId, slateLabel, eventId: item.id, position, viewType: 'modal' })}
+          />
           {item.socialPreview?.embedHtml && (
             <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
               <p className="mb-2 text-xs uppercase tracking-[0.4em] text-white/40">Highlight</p>
@@ -54,7 +62,13 @@ export function ContextModal({ item, onClose }: ContextModalProps) {
           )}
           <div className="flex flex-wrap gap-3 text-sm text-white/70">
             {item.bookingUrl && (
-              <a href={item.bookingUrl} target="_blank" rel="noreferrer" className="rounded-full border border-white/20 px-5 py-2 text-white">
+              <a
+                href={item.bookingUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-full border border-white/20 px-5 py-2 text-white"
+                onClick={() => logClientEvent('click_book', { screen: 'feed', traceId, slateLabel, eventId: item.id, position })}
+              >
                 Book / RSVP
               </a>
             )}
@@ -63,10 +77,15 @@ export function ContextModal({ item, onClose }: ContextModalProps) {
               target="_blank"
               rel="noreferrer"
               className="rounded-full border border-white/20 px-5 py-2 text-white"
+              onClick={() => logClientEvent('click_route', { screen: 'feed', traceId, slateLabel, eventId: item.id, position })}
             >
               Open map
             </a>
-            <a href={`/feed?ids=${item.id}`} className="rounded-full border border-white/20 px-5 py-2 text-white">
+            <a
+              href={`/feed?ids=${item.id}`}
+              className="rounded-full border border-white/20 px-5 py-2 text-white"
+              onClick={() => logClientEvent('card_view', { screen: 'feed', traceId, slateLabel, eventId: item.id, position, viewType: 'open_in_feed' })}
+            >
               Open in feed
             </a>
           </div>
