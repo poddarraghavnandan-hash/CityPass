@@ -18,6 +18,9 @@ COPY packages/utils/package.json ./packages/utils/package.json
 COPY packages/search/package.json ./packages/search/package.json
 COPY apps/worker/package.json ./apps/worker/package.json
 
+# Copy Prisma schema before install (needed for postinstall hooks)
+COPY packages/db/prisma ./packages/db/prisma
+
 # Install dependencies
 RUN pnpm install --no-frozen-lockfile
 
