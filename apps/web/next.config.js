@@ -26,15 +26,11 @@ const nextConfig = {
   },
   // Enable compression
   compress: true,
-  // Performance optimizations
-  swcMinify: true,
-  // Optimize font loading
-  optimizeFonts: true,
   // Production source maps for better debugging
   productionBrowserSourceMaps: false,
   // Strict mode for better development experience
   reactStrictMode: true,
-  // Power-intensive optimizations
+  // Remove powered-by header
   poweredByHeader: false,
   // Externalize Anthropic SDK and OpenAI SDK to avoid bundling issues
   serverExternalPackages: ['@anthropic-ai/sdk', 'openai', '@mapbox/mapbox-sdk', 'keyv', 'got', 'cacheable-request'],

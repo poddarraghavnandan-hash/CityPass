@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, Sparkles, MapPin, Calendar, TrendingUp, DollarSign, Moon, Sun, Menu, X as CloseIcon, ArrowRight, Zap, Heart, Users } from 'lucide-react';
+import { Search, Sparkles, MapPin, Calendar, TrendingUp, DollarSign, Moon, Sun, Menu, X as CloseIcon, ArrowRight, Zap, Heart, Users, Star } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CategoryPanel } from '@/components/CategoryPanel';
