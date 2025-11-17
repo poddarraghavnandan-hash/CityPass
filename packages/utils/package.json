@@ -10,6 +10,10 @@
     }
   },
   "dependencies": {
-    "@citypass/types": "workspace:*"
+    "@anthropic-ai/sdk": "^0.68.0",
+    "@citypass/types": "workspace:*",
+    "ollama": "^0.6.2",
+    "openai": "^6.8.1",
+    "zod": "^4.1.12"
   }
 }

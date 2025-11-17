@@ -69,6 +69,9 @@ importers:
       '@mapbox/mapbox-sdk':
         specifier: ^0.16.2
         version: 0.16.2
+      '@mlc-ai/web-llm':
+        specifier: ^0.2.79
+        version: 0.2.79
       '@radix-ui/react-dialog':
         specifier: ^1.1.15
         version: 1.1.15(@types/react-dom@19.2.2)(@types/react@19.2.2)(react-dom@19.2.0)(react@19.2.0)
@@ -268,6 +271,9 @@ importers:
       dotenv:
         specifier: ^17.2.3
         version: 17.2.3
+      tslib:
+        specifier: ^2.6.2
+        version: 2.8.1
     devDependencies:
       '@types/node':
         specifier: ^24.10.0
@@ -424,9 +430,21 @@ importers:
 
   packages/utils:
     dependencies:
+      '@anthropic-ai/sdk':
+        specifier: ^0.68.0
+        version: 0.68.0(zod@4.1.12)
       '@citypass/types':
         specifier: workspace:*
         version: link:../types
+      ollama:
+        specifier: ^0.6.2
+        version: 0.6.2
+      openai:
+        specifier: ^6.8.1
+        version: 6.8.1(zod@4.1.12)
+      zod:
+        specifier: ^4.1.12
+        version: 4.1.12
 
 packages:
 
@@ -2878,6 +2896,12 @@ packages:
       zod-to-json-schema: 3.24.6(zod@3.25.76)
     transitivePeerDependencies:
       - debug
+    dev: false
+
+  /@mlc-ai/web-llm@0.2.79:
+    resolution: {integrity: sha512-Hy1ZHQ0o2bZGZoVnGK48+fts/ZSKwLe96xjvqL/6C59Mem9HoHTcFE07NC2E23mRmhd01tL655N6CPeYmwWgwQ==}
+    dependencies:
+      loglevel: 1.9.2
     dev: false
 
   /@napi-rs/wasm-runtime@0.2.12:
