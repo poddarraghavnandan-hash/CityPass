@@ -1,12 +1,28 @@
 import { prisma, EventCategory } from '@citypass/db';
 import { canonicalUrlHash, contentChecksum } from '@citypass/utils';
-import { ensureEventsCollection, indexEvent } from '@citypass/search/typesense';
 import { SEED_EVENTS_BY_CITY, SeedEventDefinition } from './seedData';
+
+// Optional Typesense import - gracefully handle if not available
+let ensureEventsCollection: (() => Promise<void>) | undefined;
+let indexEvent: ((event: any) => Promise<void>) | undefined;
+try {
+  const typesense = require('@citypass/search/typesense');
+  ensureEventsCollection = typesense.ensureEventsCollection;
+  indexEvent = typesense.indexEvent;
+} catch (e) {
+  console.warn('Typesense module not available, search indexing disabled');
+}
 
 const MIN_EVENTS_PER_CITY = parseInt(process.env.CITYLENS_MIN_SEED_EVENTS ?? '12', 10);
 
 export async function ensureSeedInventory() {
-  await ensureEventsCollection();
+  if (ensureEventsCollection) {
+    try {
+      await ensureEventsCollection();
+    } catch (e) {
+      console.warn('Typesense collection setup failed:', e);
+    }
+  }
 
   let created = 0;
   const now = new Date();
@@ -93,6 +109,12 @@ async function maybeCreateSeedEvent(seed: SeedEventDefinition): Promise<boolean>
     },
   });
 
-  await indexEvent(event);
+  if (indexEvent) {
+    try {
+      await indexEvent(event);
+    } catch (e) {
+      console.warn('Typesense indexing failed:', e);
+    }
+  }
   return true;
 }
