@@ -14,7 +14,7 @@ const COOKIE_KEY = 'citylens_prefs';
  */
 export async function GET(req: NextRequest) {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const raw = cookieStore.get(COOKIE_KEY)?.value;
     const preferences = parsePreferencesCookie(raw);
     const session = await getServerSession(authOptions);

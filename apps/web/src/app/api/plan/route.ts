@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
   try {
     const payload = await req.json();
     const body = BodySchema.parse(payload);
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const prefCookie = cookieStore.get('citylens_prefs')?.value;
     const preferences = parsePreferencesCookie(prefCookie);
     const session = await getServerSession(authOptions);
