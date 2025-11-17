@@ -45,3 +45,5 @@ infra/data/
 
 .vercel
 vercel-env.txt
+
+.env*.local

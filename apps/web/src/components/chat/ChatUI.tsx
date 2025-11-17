@@ -7,6 +7,7 @@ import { ChatMessageList, type ChatMessage } from './ChatMessageList';
 import { ChatInput } from './ChatInput';
 import { SlateTabs } from './SlateTabs';
 import { ErrorState } from '@/components/common/ErrorState';
+import { SkeletonStoryCard } from '@/components/feed/SkeletonStoryCard';
 
 interface ChatUIProps {
   city: string;
@@ -104,6 +105,13 @@ export function ChatUI({ city, defaultTokens, initialPrompt }: ChatUIProps) {
         onMicError={(err) => setError(err.message)}
         disabled={isLoading}
       />
+      {isLoading && !slates && (
+        <div className="grid gap-4 md:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, idx) => (
+            <SkeletonStoryCard key={idx} />
+          ))}
+        </div>
+      )}
       <SlateTabs slates={slates} activeTab={activeTab} onTabChange={setActiveTab} intention={intention} />
     </div>
   );
