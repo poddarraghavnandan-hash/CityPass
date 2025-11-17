@@ -96,15 +96,53 @@ export function OnboardingExperience() {
   const renderStep = () => {
     switch (step) {
       case 1:
-        return <MoodStep value={mood} onChange={setMood} />;
+        return (
+          <MoodStep
+            value={mood}
+            onChange={(val) => {
+              setMood(val);
+              logClientEvent('onboarding_update', { screen: 'onboarding', mood: val, step });
+            }}
+          />
+        );
       case 2:
-        return <InterestStep values={interests} onToggle={toggleInterest} />;
+        return (
+          <InterestStep
+            values={interests}
+            onToggle={(val) => {
+              toggleInterest(val);
+              logClientEvent('onboarding_update', { screen: 'onboarding', interests: interests.includes(val) ? interests.filter((i) => i !== val) : [...interests, val], step });
+            }}
+          />
+        );
       case 3:
       default:
         return (
           <>
-            <ScheduleStep distanceKm={distance} onDistanceChange={setDistance} budget={budget} onBudgetChange={setBudget} />
-            <PreferenceToggles social={soloFriendly} setSocial={setSoloFriendly} proof={socialProof} setProof={setSocialProof} />
+            <ScheduleStep
+              distanceKm={distance}
+              onDistanceChange={(val) => {
+                setDistance(val);
+                logClientEvent('onboarding_update', { screen: 'onboarding', distanceKm: val, budget, step });
+              }}
+              budget={budget}
+              onBudgetChange={(val) => {
+                setBudget(val);
+                logClientEvent('onboarding_update', { screen: 'onboarding', distanceKm: distance, budget: val, step });
+              }}
+            />
+            <PreferenceToggles
+              social={soloFriendly}
+              setSocial={(val) => {
+                setSoloFriendly(val);
+                logClientEvent('onboarding_update', { screen: 'onboarding', soloFriendly: val, step });
+              }}
+              proof={socialProof}
+              setProof={(val) => {
+                setSocialProof(val);
+                logClientEvent('onboarding_update', { screen: 'onboarding', socialProof: val, step });
+              }}
+            />
           </>
         );
     }

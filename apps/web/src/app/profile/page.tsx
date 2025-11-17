@@ -91,6 +91,10 @@ export default function ProfilePage() {
     }
   };
 
+  const onChangeAndLog = (payload: Partial<Preferences>) => {
+    logClientEvent('profile_update', { screen: 'profile', ...payload });
+  };
+
   return (
     <PageShell>
       <div className="space-y-8">
@@ -104,9 +108,37 @@ export default function ProfilePage() {
             <TasteGraph scores={tasteScores} />
           </div>
           <div className="space-y-4">
-            <MoodStep value={mood} onChange={setMood} />
-            <PreferenceToggles social={soloFriendly} setSocial={setSoloFriendly} proof={socialProof} setProof={setSocialProof} />
-            <BudgetAndDistance budget={budget} onBudgetChange={setBudget} distanceKm={distanceKm} onDistanceChange={setDistanceKm} />
+            <MoodStep
+              value={mood}
+              onChange={(val) => {
+                setMood(val);
+                onChangeAndLog({ mood: val });
+              }}
+            />
+            <PreferenceToggles
+              social={soloFriendly}
+              setSocial={(val) => {
+                setSoloFriendly(val);
+                onChangeAndLog({ soloFriendly: val });
+              }}
+              proof={socialProof}
+              setProof={(val) => {
+                setSocialProof(val);
+                onChangeAndLog({ socialProof: val });
+              }}
+            />
+            <BudgetAndDistance
+              budget={budget}
+              onBudgetChange={(val) => {
+                setBudget(val);
+                onChangeAndLog({ budget: val });
+              }}
+              distanceKm={distanceKm}
+              onDistanceChange={(val) => {
+                setDistanceKm(val);
+                onChangeAndLog({ distanceKm: val });
+              }}
+            />
             {error && <p className="text-sm text-red-400">{error}</p>}
             <Button className="w-full rounded-full bg-white text-black hover:bg-white/80" onClick={saveProfile} disabled={status === 'saving'}>
               {status === 'saving' ? 'Saving…' : status === 'saved' ? 'Saved ✓' : 'Save profile'}
