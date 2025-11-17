@@ -15,7 +15,8 @@ type HeroProps = {
 
 export function Hero({ onAsk }: HeroProps) {
   return (
-    <section className="hero-grid overflow-hidden rounded-[45px] border border-white/10 bg-gradient-to-b from-white/10 via-transparent to-black/40 p-10 shadow-[0_30px_140px_rgba(0,0,0,0.85)]">
+    <section className="hero-grid relative overflow-hidden rounded-[45px] border border-white/10 bg-gradient-to-b from-white/10 via-transparent to-black/40 p-10 shadow-[0_30px_140px_rgba(0,0,0,0.85)]">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(77,123,255,0.25),transparent_40%),_radial-gradient(circle_at_80%_0%,rgba(244,91,255,0.2),transparent_35%)]" />
       <GlowBadge>Dark Neon Preview</GlowBadge>
       <div className="mt-6 grid gap-10 md:grid-cols-[1.2fr,0.8fr]">
         <div className="space-y-6">

@@ -41,11 +41,13 @@ export function StoryCard({ item, onOpen, slateLabel = 'feed_primary', traceId, 
         ) : (
           <div className="flex h-full items-center justify-center text-white/50">CityLens</div>
         )}
-        {item.socialPreview?.platform && (
-          <span className="absolute right-3 top-3 rounded-full bg-black/70 px-3 py-1 text-xs uppercase tracking-[0.3em]">
-            {item.socialPreview.platform}
-          </span>
-        )}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
+        <div className="absolute bottom-3 left-3 flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-white/70">
+          <span className="rounded-full bg-white/10 px-3 py-1">{item.neighborhood ?? item.category ?? 'City'}</span>
+          {item.socialPreview?.platform && (
+            <span className="rounded-full bg-black/60 px-3 py-1">{item.socialPreview.platform}</span>
+          )}
+        </div>
       </div>
       <div className="mt-4 flex flex-1 flex-col gap-3">
         <p className="text-xs uppercase tracking-[0.5em] text-white/50">{item.neighborhood ?? item.category ?? 'CityLens'}</p>
