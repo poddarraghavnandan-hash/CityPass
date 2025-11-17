@@ -3,10 +3,34 @@
  * Schedules periodic jobs for graph refresh and social indexing
  */
 
-import { refreshSimilarityEdges } from './graph/refresh-similarity';
-import { embedAndIndexSocial } from './social/embed-index';
 import { ensureSeedInventory } from './seedJob';
 import { processIngestionQueue } from './ingestionQueueJob';
+
+// Optional imports - gracefully handle if modules don't compile
+let refreshSimilarityEdges: (() => Promise<any>) | undefined;
+let embedAndIndexSocial: (() => Promise<any>) | undefined;
+let runScraperCycle: (() => Promise<any>) | undefined;
+
+try {
+  const graphModule = require('./graph/refresh-similarity');
+  refreshSimilarityEdges = graphModule.refreshSimilarityEdges;
+} catch (e) {
+  console.warn('Graph similarity module not available');
+}
+
+try {
+  const socialModule = require('./social/embed-index');
+  embedAndIndexSocial = socialModule.embedAndIndexSocial;
+} catch (e) {
+  console.warn('Social embedding module not available');
+}
+
+try {
+  const scraperModule = require('./scrape/schedule');
+  runScraperCycle = scraperModule.runScraperCycle;
+} catch (e) {
+  console.warn('Scraper module not available');
+}
 
 interface CronJob {
   name: string;
@@ -16,6 +40,11 @@ interface CronJob {
 }
 
 const jobs: CronJob[] = [
+  runScraperCycle && {
+    name: 'scrape-events',
+    intervalMs: 60 * 60 * 1000, // 60 minutes (hourly scraping)
+    handler: runScraperCycle,
+  },
   {
     name: 'seed-events',
     intervalMs: parseInt(process.env.CITYLENS_SEED_INTERVAL ?? String(10 * 60 * 1000), 10),
@@ -26,17 +55,17 @@ const jobs: CronJob[] = [
     intervalMs: parseInt(process.env.CITYLENS_QUEUE_INTERVAL ?? String(60 * 1000), 10),
     handler: processIngestionQueue,
   },
-  {
+  embedAndIndexSocial && {
     name: 'social-embed-index',
     intervalMs: 15 * 60 * 1000, // 15 minutes
     handler: embedAndIndexSocial,
   },
-  {
+  refreshSimilarityEdges && {
     name: 'graph-similarity-refresh',
     intervalMs: 24 * 60 * 60 * 1000, // 24 hours
     handler: refreshSimilarityEdges,
   },
-];
+].filter(Boolean) as CronJob[];
 
 /**
  * Start cron scheduler
