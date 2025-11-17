@@ -3,7 +3,17 @@ import { IntentionTokensSchema } from '@citypass/types';
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const freeText = (body.prompt as string) ?? '';
+
+  // Support both prompt (old) and messages (new) formats
+  let freeText = '';
+  if (body.prompt) {
+    freeText = body.prompt as string;
+  } else if (body.messages && Array.isArray(body.messages)) {
+    // Extract last user message from messages array
+    const lastUserMessage = body.messages.filter((m: any) => m.role === 'user').pop();
+    freeText = lastUserMessage?.content || '';
+  }
+
   const city = (body.city as string) ?? process.env.NEXT_PUBLIC_DEFAULT_CITY ?? 'New York';
   const rawTokens = body.tokens ? IntentionTokensSchema.partial().parse(body.tokens) : undefined;
 

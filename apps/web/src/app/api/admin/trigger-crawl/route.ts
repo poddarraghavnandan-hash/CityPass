@@ -1,23 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { processSource, processAllSources } from '@/lib/event-crawler';
 
 const TriggerCrawlSchema = z.object({
-  sourceId: z.string(),
+  sourceId: z.string().optional(),
+  all: z.boolean().optional(),
 });
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { sourceId } = TriggerCrawlSchema.parse(body);
+    const { sourceId, all } = TriggerCrawlSchema.parse(body);
 
-    // In production, this would trigger the worker
-    // For now, we'll just return success
-    console.log(`🚀 Triggering crawl for source: ${sourceId}`);
+    if (all) {
+      // Process all active sources
+      console.log('🚀 Triggering crawl for ALL active sources');
+      const result = await processAllSources();
 
-    // TODO: Trigger worker via queue or direct call
-    // await processSource(sourceId);
+      return NextResponse.json({
+        success: true,
+        ...result,
+      });
+    } else if (sourceId) {
+      // Process specific source
+      console.log(`🚀 Triggering crawl for source: ${sourceId}`);
+      const result = await processSource(sourceId);
 
-    return NextResponse.json({ success: true });
+      return NextResponse.json({
+        success: result.success,
+        eventsCreated: result.eventsCreated,
+        errors: result.errors,
+      });
+    } else {
+      return NextResponse.json(
+        { error: 'Either sourceId or all=true must be provided' },
+        { status: 400 }
+      );
+    }
   } catch (error: any) {
     console.error('Trigger crawl error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
