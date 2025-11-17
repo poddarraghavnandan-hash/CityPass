@@ -57,23 +57,47 @@ export function StoryCard({ item, onOpen, slateLabel = 'feed_primary', traceId, 
           reasons={item.reasons}
           onHide={() => logClientEvent('hide', { screen: 'feed', traceId, slateLabel, eventId: item.id, position: index })}
         />
-        <div className="mt-auto flex gap-3">
-          <button
-            className="flex-1 rounded-full bg-white text-black py-3 text-sm font-semibold"
-            onClick={() => {
-              logClientEvent('card_view', { screen: 'feed', traceId, slateLabel, eventId: item.id, position: index, viewType: 'modal' });
-              onOpen(item);
-            }}
-          >
-            Context
-          </button>
-          <a
-            href={`/feed?ids=${item.id}`}
-            className="rounded-full border border-white/30 px-4 py-3 text-sm text-white/70"
-            onClick={() => logClientEvent('save', { screen: 'feed', traceId, slateLabel, eventId: item.id, position: index })}
-          >
-            Save
-          </a>
+        <div className="mt-auto space-y-2">
+          <div className="flex gap-3">
+            <button
+              className="flex-1 rounded-full bg-white text-black py-3 text-sm font-semibold"
+              onClick={() => {
+                logClientEvent('card_view', { screen: 'feed', traceId, slateLabel, eventId: item.id, position: index, viewType: 'modal' });
+                onOpen(item);
+              }}
+            >
+              Context
+            </button>
+            <a
+              href={`/feed?ids=${item.id}`}
+              className="rounded-full border border-white/30 px-4 py-3 text-sm text-white/70"
+              onClick={() => logClientEvent('save', { screen: 'feed', traceId, slateLabel, eventId: item.id, position: index })}
+            >
+              Save
+            </a>
+          </div>
+          <div className="flex gap-3 text-xs">
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.venueName || item.title)}`}
+              target="_blank"
+              rel="noreferrer"
+              className="flex-1 rounded-full border border-white/20 px-4 py-2 text-white/80"
+              onClick={() => logClientEvent('click_route', { screen: 'feed', traceId, slateLabel, eventId: item.id, position: index })}
+            >
+              Route
+            </a>
+            {item.bookingUrl && (
+              <a
+                href={item.bookingUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="flex-1 rounded-full border border-white/20 px-4 py-2 text-white/80"
+                onClick={() => logClientEvent('click_book', { screen: 'feed', traceId, slateLabel, eventId: item.id, position: index })}
+              >
+                Book
+              </a>
+            )}
+          </div>
         </div>
       </div>
     </article>
