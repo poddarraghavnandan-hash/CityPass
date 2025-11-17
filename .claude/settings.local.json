@@ -112,7 +112,8 @@
       "Bash(node:*)",
       "Bash(del:*)",
       "Bash(mkdir:*)",
-      "Bash(apps/web/.env.local)"
+      "Bash(apps/web/.env.local)",
+      "Bash(npx next lint:*)"
     ],
     "deny": [],
     "ask": []

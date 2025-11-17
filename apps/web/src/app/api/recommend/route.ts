@@ -143,16 +143,22 @@ export async function POST(req: NextRequest) {
     });
 
     // Step 6: Apply epsilon-greedy exploration
-    const scores = scoredEvents.map(e => e._score);
-    const exploredScores = applyEpsilonGreedy(scores, params.exploreRate);
+    // Map to fitScore property for applyEpsilonGreedy
+    const candidatesWithFitScore = scoredEvents.map(e => ({
+      ...e,
+      fitScore: e._score,
+    }));
 
-    const rankedEvents = scoredEvents
-      .map((event, idx) => ({
-        ...event,
-        _score: exploredScores[idx],
-      }))
-      .sort((a, b) => b._score - a._score)
-      .slice(0, params.limit);
+    const exploredResults = applyEpsilonGreedy(
+      candidatesWithFitScore,
+      params.limit,
+      params.exploreRate
+    );
+
+    const rankedEvents = exploredResults.map(result => ({
+      ...result,
+      _score: result.fitScore,
+    }));
 
     // Step 7: Log impressions for learning
     await logImpressions(

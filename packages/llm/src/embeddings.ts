@@ -14,7 +14,7 @@ const USE_CACHE = process.env.USE_EMBEDDING_CACHE !== 'false'; // Default: enabl
 
 // Singleton clients
 let ollamaClient: Ollama | null = null;
-let anthropicClient: Anthropic | null = null;
+let anthropicClient: InstanceType<typeof Anthropic> | null = null;
 
 function getOllamaClient(): Ollama {
   if (!ollamaClient) {
@@ -23,7 +23,7 @@ function getOllamaClient(): Ollama {
   return ollamaClient;
 }
 
-function getAnthropicClient(): Anthropic {
+function getAnthropicClient(): InstanceType<typeof Anthropic> {
   if (!anthropicClient) {
     anthropicClient = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
   }

@@ -17,7 +17,7 @@ const USE_CACHE = process.env.USE_EXTRACTION_CACHE !== 'false'; // Default: enab
 
 // Singleton clients
 let ollamaClient: Ollama | null = null;
-let anthropicClient: Anthropic | null = null;
+let anthropicClient: InstanceType<typeof Anthropic> | null = null;
 
 function getOllamaClient(): Ollama {
   if (!ollamaClient) {
@@ -26,7 +26,7 @@ function getOllamaClient(): Ollama {
   return ollamaClient;
 }
 
-function getAnthropicClient(): Anthropic {
+function getAnthropicClient(): InstanceType<typeof Anthropic> {
   if (!anthropicClient) {
     anthropicClient = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
   }
@@ -269,8 +269,8 @@ async function extractWithClaude(
 
   // Extract text from response
   const responseText = message.content
-    .filter(block => block.type === 'text')
-    .map(block => (block as any).text)
+    .filter((block: any) => block.type === 'text')
+    .map((block: any) => block.text)
     .join('\n');
 
   // Parse JSON
