@@ -228,22 +228,40 @@ export function CategoryPanel() {
       const newCounts: CategoryCounts = {};
 
       try {
+        // Helper function to fetch with timeout
+        const fetchWithTimeout = async (url: string, timeout = 10000) => {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+          try {
+            const response = await fetch(url, { signal: controller.signal });
+            clearTimeout(timeoutId);
+            return response;
+          } catch (error) {
+            clearTimeout(timeoutId);
+            throw error;
+          }
+        };
+
         // Fetch counts in parallel for all categories
         const countPromises = CATEGORIES.filter(cat => cat.id !== 'SURPRISE').map(async (category) => {
           try {
             const timeFilter = getSmartTimeFilter(currentTime);
-            const response = await fetch(
-              `/api/search?q=${encodeURIComponent(category.searchQuery)}&city=${encodeURIComponent(city)}&limit=1&category=${category.id}&${timeFilter}`
-            );
+            const url = `/api/search?q=${encodeURIComponent(category.searchQuery)}&city=${encodeURIComponent(city)}&limit=1&category=${category.id}&${timeFilter}`;
+
+            const response = await fetchWithTimeout(url, 10000);
 
             if (response.ok) {
               const data = await response.json();
               return { id: category.id, count: data.total || 0 };
+            } else {
+              console.warn(`API returned ${response.status} for ${category.id}`);
+              return { id: category.id, count: 0 };
             }
-          } catch (error) {
-            console.error(`Failed to fetch count for ${category.id}:`, error);
+          } catch (error: any) {
+            console.error(`Failed to fetch count for ${category.id}:`, error?.name, error?.message);
+            return { id: category.id, count: 0 };
           }
-          return { id: category.id, count: 0 };
         });
 
         const results = await Promise.all(countPromises);
