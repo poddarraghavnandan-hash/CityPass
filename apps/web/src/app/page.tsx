@@ -7,7 +7,7 @@ import { InvestorTeaser } from '@/components/landing/InvestorTeaser';
 export default function LandingPage() {
   return (
     <PageShell>
-      <div className=\"space-y-14 py-10\">
+      <div className="space-y-14 py-10">
         <Hero />
         <HowItWorks />
         <TastePreview />

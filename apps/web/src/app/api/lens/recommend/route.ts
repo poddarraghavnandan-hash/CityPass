@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { randomUUID } from 'crypto';
 import { prisma } from '@citypass/db';
-import { plan } from '@citypass/agent';
+import { planAgent } from '@citypass/agent';
 import {
   IntentionTokensSchema,
   type RankedItem,
@@ -225,12 +225,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    let agentResult: Awaited<ReturnType<typeof plan>> | null = null;
+    let agentResult: Awaited<ReturnType<typeof planAgent>> | null = null;
     try {
-      agentResult = await plan({
-        user: body.intention?.user || (userId ? { id: userId } : undefined),
+      agentResult = await planAgent({
         tokens: mergedTokens,
-        freeText: body.intention?.freeText,
+        userId: body.intention?.user?.id || userId || undefined,
+        city: requestedCity,
       });
     } catch (error) {
       console.error('lens/recommend plan error, falling back to DB events', error);

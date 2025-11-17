@@ -9,7 +9,6 @@ import { SlateTabs } from './SlateTabs';
 import { ErrorState } from '@/components/common/ErrorState';
 import { SkeletonStoryCard } from '@/components/feed/SkeletonStoryCard';
 import { logClientEvent } from '@/lib/analytics/logClientEvent';
-import { logClientEvent } from '@/lib/analytics/logClientEvent';
 
 interface ChatUIProps {
   city: string;

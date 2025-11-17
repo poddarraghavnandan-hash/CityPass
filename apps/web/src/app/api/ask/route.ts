@@ -5,7 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { randomUUID } from 'crypto';
-import { understand } from '@citypass/agent';
+import { askAgent } from '@citypass/agent';
 import { AskInputSchema } from '@/lib/schemas';
 import { checkRateLimit, getRateLimitIdentifier } from '@/lib/rate-limit';
 
@@ -59,13 +59,20 @@ export async function POST(req: NextRequest) {
 
     console.log(`✨ [${traceId}] Intent extracted via ${extractionResult.method}`);
 
-    const intention = await understand({
+    const agentResult = await askAgent({
+      freeText: body.freeText,
       city: body.context?.city,
       userId: body.context?.userId,
       sessionId: body.context?.sessionId,
-      cookie: cookieIntention,
-      overrides: extractionResult.tokens,
+      traceId,
     });
+
+    const intention = agentResult.state.intention ?? {
+      city: body.context?.city || 'Unknown',
+      nowISO: new Date().toISOString(),
+      tokens: extractionResult.tokens,
+      source: 'inferred' as const,
+    };
 
     return NextResponse.json({
       tokens: intention.tokens,
