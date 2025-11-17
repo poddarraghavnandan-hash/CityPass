@@ -114,11 +114,11 @@ export async function extractIntentWithLLM(
 
   try {
     // Determine which model to use
-    // Priority: Claude/OpenAI (fast, reliable) → Ollama (free backup) → null
+    // Priority: OpenAI (fast, reliable) → Ollama (free backup) → Claude → null
     let useModel: 'claude' | 'gpt' | 'ollama' | null;
     if (model === 'auto') {
       // Try cloud APIs first (faster, more reliable), then Ollama as free backup
-      useModel = hasAnthropic ? 'claude' : hasOpenAI ? 'gpt' : hasOllama ? 'ollama' : null;
+      useModel = hasOpenAI ? 'gpt' : hasOllama ? 'ollama' : hasAnthropic ? 'claude' : null;
     } else {
       useModel = model;
     }
