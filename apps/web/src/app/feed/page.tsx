@@ -15,14 +15,14 @@ interface FeedPageProps {
 
 const moods: IntentionTokens['mood'][] = ['calm', 'social', 'electric', 'artistic', 'grounded'];
 
-export default function FeedPage({ searchParams }: FeedPageProps) {
+export default async function FeedPage({ searchParams }: FeedPageProps) {
   const moodParam = (searchParams?.mood as string) || 'electric';
   const defaultMood = moods.includes(moodParam as IntentionTokens['mood'])
     ? (moodParam as IntentionTokens['mood'])
     : 'electric';
   const presetIds = typeof searchParams?.ids === 'string' ? searchParams.ids.split(',').filter(Boolean) : null;
   const city = (searchParams?.city as string) || process.env.NEXT_PUBLIC_DEFAULT_CITY || 'New York';
-  const prefCookie = cookies().get('citylens_prefs')?.value;
+  const prefCookie = (await cookies()).get('citylens_prefs')?.value;
   const prefs = parsePreferencesCookie(prefCookie);
 
   return (

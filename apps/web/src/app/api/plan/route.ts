@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions);
     const userId = session?.user && 'id' in session.user ? (session.user as any).id : undefined;
 
-    const mergedTokens: IntentionTokens | undefined = {
+    const mergedTokens: Partial<IntentionTokens> = {
       ...(preferences
         ? {
             mood: preferences.mood,

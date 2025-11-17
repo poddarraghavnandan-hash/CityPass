@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
       const profile = await prisma.userProfile.findUnique({ where: { userId } });
       if (profile?.meta) {
         try {
-          const merged = { ...preferences, ...profile.meta };
+          const merged = Object.assign({}, preferences || {}, profile.meta as Record<string, any>);
           const parsedDbPrefs = parsePreferencesCookie(JSON.stringify(merged));
           if (parsedDbPrefs) {
             return NextResponse.json({

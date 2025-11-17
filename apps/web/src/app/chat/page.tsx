@@ -18,9 +18,9 @@ const moods: IntentionTokens['mood'][] = ['calm', 'social', 'electric', 'artisti
 const budgets: IntentionTokens['budget'][] = ['free', 'casual', 'splurge'];
 const companions: IntentionTokens['companions'][number][] = ['solo', 'partner', 'crew', 'family'];
 
-export default function ChatPage({ searchParams }: ChatPageProps) {
+export default async function ChatPage({ searchParams }: ChatPageProps) {
   const city = (searchParams?.city as string) || process.env.NEXT_PUBLIC_DEFAULT_CITY || 'New York';
-  const prefCookie = cookies().get('citylens_prefs')?.value;
+  const prefCookie = (await cookies()).get('citylens_prefs')?.value;
   const prefs = parsePreferencesCookie(prefCookie);
   const defaultTokens: IntentionTokens = {
     mood: prefs?.mood ?? parseMood(searchParams?.mood as string),

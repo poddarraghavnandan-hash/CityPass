@@ -179,9 +179,9 @@ export async function POST(req: NextRequest) {
     const userId = session?.user && 'id' in session.user ? (session.user as any).id : undefined;
     const profile = userId ? await prisma.userProfile.findUnique({ where: { userId } }) : null;
     const mergedPrefs = parsePreferencesCookie(
-      JSON.stringify({ ...(cookiePrefs || {}), ...(profile?.meta || {}) })
+      JSON.stringify(Object.assign({}, cookiePrefs || {}, (profile?.meta as Record<string, any>) || {}))
     ) || cookiePrefs;
-    const mergedTokens: IntentionTokens | undefined = {
+    const mergedTokens: Partial<IntentionTokens> = {
       ...(mergedPrefs
         ? {
             mood: mergedPrefs.mood,
