@@ -63,11 +63,8 @@ COPY --from=base /app/packages/utils/package.json ./packages/utils/package.json
 COPY --from=base /app/packages/search/package.json ./packages/search/package.json
 COPY --from=base /app/apps/worker/package.json ./apps/worker/package.json
 
-# Copy built artifacts
-COPY --from=base /app/packages/db/dist ./packages/db/dist
+# Copy built artifacts (only packages that actually build)
 COPY --from=base /app/packages/db/prisma ./packages/db/prisma
-COPY --from=base /app/packages/types/dist ./packages/types/dist
-COPY --from=base /app/packages/utils/dist ./packages/utils/dist
 COPY --from=base /app/packages/search/dist ./packages/search/dist
 COPY --from=base /app/apps/worker/dist ./apps/worker/dist
 
