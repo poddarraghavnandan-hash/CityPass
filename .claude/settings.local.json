@@ -119,7 +119,9 @@
       "Bash(vercel --token=NV6pRCdM96cCoorOUPXrd56G inspect citypass-4dp7106pf-raghav-poddars-projects.vercel.app --logs)",
       "WebFetch(domain:citypass-4dp7106pf-raghav-poddars-projects.vercel.app)",
       "WebFetch(domain:citypass-nqoc408sn-raghav-poddars-projects.vercel.app)",
-      "Bash(vercel --token=NV6pRCdM96cCoorOUPXrd56G inspect citypass-nqoc408sn-raghav-poddars-projects.vercel.app --logs)"
+      "Bash(vercel --token=NV6pRCdM96cCoorOUPXrd56G inspect citypass-nqoc408sn-raghav-poddars-projects.vercel.app --logs)",
+      "Bash(vercel --token=NV6pRCdM96cCoorOUPXrd56G inspect citypass-3qnjd4416-raghav-poddars-projects.vercel.app --logs)",
+      "WebFetch(domain:citypass-rcps6k1xm-raghav-poddars-projects.vercel.app)"
     ],
     "deny": [],
     "ask": []
