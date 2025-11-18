@@ -80,6 +80,8 @@ model Event {
   @@index([startTime])
   @@index([sourceDomain])
   @@index([checksum])
+  @@index([venueId])  // Added for venue-based queries
+  @@index([sourceId]) // Added for source-based queries
   @@map("events")
 }
 
@@ -428,6 +430,7 @@ model SearchCache {
 
   @@unique([city, timeframe, query, category], name: "unique_search_cache_key")
   @@index([timeframe, city], name: "idx_search_cache_timeframe_city")
+  @@index([expiresAt]) // Added for efficient cleanup of expired entries
   @@map("search_cache")
 }
 
@@ -1063,4 +1066,72 @@ model RankerSnapshot {
   @@index([modelVersionId])
   @@index([createdAt])
   @@map("ranker_snapshots")
+}
+
+// ============================================
+// Chat Brain V2 Models
+// ============================================
+
+model ChatThread {
+  id        String   @id @default(cuid())
+  userId    String?  @map("user_id")
+  anonId    String?  @map("anon_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  messages      ChatMessage[]
+  slateDecisions SlateDecision[]
+
+  @@index([userId, createdAt])
+  @@index([anonId, createdAt])
+  @@map("chat_threads")
+}
+
+model ChatMessage {
+  id          String   @id @default(cuid())
+  threadId    String   @map("thread_id")
+  thread      ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  role        String   // "user" | "assistant" | "system"
+  freeText    String?  @map("free_text") @db.Text
+  modelReply  String?  @map("model_reply") @db.Text
+  rawPayload  Json?    @map("raw_payload") // Context snapshot, analyst output, etc.
+
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([threadId, createdAt])
+  @@map("chat_messages")
+}
+
+model SlateDecision {
+  id                String   @id @default(cuid())
+  traceId           String   @map("trace_id")
+  threadId          String   @map("thread_id")
+  thread            ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  userId            String?  @map("user_id")
+
+  intentionJson     Json     @map("intention_json")
+  slatesJson        Json     @map("slates_json")
+  banditPolicyName  String?  @map("bandit_policy_name")
+  usedProfile       Boolean  @default(false) @map("used_profile")
+  usedLearnerState  Boolean  @default(false) @map("used_learner_state")
+
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  @@index([traceId])
+  @@index([threadId, createdAt])
+  @@index([userId, createdAt])
+  @@map("slate_decisions")
+}
+
+model UserContextSnapshot {
+  id                String   @id @default(cuid())
+  userId            String   @unique @map("user_id")
+  lastTraceId       String   @map("last_trace_id")
+  lastIntentionJson Json     @map("last_intention_json")
+  lastTasteVectorId String?  @map("last_taste_vector_id")
+  lastUpdatedAt     DateTime @map("last_updated_at")
+
+  @@index([userId])
+  @@map("user_context_snapshots")
 }

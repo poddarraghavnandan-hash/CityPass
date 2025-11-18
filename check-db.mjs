@@ -1,1 +1,0 @@
-import { prisma } from '@citypass/db'; (async () => { const count = await prisma.event.count(); console.log('Total events:', count); const recent = await prisma.event.findMany({ take: 5, orderBy: { createdAt: 'desc' }, select: { id: true, title: true, category: true, city: true } }); console.log('Recent:', JSON.stringify(recent, null, 2)); await prisma.\(); })();

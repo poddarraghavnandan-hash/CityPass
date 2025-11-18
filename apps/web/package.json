@@ -21,6 +21,7 @@
     "@citypass/agent": "workspace:*",
     "@citypass/analytics": "workspace:*",
     "@citypass/cag": "workspace:*",
+    "@citypass/chat": "workspace:*",
     "@citypass/db": "workspace:*",
     "@citypass/llm": "workspace:*",
     "@citypass/rag": "workspace:*",

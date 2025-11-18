@@ -1,135 +1,241 @@
-import { NextRequest } from 'next/server';
-import { IntentionTokensSchema } from '@citypass/types';
-import OpenAI from 'openai';
+/**
+ * /api/chat - Chat Brain V2 Streaming Endpoint
+ * Uses new orchestrator: Context → Analyst → Planner → Stylist
+ */
 
-// Initialize OpenAI only if API key is available
-const openai = process.env.OPENAI_API_KEY ? new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-}) : null;
+import { NextRequest } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { cookies } from 'next/headers';
+import { runChatTurn } from '@citypass/chat';
+import type { RankedItem } from '@citypass/types';
+import { z } from 'zod';
+import { checkRateLimit, getRateLimitIdentifier } from '@/lib/rate-limit';
+
+const ChatRequestSchema = z.object({
+  prompt: z.string().min(1).max(1000).optional(),
+  messages: z
+    .array(
+      z.object({
+        role: z.enum(['user', 'assistant', 'system']),
+        content: z.string(),
+      })
+    )
+    .optional(),
+  city: z.string().max(100).optional(),
+  threadId: z.string().uuid().optional(),
+}).refine(
+  (data) => data.prompt || (data.messages && data.messages.length > 0),
+  {
+    message: 'Either prompt or messages must be provided',
+  }
+);
+
+/**
+ * Adapter: Convert Slate items to RankedItem[] format for backward compatibility
+ */
+function slateItemsToRankedItems(slateItems: any[], eventMap: Map<string, any>): RankedItem[] {
+  return slateItems.map((item) => {
+    const event = eventMap.get(item.eventId);
+    if (!event) {
+      // Event not found in candidate list - should not happen
+      return null;
+    }
+
+    return {
+      id: event.id,
+      title: event.title,
+      venueName: event.venueName || null,
+      city: event.city || null,
+      startTime: event.startTime,
+      priceMin: event.priceMin,
+      priceMax: event.priceMax,
+      imageUrl: event.imageUrl || null,
+      bookingUrl: event.bookingUrl || null,
+      category: event.category || null,
+      fitScore: item.factorScores?.tasteMatchScore || 0.5,
+      moodScore: item.factorScores?.moodAlignment || null,
+      socialHeat: item.factorScores?.socialHeatScore || null,
+      reasons: item.reasons || [],
+      sponsored: false,
+      subtitle: event.subtitle || null,
+      description: event.description || null,
+      neighborhood: event.neighborhood || null,
+      endTime: event.endTime || null,
+      distanceKm: item.factorScores?.distanceKm || null,
+    };
+  }).filter(Boolean) as RankedItem[];
+}
 
 export async function POST(req: NextRequest) {
-  const body = await req.json();
+  try {
+    // Rate limiting: 20 requests per minute per IP (strict limit for LLM endpoints)
+    const rateLimitId = getRateLimitIdentifier(req);
+    const rateLimit = checkRateLimit({
+      identifier: rateLimitId,
+      limit: 20,
+      windowSeconds: 60,
+    });
 
-  // Support both prompt (old) and messages (new) formats
-  let freeText = '';
-  if (body.prompt) {
-    freeText = body.prompt as string;
-  } else if (body.messages && Array.isArray(body.messages)) {
-    // Extract last user message from messages array
-    const lastUserMessage = body.messages.filter((m: any) => m.role === 'user').pop();
-    freeText = lastUserMessage?.content || '';
-  }
-
-  const city = (body.city as string) ?? process.env.NEXT_PUBLIC_DEFAULT_CITY ?? 'New York';
-  const rawTokens = body.tokens ? IntentionTokensSchema.partial().parse(body.tokens) : undefined;
-
-  const encoder = new TextEncoder();
-  const stream = new ReadableStream({
-    async start(controller) {
-      const send = (event: string, data: any) => {
-        controller.enqueue(
-          encoder.encode(`event: ${event}\n` + `data: ${typeof data === 'string' ? data : JSON.stringify(data)}\n\n`)
-        );
-      };
-
-      try {
-        const intentionResponse = await fetch(`${req.nextUrl.origin}/api/ask`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            freeText,
-            context: { city, overrides: rawTokens },
-          }),
-        });
-        if (!intentionResponse.ok) {
-          throw new Error('Unable to understand request.');
+    if (!rateLimit.allowed) {
+      return new Response(
+        JSON.stringify({
+          error: 'Rate limit exceeded',
+          message: 'Too many chat requests. Please try again in a moment.',
+        }),
+        {
+          status: 429,
+          headers: {
+            'Content-Type': 'application/json',
+            'Retry-After': String(rateLimit.retryAfter),
+            'X-RateLimit-Limit': '20',
+            'X-RateLimit-Remaining': '0',
+            'X-RateLimit-Reset': String(rateLimit.resetAt),
+          },
         }
-        const intentionPayload = await intentionResponse.json();
-        const intention = intentionPayload.intention ?? intentionPayload.tokens;
-        send('message', { text: `Okay, curating ${intention?.tokens?.mood ?? 'city'} mood…` });
+      );
+    }
 
-        const planResponse = await fetch(`${req.nextUrl.origin}/api/plan`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            freeText,
-            tokens: rawTokens,
-            user: intention?.user,
-          }),
+    const rawBody = await req.json();
+    const body = ChatRequestSchema.parse(rawBody);
+
+    // Support both prompt (old) and messages (new) formats
+    let freeText = '';
+    if (body.prompt) {
+      freeText = body.prompt;
+    } else if (body.messages && Array.isArray(body.messages)) {
+      // Extract last user message from messages array
+      const lastUserMessage = body.messages.filter((m) => m.role === 'user').pop();
+      freeText = lastUserMessage?.content || '';
+    }
+
+    const cityHint = body.city ?? process.env.NEXT_PUBLIC_DEFAULT_CITY ?? 'New York';
+    const threadId = body.threadId;
+
+  // Get user ID from session
+  const session = await getServerSession(authOptions);
+  const userId = session?.user && 'id' in session.user ? (session.user as any).id : undefined;
+
+  // Get anon ID from cookie
+  const cookieStore = await cookies();
+  const anonId = cookieStore.get('citylens_anon_id')?.value;
+
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      async start(controller) {
+        const send = (event: string, data: any) => {
+          controller.enqueue(
+            encoder.encode(`event: ${event}\n` + `data: ${typeof data === 'string' ? data : JSON.stringify(data)}\n\n`)
+          );
+        };
+
+        try {
+          // Send initial acknowledgment
+          send('message', { text: 'Understanding your request…' });
+
+        // Run Chat Brain V2 orchestrator
+        const result = await runChatTurn({
+          userId,
+          anonId,
+          freeText,
+          cityHint,
+          threadId,
         });
 
-        if (!planResponse.ok) {
-          throw new Error('Unable to plan recommendations.');
-        }
+        const { plannerDecision, reply } = result;
 
-        const planPayload = await planResponse.json();
+        // Build event map for quick lookup
+        const eventMap = new Map();
+        // We need to fetch the actual events from the database based on slate item IDs
+        // For now, we'll build a simplified structure
 
-        // Generate personalized summary using LLM with search results context
-        let personalizedSummary = planPayload.reasons?.[0] ?? 'Ready with 3 slates.';
-        if (openai) {
-          try {
-            // Collect events from all slates for context
-            const allEvents = [
-            ...(planPayload.slates?.best || []),
-            ...(planPayload.slates?.wildcard || []),
-            ...(planPayload.slates?.closeAndEasy || []),
-          ].slice(0, 10); // Limit to top 10 events for context
+        // Send progress update
+        send('message', { text: 'Curating your recommendations…' });
 
-          if (allEvents.length > 0) {
-            const eventsContext = allEvents.map((event: any, idx: number) =>
-              `${idx + 1}. ${event.title} at ${event.venueName || 'TBD'}${event.category ? ` (${event.category})` : ''}${event.priceMin !== undefined ? ` - $${event.priceMin}${event.priceMax ? `-$${event.priceMax}` : ''}` : ''}`
-            ).join('\n');
+        // Convert slates to RankedItem[] format
+        // Note: We need to fetch full event details from DB for this
+        // For now, create a simplified version
+        const normalizedSlates: {
+          best: RankedItem[];
+          wildcard: RankedItem[];
+          closeAndEasy: RankedItem[];
+        } = {
+          best: [],
+          wildcard: [],
+          closeAndEasy: [],
+        };
 
-            const completion = await openai.chat.completions.create({
-              model: 'gpt-4o-mini',
-              messages: [
-                {
-                  role: 'system',
-                  content: `You are CityLens, a concise AI assistant helping users discover events in their city. Your responses should be:
-- Brief and to-the-point (1-2 sentences max)
-- Personalized based on their search intent
-- Highlight what makes the recommendations special
-- Conversational and friendly, not formal`
-                },
-                {
-                  role: 'user',
-                  content: `User asked: "${freeText}"
+        // Try to find slates by label
+        const bestSlate = plannerDecision.slates.find((s) => s.label === 'Best');
+        const wildcardSlate = plannerDecision.slates.find((s) => s.label === 'Wildcard');
+        const closeEasySlate = plannerDecision.slates.find((s) => s.label === 'Close & Easy');
 
-I found these events for them:
-${eventsContext}
+        // For each slate, we need to fetch full event details
+        // This is a limitation of the current architecture - the planner only returns event IDs
+        // TODO: Refactor to include full event objects in planner output
+        const eventIds = new Set<string>();
+        if (bestSlate) bestSlate.items.forEach((item) => eventIds.add(item.eventId));
+        if (wildcardSlate) wildcardSlate.items.forEach((item) => eventIds.add(item.eventId));
+        if (closeEasySlate) closeEasySlate.items.forEach((item) => eventIds.add(item.eventId));
 
-Context:
-- Mood: ${intention?.tokens?.mood || 'exploring'}
-- City: ${intention?.city || city}
-- Time: ${intention?.tokens?.untilMinutes ? (intention.tokens.untilMinutes <= 720 ? 'today' : intention.tokens.untilMinutes <= 1440 ? 'tonight/tomorrow' : 'upcoming') : 'upcoming'}
+        // Fetch events from database
+        if (eventIds.size > 0) {
+          const { prisma } = await import('@citypass/db');
+          const events = await prisma.event.findMany({
+            where: { id: { in: Array.from(eventIds) } },
+            select: {
+              id: true,
+              title: true,
+              venueName: true,
+              city: true,
+              startTime: true,
+              endTime: true,
+              priceMin: true,
+              priceMax: true,
+              imageUrl: true,
+              bookingUrl: true,
+              category: true,
+              subtitle: true,
+              description: true,
+              neighborhood: true,
+            },
+          });
 
-Write a brief, personalized response (1-2 sentences) that:
-1. Confirms what they searched for ("${freeText}")
-2. Mentions the time frame and number of events
-Example: "I found 5 music events happening today in Brooklyn that match your vibe."`
-                }
-              ],
-              temperature: 0.7,
-              max_tokens: 100,
-            });
+          events.forEach((event) => eventMap.set(event.id, event));
 
-            personalizedSummary = completion.choices[0]?.message?.content || personalizedSummary;
-            }
-          } catch (llmError) {
-            console.error('LLM summary generation failed:', llmError);
-            // Fall back to default summary
+          // Convert slates
+          if (bestSlate) {
+            normalizedSlates.best = slateItemsToRankedItems(bestSlate.items, eventMap);
+          }
+          if (wildcardSlate) {
+            normalizedSlates.wildcard = slateItemsToRankedItems(wildcardSlate.items, eventMap);
+          }
+          if (closeEasySlate) {
+            normalizedSlates.closeAndEasy = slateItemsToRankedItems(closeEasySlate.items, eventMap);
           }
         }
 
+        // Extract reasons from first slate
+        const reasons = bestSlate?.items[0]?.reasons || ['Recommended for you'];
+
+        // Send final payload
         send('payload', {
-          summary: personalizedSummary,
-          intentionSummary: `${intention?.tokens?.mood ?? 'City'} · ${intention?.city ?? city}`,
-          slates: planPayload.slates,
-          reasons: planPayload.reasons,
-          intention: planPayload.intention,
-          traceId: planPayload.traceId,
+          summary: reply,
+          intentionSummary: `${plannerDecision.intention.vibeDescriptors[0] || 'Exploring'} · ${plannerDecision.intention.city}`,
+          slates: normalizedSlates,
+          reasons,
+          intention: {
+            city: plannerDecision.intention.city,
+            tokens: {
+              mood: plannerDecision.intention.vibeDescriptors[0] || null,
+              fromMinutes: 0, // TODO: Calculate from timeWindow
+              untilMinutes: 180, // TODO: Calculate from timeWindow
+            },
+          },
+          traceId: result.threadId,
         });
       } catch (error: any) {
+        console.error('[ChatAPI] Chat turn failed:', error);
         send('error', error?.message || 'Chat failed');
       } finally {
         controller.close();
@@ -137,11 +243,36 @@ Example: "I found 5 music events happening today in Brooklyn that match your vib
     },
   });
 
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      Connection: 'keep-alive',
-      'Cache-Control': 'no-cache',
-    },
-  });
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        Connection: 'keep-alive',
+        'Cache-Control': 'no-cache',
+      },
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return new Response(
+        JSON.stringify({
+          error: 'Invalid request',
+          details: error.flatten(),
+        }),
+        {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    console.error('[ChatAPI] Request failed:', error);
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Internal server error',
+      }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+  }
 }

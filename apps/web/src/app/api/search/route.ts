@@ -15,6 +15,17 @@ import {
   type EventCategoryValue,
 } from '@/lib/categories';
 import { getCachedResults, inferTimeframe } from '@/lib/search-cache';
+import { z } from 'zod';
+import { checkRateLimit, getRateLimitIdentifier } from '@/lib/rate-limit';
+
+const SearchParamsSchema = z.object({
+  q: z.string().max(500).optional(),
+  city: z.string().max(100).optional(),
+  category: z.string().max(50).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+  timePreference: z.string().max(50).optional(),
+  cacheOnly: z.enum(['true', 'false']).optional(),
+});
 
 // Query expansion keywords
 const QUERY_EXPANSIONS: Record<string, string[]> = {
@@ -35,15 +46,44 @@ export async function GET(req: NextRequest) {
   const searchTiers: SearchTier[] = [];
 
   try {
-    const searchParams = req.nextUrl.searchParams;
-    const query = searchParams.get('q') || '';
-    const city = searchParams.get('city') || 'New York';
-    const rawCategory = searchParams.get('category');
+    // Rate limiting: 60 requests per minute per IP
+    const rateLimitId = getRateLimitIdentifier(req);
+    const rateLimit = checkRateLimit({
+      identifier: rateLimitId,
+      limit: 60,
+      windowSeconds: 60,
+    });
+
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        {
+          error: 'Rate limit exceeded',
+          message: 'Too many search requests. Please try again in a moment.',
+        },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimit.retryAfter),
+            'X-RateLimit-Limit': '60',
+            'X-RateLimit-Remaining': '0',
+            'X-RateLimit-Reset': String(rateLimit.resetAt),
+          },
+        }
+      );
+    }
+
+    // Validate search params
+    const rawParams = Object.fromEntries(req.nextUrl.searchParams.entries());
+    const validatedParams = SearchParamsSchema.parse(rawParams);
+
+    const query = validatedParams.q || '';
+    const city = validatedParams.city || 'New York';
+    const rawCategory = validatedParams.category;
     const category = normalizeCategory(rawCategory);
-    const limit = parseInt(searchParams.get('limit') || '20');
-    const timePreference = searchParams.get('timePreference');
+    const limit = validatedParams.limit || 20;
+    const timePreference = validatedParams.timePreference;
     const requestedTimeframe = inferTimeframe(timePreference);
-    const cacheOnly = searchParams.get('cacheOnly') === 'true';
+    const cacheOnly = validatedParams.cacheOnly === 'true';
 
     console.log(`🔍 Search query: "${query}" in ${city}${category ? ` [${category}]` : ''}`);
 
@@ -130,6 +170,16 @@ export async function GET(req: NextRequest) {
     return formatSuccessResponse(finalResults, query, city, prefs, searchTiers, limit);
 
   } catch (error: any) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        {
+          error: 'Invalid search parameters',
+          details: error.flatten(),
+        },
+        { status: 400 }
+      );
+    }
+
     console.error('❌ Search error:', error);
     return NextResponse.json(
       {

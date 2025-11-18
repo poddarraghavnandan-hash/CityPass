@@ -131,6 +131,9 @@ const jobs: CronJob[] = [
   },
 ].filter(Boolean) as CronJob[];
 
+// Store interval IDs for cleanup
+const intervalIds: NodeJS.Timeout[] = [];
+
 /**
  * Start cron scheduler
  */
@@ -141,10 +144,12 @@ export function startCron(): void {
     // Run immediately on start
     runJob(job);
 
-    // Schedule recurring runs
-    setInterval(() => {
+    // Schedule recurring runs and store interval ID
+    const intervalId = setInterval(() => {
       runJob(job);
     }, job.intervalMs);
+
+    intervalIds.push(intervalId);
 
     console.log(`  ✓ Scheduled: ${job.name} (every ${job.intervalMs / 1000}s)`);
   });
@@ -175,8 +180,16 @@ async function runJob(job: CronJob): Promise<void> {
  */
 export function stopCron(): void {
   console.log('⏹️ Stopping cron scheduler...');
-  // In a real implementation, we'd clear intervals here
-  // For now, this is a placeholder for graceful shutdown
+
+  // Clear all intervals
+  intervalIds.forEach(intervalId => {
+    clearInterval(intervalId);
+  });
+
+  // Clear the array
+  intervalIds.length = 0;
+
+  console.log('✓ All cron jobs stopped');
 }
 
 /**
@@ -208,3 +221,16 @@ export function getJobStatus(): Array<{
     nextRun: job.lastRun ? job.lastRun + job.intervalMs : null,
   }));
 }
+
+// Graceful shutdown handlers
+process.on('SIGTERM', () => {
+  console.log('\n📡 Received SIGTERM signal - shutting down gracefully...');
+  stopCron();
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  console.log('\n📡 Received SIGINT signal - shutting down gracefully...');
+  stopCron();
+  process.exit(0);
+});

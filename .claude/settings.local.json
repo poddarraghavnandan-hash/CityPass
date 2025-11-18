@@ -158,7 +158,9 @@
       "Bash(if [ -n \"$OPENAI_API_KEY\" ])",
       "Bash(then echo \"OPENAI_API_KEY is set\")",
       "Bash(else echo \"OPENAI_API_KEY is NOT set\")",
-      "Bash(fi)"
+      "Bash(fi)",
+      "Bash(if exist \".git\\index.lock\" del /F /Q \".git\\index.lock\")",
+      "Bash(if exist \"C:\\Users\\ragha\\citypass\\check-db.mjs\" del /F /Q \"C:\\Users\\ragha\\citypass\\check-db.mjs\")"
     ],
     "deny": [],
     "ask": []

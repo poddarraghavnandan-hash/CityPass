@@ -1,0 +1,31 @@
+{
+  "name": "@citypass/chat",
+  "version": "2.0.0",
+  "private": true,
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "exports": {
+    ".": "./index.ts",
+    "./orchestrator": "./orchestrator.ts",
+    "./types": "./types.ts"
+  },
+  "scripts": {
+    "dev": "tsc --watch",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@citypass/db": "workspace:*",
+    "@citypass/types": "workspace:*",
+    "@citypass/ranker": "workspace:*",
+    "@citypass/slate": "workspace:*",
+    "@citypass/utils": "workspace:*",
+    "openai": "^4.81.0",
+    "uuid": "^11.0.5",
+    "zod": "^3.25.4"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.0",
+    "@types/uuid": "^10.0.0",
+    "typescript": "^5.9.3"
+  }
+}
