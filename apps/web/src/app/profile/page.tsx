@@ -131,7 +131,7 @@ export default function ProfilePage() {
               budget={budget}
               onBudgetChange={(val) => {
                 setBudget(val);
-                onChangeAndLog({ budget: val });
+                onChangeAndLog({ budget: val as 'free' | 'casual' | 'splurge' });
               }}
               distanceKm={distanceKm}
               onDistanceChange={(val) => {

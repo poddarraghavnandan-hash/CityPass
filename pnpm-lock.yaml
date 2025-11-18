@@ -311,9 +311,18 @@ importers:
       '@citypass/rag':
         specifier: workspace:*
         version: link:../rag
+      '@citypass/ranker':
+        specifier: workspace:*
+        version: link:../ranker
       '@citypass/search':
         specifier: workspace:*
         version: link:../search
+      '@citypass/slate':
+        specifier: workspace:*
+        version: link:../slate
+      '@citypass/taste':
+        specifier: workspace:*
+        version: link:../taste
       '@citypass/types':
         specifier: workspace:*
         version: link:../types

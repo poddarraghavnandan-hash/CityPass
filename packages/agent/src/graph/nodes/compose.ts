@@ -3,8 +3,7 @@
  * Create multiple recommendation slates using bandit policy
  */
 
-import { composeSlates } from '@citypass/slate';
-import { choosePolicyForUser } from '@citypass/slate/bandit';
+import { composeSlates, choosePolicyForUser } from '@citypass/slate';
 import { getUserFeatures } from '@citypass/taste';
 import type { AgentState } from '../types';
 import type { RankedEvent } from '@citypass/slate';

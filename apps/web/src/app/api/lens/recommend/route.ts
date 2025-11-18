@@ -250,15 +250,36 @@ export async function POST(req: NextRequest) {
     }
 
     const slates = agentResult.state.slates || {
-      best: [],
-      wildcard: [],
-      closeAndEasy: [],
+      best: { events: [] },
+      wildcard: { events: [] },
+      closeAndEasy: { events: [] },
     };
 
+    const mapSlateItemToRankedItem = (item: any): RankedItem => ({
+      id: item.eventId,
+      title: item.title,
+      subtitle: item.subtitle,
+      description: item.description,
+      category: item.category,
+      city: item.city,
+      venueName: item.venueName,
+      neighborhood: item.neighborhood,
+      startTime: item.startTime,
+      endTime: item.endTime,
+      priceMin: item.priceMin,
+      priceMax: item.priceMax,
+      distanceKm: item.distanceKm,
+      imageUrl: item.imageUrl,
+      bookingUrl: item.bookingUrl,
+      fitScore: item.score,
+      sponsored: false,
+      reasons: item.reasons,
+    });
+
     const combined: RankedItem[] = [
-      ...(slates.best || []),
-      ...(slates.wildcard || []),
-      ...(slates.closeAndEasy || []),
+      ...(slates.best.events || []).map(mapSlateItemToRankedItem),
+      ...(slates.wildcard.events || []).map(mapSlateItemToRankedItem),
+      ...(slates.closeAndEasy.events || []).map(mapSlateItemToRankedItem),
     ];
 
     if (combined.length === 0) {

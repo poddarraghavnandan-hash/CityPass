@@ -41,7 +41,7 @@ const nextConfig = {
     CITYLENS_ENABLED: process.env.CITYLENS_ENABLED,
   },
 
-  // Turbopack configuration (Next.js 16+)
+  // Empty turbopack config to allow webpack config in Next.js 16
   turbopack: {},
 
   webpack: (config, { isServer }) => {

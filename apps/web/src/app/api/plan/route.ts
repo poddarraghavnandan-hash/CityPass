@@ -123,7 +123,7 @@ export async function POST(req: NextRequest) {
       userId: userId,
       sessionId: randomUUID(),
       traceId,
-      city: body.user?.city || preferences?.city || 'New York',
+      city: body.user?.city || 'New York',
     });
 
     const latency = Date.now() - startTime;

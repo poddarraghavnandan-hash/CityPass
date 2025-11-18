@@ -4,29 +4,28 @@ import { prisma } from '@citypass/db';
 
 const EventSchema = z.object({
   type: z.enum([
-    'query',
-    'slate_impression',
-    'card_view',
-    'click_route',
-    'click_book',
-    'save',
-    'hide',
-    'reask',
-    'error',
-    'profile_update',
-    'onboarding_update',
+    'QUERY',
+    'SLATE_IMPRESSION',
+    'CARD_VIEW',
+    'CLICK_ROUTE',
+    'CLICK_BOOK',
+    'SAVE',
+    'HIDE',
+    'REASK',
+    'ERROR',
+    'FEEDBACK_POSITIVE',
+    'FEEDBACK_NEGATIVE',
   ]),
-  payload: z.record(z.any()).and(
-    z.object({
-      screen: z.enum(['chat', 'feed', 'profile', 'onboarding', 'investors', 'landing']),
-      traceId: z.string().optional(),
-      slateLabel: z.string().optional(),
-      eventId: z.string().optional(),
-      eventIds: z.array(z.string()).optional(),
-      position: z.number().int().optional(),
-      intention: z.any().optional(),
-    })
-  ),
+  sessionId: z.string(),
+  traceId: z.string(),
+  payload: z.object({
+    screen: z.enum(['chat', 'feed', 'profile', 'onboarding', 'investors', 'landing']),
+    slateLabel: z.string().optional(),
+    eventId: z.string().optional(),
+    eventIds: z.array(z.string()).optional(),
+    position: z.number().int().optional(),
+    intention: z.any().optional(),
+  }).passthrough(),
 });
 
 const BodySchema = z.object({
@@ -41,9 +40,11 @@ export async function POST(req: NextRequest) {
 
     // Fire-and-forget insert; avoid blocking UI
     await prisma.eventLog.createMany({
-      data: body.events.map(({ type, payload }) => ({
-        type,
-        payload,
+      data: body.events.map(({ type, sessionId, traceId, payload }) => ({
+        eventType: type,
+        sessionId,
+        traceId,
+        payload: payload as any,
         createdAt: now,
       })),
       skipDuplicates: true,

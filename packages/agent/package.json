@@ -20,7 +20,10 @@
     "@citypass/utils": "workspace:*",
     "@citypass/rag": "workspace:*",
     "@citypass/cag": "workspace:*",
-    "@citypass/search": "workspace:*"
+    "@citypass/search": "workspace:*",
+    "@citypass/ranker": "workspace:*",
+    "@citypass/slate": "workspace:*",
+    "@citypass/taste": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^24.10.0",

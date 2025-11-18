@@ -151,7 +151,8 @@
       "Bash(tskill:*)",
       "Bash(rd /s /q packagesrankerdist)",
       "Bash(rd /s /q packagesslatedist)",
-      "Bash(rd /s /q packagestastedist)"
+      "Bash(rd /s /q packagestastedist)",
+      "Bash(time pnpm build:*)"
     ],
     "deny": [],
     "ask": []

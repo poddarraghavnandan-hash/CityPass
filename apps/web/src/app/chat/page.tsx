@@ -11,7 +11,7 @@ export const metadata = {
 };
 
 interface ChatPageProps {
-  searchParams?: Record<string, string | string[] | undefined>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 const moods: IntentionTokens['mood'][] = ['calm', 'social', 'electric', 'artistic', 'grounded'];
@@ -19,18 +19,19 @@ const budgets: IntentionTokens['budget'][] = ['free', 'casual', 'splurge'];
 const companions: IntentionTokens['companions'][number][] = ['solo', 'partner', 'crew', 'family'];
 
 export default async function ChatPage({ searchParams }: ChatPageProps) {
-  const city = (searchParams?.city as string) || process.env.NEXT_PUBLIC_DEFAULT_CITY || 'New York';
+  const params = await searchParams;
+  const city = (params?.city as string) || process.env.NEXT_PUBLIC_DEFAULT_CITY || 'New York';
   const prefCookie = (await cookies()).get('citylens_prefs')?.value;
   const prefs = parsePreferencesCookie(prefCookie);
   const defaultTokens: IntentionTokens = {
-    mood: prefs?.mood ?? parseMood(searchParams?.mood as string),
-    untilMinutes: searchParams?.untilMinutes ? Number(searchParams.untilMinutes) : 180,
-    distanceKm: prefs?.distanceKm ?? (searchParams?.distanceKm ? Number(searchParams.distanceKm) : 6),
-    budget: prefs?.budget ?? parseBudget(searchParams?.budget as string),
-    companions: parseCompanions(searchParams?.companions as string),
+    mood: prefs?.mood ?? parseMood(params?.mood as string),
+    untilMinutes: params?.untilMinutes ? Number(params.untilMinutes) : 180,
+    distanceKm: prefs?.distanceKm ?? (params?.distanceKm ? Number(params.distanceKm) : 6),
+    budget: prefs?.budget ?? parseBudget(params?.budget as string),
+    companions: parseCompanions(params?.companions as string),
   };
 
-  const initialPrompt = searchParams?.prompt as string | undefined;
+  const initialPrompt = params?.prompt as string | undefined;
 
   return (
     <PageShell>

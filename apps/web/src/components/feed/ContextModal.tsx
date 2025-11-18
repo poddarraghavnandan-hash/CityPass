@@ -30,10 +30,12 @@ export function ContextModal({ item, onClose, traceId, slateLabel = 'feed_primar
       <div className="relative max-h-full w-full max-w-3xl overflow-y-auto rounded-[40px] border border-white/10 bg-[#05030b] p-8 text-white">
         <button
           type="button"
-          onClick={onClose}
+          onClick={() => {
+            logClientEvent('card_view', { screen: 'feed', traceId, slateLabel, eventId: item.id, position, viewType: 'modal_close' });
+            onClose();
+          }}
           className="absolute right-6 top-6 rounded-full border border-white/20 px-3 py-1 text-sm text-white/70"
           aria-label="Close modal"
-          onClick={() => logClientEvent('card_view', { screen: 'feed', traceId, slateLabel, eventId: item.id, position, viewType: 'modal_close' })}
         >
           Close
         </button>

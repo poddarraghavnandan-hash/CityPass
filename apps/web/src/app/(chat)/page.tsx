@@ -8,11 +8,12 @@ export const metadata = {
 };
 
 interface ChatPageProps {
-  searchParams?: Record<string, string | string[] | undefined>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-export default function ChatPage({ searchParams }: ChatPageProps) {
-  const city = (searchParams?.city as string) || process.env.NEXT_PUBLIC_DEFAULT_CITY || 'New York';
+export default async function ChatPage({ searchParams }: ChatPageProps) {
+  const params = await searchParams;
+  const city = (params?.city as string) || process.env.NEXT_PUBLIC_DEFAULT_CITY || 'New York';
 
   const allowedMoods: IntentionTokens['mood'][] = ['calm', 'social', 'electric', 'artistic', 'grounded'];
   const allowedBudgets: IntentionTokens['budget'][] = ['free', 'casual', 'splurge'];
@@ -38,14 +39,14 @@ export default function ChatPage({ searchParams }: ChatPageProps) {
   };
 
   const defaultTokens: IntentionTokens = {
-    mood: pickMood(searchParams?.mood as string | undefined),
-    untilMinutes: searchParams?.untilMinutes ? Number(searchParams.untilMinutes) : 180,
-    distanceKm: searchParams?.distanceKm ? Number(searchParams.distanceKm) : 6,
-    budget: pickBudget(searchParams?.budget as string | undefined),
-    companions: pickCompanions(searchParams?.companions as string | undefined),
+    mood: pickMood(params?.mood as string | undefined),
+    untilMinutes: params?.untilMinutes ? Number(params.untilMinutes) : 180,
+    distanceKm: params?.distanceKm ? Number(params.distanceKm) : 6,
+    budget: pickBudget(params?.budget as string | undefined),
+    companions: pickCompanions(params?.companions as string | undefined),
   };
 
-  const initialPrompt = searchParams?.prompt as string | undefined;
+  const initialPrompt = params?.prompt as string | undefined;
 
   return (
     <Suspense fallback={<div className="p-8 text-white/70">Loading CityLens…</div>}>

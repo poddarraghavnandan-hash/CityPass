@@ -84,8 +84,8 @@ export function ChatUI({ city, defaultTokens, initialPrompt }: ChatUIProps) {
                 screen: 'chat',
                 traceId: payload?.traceId,
                 slateLabel: key,
-                eventIds: slateItems.map((item) => item.id),
-                scores: slateItems.map((item) => item.fitScore).filter((val) => typeof val === 'number'),
+                eventIds: slateItems.map((item: any) => item.id),
+                scores: slateItems.map((item: any) => item.fitScore).filter((val: any) => typeof val === 'number'),
                 position: 0,
                 intention: payload?.intention,
               });

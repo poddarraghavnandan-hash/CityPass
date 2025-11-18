@@ -368,3 +368,5 @@ export function calculateSlateOverlap(slate1: Slate, slate2: Slate): number {
 // ============================================
 // Exports
 // ============================================
+
+export * from './bandit';
