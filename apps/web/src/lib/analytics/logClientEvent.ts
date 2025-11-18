@@ -5,6 +5,7 @@ type EventType =
   | 'click_route'
   | 'click_book'
   | 'save'
+  | 'share'
   | 'hide'
   | 'reask'
   | 'error'

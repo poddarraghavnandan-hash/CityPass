@@ -611,11 +611,11 @@ export async function extractEventsWithDirectScrape(
 
     console.log(`  ✓ Direct scrape fetched ${content.length} chars from ${url}`);
 
-    // Extract events using LLM fallback chain (OpenAI → Claude → Ollama → HuggingFace)
+    // Extract events using LLM fallback chain (Ollama → HuggingFace - NO OpenAI)
     return extractEventsWithFallback(content, {
-      ...options,
+      city: options.city,
       sourceUrl: url,
-      openaiApiKey: options.openaiApiKey,
+      maxEvents: options.maxEvents,
     });
   } catch (error: any) {
     console.error(`Direct scrape error for ${url}:`, error.message);

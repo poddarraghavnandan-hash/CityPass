@@ -93,13 +93,11 @@ export async function processSource(sourceId: string): Promise<{
 
     console.log(`✓ Scraped ${content.length} characters from ${source.name}`);
 
-    // 3. Extract events with automatic LLM fallback (OpenAI → Claude → Ollama → HuggingFace)
+    // 3. Extract events with automatic LLM fallback (Ollama → HuggingFace - NO OpenAI)
     const extraction = await extractEventsWithFallback(content, {
       city: source.city,
       sourceUrl: source.url,
       maxEvents: 50,
-      openaiApiKey: process.env.OPENAI_API_KEY,
-      anthropicApiKey: process.env.ANTHROPIC_API_KEY,
       ollamaHost: process.env.OLLAMA_HOST,
       ollamaApiKey: process.env.OLLAMA_API_KEY,
       huggingfaceApiKey: process.env.HUGGINGFACE_API_KEY,

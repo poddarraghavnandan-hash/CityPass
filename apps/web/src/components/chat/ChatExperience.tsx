@@ -139,7 +139,7 @@ export function ChatExperience({ city, defaultTokens, initialPrompt }: ChatExper
   };
 
   const degradeNote = useMemo(() => {
-    return intention?.degradedFlags ? 'Limited results' : null;
+    return null; // Degraded flags feature removed
   }, [intention]);
 
   return (
