@@ -3,23 +3,27 @@
  * Usage: npx tsx scripts/ingest-real-events.ts
  */
 
-import { extractEventsFromUrl } from '../packages/utils/src/event-extraction';
+import { extractEventsFromUrl, extractEventsWithFallback, extractEventsWithDirectScrape } from '../packages/utils/src/event-extraction';
 import { prisma } from '../packages/db/src/index';
 
 const REAL_EVENT_SOURCES = {
   NYC: [
-    'https://www.timeout.com/newyork/things-to-do/things-to-do-in-nyc-this-week',
-    'https://www.theskint.com/events/',
-    'https://www.bowerybballroom.com/calendar',
-    'https://www.brooklynbowl.com/events/',
-    'https://www.comedycellar.com/shows/',
+    'https://www.eventbrite.com/d/ny--new-york/events/',
+    'https://www.ticketmaster.com/discover/concerts/new-york',
+    'https://ra.co/events/us/newyork',
+    'https://donyc.com/events',
+    'https://www.timeout.com/newyork/things-to-do/best-things-to-do-in-new-york',
+    'https://www.nycgo.com/events',
   ],
   LA: [
-    'https://www.timeout.com/los-angeles/things-to-do/things-to-do-this-weekend-in-la',
-    'https://www.theecho.com/calendar',
+    'https://www.eventbrite.com/d/ca--los-angeles/events/',
+    'https://www.timeout.com/los-angeles/things-to-do',
+    'https://ra.co/events/us/losangeles',
   ],
   SF: [
-    'https://www.timeout.com/san-francisco/things-to-do/things-to-do-this-weekend-in-san-francisco',
+    'https://www.eventbrite.com/d/ca--san-francisco/events/',
+    'https://www.timeout.com/san-francisco/things-to-do',
+    'https://ra.co/events/us/sanfrancisco',
   ],
 };
 
@@ -27,7 +31,13 @@ async function ingestFromSource(url: string, city: string) {
   console.log(`\n📡 Fetching events from ${url}...`);
 
   try {
-    const result = await extractEventsFromUrl(url, { city });
+    // Use direct scrape (skip Firecrawl since it's quota exceeded)
+    // This function will automatically try LLM fallback: OpenAI → Claude → Ollama → HuggingFace
+    const result = await extractEventsFromUrl(url, {
+      city,
+      skipFirecrawl: true,
+      openaiApiKey: process.env.OPENAI_API_KEY,
+    });
 
     if (result.events.length === 0) {
       console.log(`⚠️  No events found`);

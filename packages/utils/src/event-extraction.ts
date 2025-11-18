@@ -55,7 +55,7 @@ Extract ALL events from the provided text. For each event, return a JSON object 
   "city": "City name",
   "priceMin": 0,
   "priceMax": 50,
-  "category": "MUSIC|COMEDY|FOOD|ARTS|THEATRE|DANCE|SPORTS|FAMILY|NETWORKING|OTHER",
+  "category": "MUSIC|COMEDY|FOOD|ARTS|THEATRE|DANCE|FITNESS|FAMILY|NETWORKING|OTHER",
   "imageUrl": "Image URL (if available)",
   "bookingUrl": "Ticket/registration URL",
   "organizer": "Event organizer"
@@ -63,7 +63,17 @@ Extract ALL events from the provided text. For each event, return a JSON object 
 
 Rules:
 1. Only extract FUTURE events (not past)
-2. Infer category from content (music concert = MUSIC, stand-up = COMEDY, etc.)
+2. Infer category from content - MUST use EXACTLY one of these categories:
+   - MUSIC: concerts, music performances, DJ sets
+   - COMEDY: stand-up, improv shows
+   - THEATRE: plays, musicals, performances
+   - DANCE: dance performances, dance parties
+   - ARTS: art exhibits, painting classes, creative workshops
+   - FITNESS: workouts, yoga, sports, climbing, running
+   - FOOD: food festivals, cooking classes, tastings
+   - NETWORKING: professional meetups, mixers
+   - FAMILY: kid-friendly events
+   - OTHER: everything else
 3. Parse dates/times carefully - convert to ISO 8601 with timezone
 4. If price is "free", set priceMin: 0, priceMax: 0
 5. Return ONLY valid JSON array: [{"title": "...", ...}, ...]
@@ -452,7 +462,7 @@ export async function extractEventsWithHuggingFace(
 
 /**
  * Extract events with automatic LLM fallback
- * Tries OpenAI → Claude → Ollama → HuggingFace in order
+ * Tries Ollama → HuggingFace only (OpenAI reserved exclusively for user chat)
  */
 export async function extractEventsWithFallback(
   content: string,
@@ -460,8 +470,6 @@ export async function extractEventsWithFallback(
     city?: string;
     sourceUrl?: string;
     maxEvents?: number;
-    openaiApiKey?: string;
-    anthropicApiKey?: string;
     ollamaModel?: string;
     ollamaHost?: string;
     ollamaApiKey?: string;
@@ -469,36 +477,8 @@ export async function extractEventsWithFallback(
     huggingfaceModel?: string;
   } = {}
 ): Promise<EventExtractionResult & { provider?: string }> {
-  // Try OpenAI first (best quality)
-  console.log('  → Trying OpenAI extraction...');
-  const openaiResult = await extractEventsWithOpenAI(content, {
-    city: options.city,
-    sourceUrl: options.sourceUrl,
-    maxEvents: options.maxEvents,
-    apiKey: options.openaiApiKey,
-  });
-
-  if (openaiResult.events.length > 0) {
-    console.log(`  ✓ OpenAI extracted ${openaiResult.events.length} events`);
-    return { ...openaiResult, provider: 'openai' };
-  }
-
-  // Try Claude as fallback
-  console.log('  → OpenAI failed, trying Claude...');
-  const claudeResult = await extractEventsWithClaude(content, {
-    city: options.city,
-    sourceUrl: options.sourceUrl,
-    maxEvents: options.maxEvents,
-    apiKey: options.anthropicApiKey,
-  });
-
-  if (claudeResult.events.length > 0) {
-    console.log(`  ✓ Claude extracted ${claudeResult.events.length} events`);
-    return { ...claudeResult, provider: 'claude' };
-  }
-
-  // Try Ollama (free, local/remote)
-  console.log('  → Claude failed, trying Ollama (local/cloud LLM)...');
+  // Try Ollama first (free, fast, good quality for event extraction)
+  console.log('  → Trying Ollama extraction...');
   const ollamaResult = await extractEventsWithOllama(content, {
     city: options.city,
     sourceUrl: options.sourceUrl,
@@ -513,7 +493,7 @@ export async function extractEventsWithFallback(
     return { ...ollamaResult, provider: 'ollama' };
   }
 
-  // Try HuggingFace as final fallback (free cloud API)
+  // Try HuggingFace as fallback (free cloud API)
   console.log('  → Ollama failed, trying HuggingFace (free cloud LLM)...');
   const huggingfaceResult = await extractEventsWithHuggingFace(content, {
     city: options.city,
@@ -528,7 +508,7 @@ export async function extractEventsWithFallback(
     return { ...huggingfaceResult, provider: 'huggingface' };
   }
 
-  console.log('  ✗ All extraction methods failed');
+  console.log('  ✗ All extraction methods failed (OpenAI not used - reserved for user chat only)');
   return { events: [], confidence: 0, provider: 'none' };
 }
 
@@ -554,7 +534,97 @@ function validateEvent(event: any): event is ExtractedEvent {
 }
 
 /**
- * Extract events from a URL using Firecrawl + OpenAI
+ * Extract events from a URL using direct HTTP scraping + Cheerio + OpenAI
+ * This is a backup method when Firecrawl API is unavailable
+ */
+export async function extractEventsWithDirectScrape(
+  url: string,
+  options: {
+    city?: string;
+    maxEvents?: number;
+    openaiApiKey?: string;
+  } = {}
+): Promise<EventExtractionResult> {
+  try {
+    // Fetch HTML directly
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const html = await response.text();
+
+    // Use cheerio to parse and extract text content
+    const cheerio = await import('cheerio');
+    const $ = cheerio.load(html);
+
+    // Remove script, style, and other non-content elements
+    $('script, style, nav, header, footer, iframe, noscript').remove();
+
+    // Extract main content - try common content selectors first
+    const contentSelectors = [
+      'main',
+      'article',
+      '[role="main"]',
+      '.content',
+      '#content',
+      '.main-content',
+      '.event-list',
+      '.events',
+      'body',
+    ];
+
+    let content = '';
+    for (const selector of contentSelectors) {
+      const element = $(selector);
+      if (element.length > 0) {
+        content = element.text();
+        if (content.length > 500) {
+          // Found substantial content
+          break;
+        }
+      }
+    }
+
+    // If still no content, fall back to body text
+    if (!content || content.length < 100) {
+      content = $('body').text();
+    }
+
+    // Clean up whitespace
+    content = content
+      .replace(/\s+/g, ' ')
+      .replace(/\n\s*\n/g, '\n')
+      .trim();
+
+    if (!content || content.length < 50) {
+      console.warn(`Direct scrape: Insufficient content from ${url}`);
+      return { events: [], confidence: 0 };
+    }
+
+    console.log(`  ✓ Direct scrape fetched ${content.length} chars from ${url}`);
+
+    // Extract events using LLM fallback chain (OpenAI → Claude → Ollama → HuggingFace)
+    return extractEventsWithFallback(content, {
+      ...options,
+      sourceUrl: url,
+      openaiApiKey: options.openaiApiKey,
+    });
+  } catch (error: any) {
+    console.error(`Direct scrape error for ${url}:`, error.message);
+    return { events: [], confidence: 0 };
+  }
+}
+
+/**
+ * Extract events from a URL using Firecrawl + OpenAI (with direct scrape fallback)
  */
 export async function extractEventsFromUrl(
   url: string,
@@ -563,15 +633,20 @@ export async function extractEventsFromUrl(
     maxEvents?: number;
     openaiApiKey?: string;
     firecrawlApiKey?: string;
+    skipFirecrawl?: boolean;
   } = {}
 ): Promise<EventExtractionResult> {
+  // Try direct scrape if Firecrawl is explicitly skipped or not configured
   const firecrawlApiKey = options.firecrawlApiKey || process.env.FIRECRAWL_API_KEY;
-  if (!firecrawlApiKey) {
-    throw new Error('FIRECRAWL_API_KEY not configured');
+
+  if (options.skipFirecrawl || !firecrawlApiKey) {
+    console.log('  → Using direct HTTP scrape (Firecrawl not available)');
+    return extractEventsWithDirectScrape(url, options);
   }
 
   try {
-    // Scrape the URL with Firecrawl
+    // Try Firecrawl first
+    console.log('  → Trying Firecrawl scrape...');
     const scrapeResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
       method: 'POST',
       headers: {
@@ -585,7 +660,9 @@ export async function extractEventsFromUrl(
     });
 
     if (!scrapeResponse.ok) {
-      throw new Error(`Firecrawl error: ${scrapeResponse.status}`);
+      // If Firecrawl fails (e.g., 402 Payment Required), fall back to direct scrape
+      console.warn(`  ✗ Firecrawl failed (${scrapeResponse.status}), falling back to direct scrape`);
+      return extractEventsWithDirectScrape(url, options);
     }
 
     const scrapeData = await scrapeResponse.json() as {
@@ -597,8 +674,11 @@ export async function extractEventsFromUrl(
     const content = scrapeData.data?.markdown || scrapeData.data?.html || '';
 
     if (!content) {
-      return { events: [], confidence: 0 };
+      console.warn('  ✗ Firecrawl returned no content, falling back to direct scrape');
+      return extractEventsWithDirectScrape(url, options);
     }
+
+    console.log(`  ✓ Firecrawl fetched ${content.length} chars`);
 
     // Extract events using OpenAI
     return extractEventsWithOpenAI(content, {
@@ -607,8 +687,9 @@ export async function extractEventsFromUrl(
       apiKey: options.openaiApiKey,
     });
   } catch (error: any) {
-    console.error('Event extraction from URL error:', error.message);
-    return { events: [], confidence: 0 };
+    console.error(`Event extraction from URL error: ${error.message}, falling back to direct scrape`);
+    // Fall back to direct scrape on any error
+    return extractEventsWithDirectScrape(url, options);
   }
 }
 

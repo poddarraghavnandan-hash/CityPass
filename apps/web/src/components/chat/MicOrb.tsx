@@ -19,7 +19,7 @@ export function MicOrb({ onTranscript, onError }: MicOrbProps) {
       type="button"
       onClick={toggleRecording}
       className={cn(
-        'relative flex h-16 w-16 items-center justify-center rounded-full border border-white/30 text-white transition',
+        'relative flex h-16 w-16 items-center justify-center rounded-full border border-white/30 text-white transition hover:shadow-[0_0_40px_rgba(77,123,255,0.4)]',
         isRecording ? 'bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 shadow-[0_0_60px_rgba(77,123,255,0.6)]' : 'bg-white/5'
       )}
       aria-pressed={isRecording}

@@ -1,13 +1,11 @@
-import { Suspense } from 'react';
 import type { IntentionTokens } from '@citypass/types';
-import { ChatUI } from '@/components/chat/ChatUI';
-import { PageShell } from '@/components/layout/PageShell';
-import { GlowBadge } from '@/components/ui/GlowBadge';
 import { cookies } from 'next/headers';
+import { ChatShell } from '@/components/chat/ChatShell';
+import { ChatExperience } from '@/components/chat/ChatExperience';
 import { parsePreferencesCookie } from '@/lib/preferences';
 
 export const metadata = {
-  title: 'CityLens Copilot',
+  title: 'CityLens Concierge',
 };
 
 interface ChatPageProps {
@@ -23,6 +21,7 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
   const city = (params?.city as string) || process.env.NEXT_PUBLIC_DEFAULT_CITY || 'New York';
   const prefCookie = (await cookies()).get('citylens_prefs')?.value;
   const prefs = parsePreferencesCookie(prefCookie);
+
   const defaultTokens: IntentionTokens = {
     mood: prefs?.mood ?? parseMood(params?.mood as string),
     untilMinutes: params?.untilMinutes ? Number(params.untilMinutes) : 180,
@@ -34,13 +33,9 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
   const initialPrompt = params?.prompt as string | undefined;
 
   return (
-    <PageShell>
-      <section className="mx-auto max-w-4xl space-y-4 pt-4">
-        <Suspense fallback={<div className="rounded-3xl border border-white/5 bg-white/5 p-6 text-white/70">Warming up the chat…</div>}>
-          <ChatUI city={city} defaultTokens={defaultTokens} initialPrompt={initialPrompt} />
-        </Suspense>
-      </section>
-    </PageShell>
+    <ChatShell>
+      <ChatExperience city={city} defaultTokens={defaultTokens} initialPrompt={initialPrompt} />
+    </ChatShell>
   );
 }
 

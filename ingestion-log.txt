@@ -1,0 +1,112 @@
+🚀 Starting real event ingestion...
+
+
+📡 Fetching events from https://www.eventbrite.com/d/ny--new-york/events/...
+  → Using direct HTTP scrape (Firecrawl not available)
+  ✓ Direct scrape fetched 15473 chars from https://www.eventbrite.com/d/ny--new-york/events/
+  → Trying Ollama extraction...
+  ✓ Ollama extracted 29 events
+✨ Extracted 29 events (confidence: 60%)
+  ✓ Summer Networking Mixer | Private Equity | Venture Capital | Law | Fintech
+  ✓ Long Island Career Fair
+  ✓ Lucy Bedroque w/ kuru
+  ✓ The American Analog Set (Night #2)
+  ✓ LET IT HAPPEN (TAME IMPALA DANCE PARTY)
+  ✓ club babu tour: Jai Wolf (DJ Set), ARINI, Firungi, BANGLABOY, SRI + more
+  ✓ Jerk Fest Black Friday at Harbor with 1 Hour Open Bar + Jerk Chicken
+  ✓ HOT 100 Bingo - Alligator Lounge
+  ✓ The Dark Side of Bohemia - a true crime walking tour
+  ✓ Dumpster Fire Comedy
+  ✓ Sip & Paint (Watercolor)
+  ✓ In-Person Class: Handmade Dumplings (NYC)
+  ✓ Central Park Walking Tour
+  ✓ CRUX LGBTQ Climbing - 2nd and 4th Tuesdays @Movement Harlem
+  ✓ Riichi Mahjong Learn-and-Play
+  ✓ Sak Pase: Afro-Konpa Party w/ Miabelle, Citizen B, & DJ Marz
+  ✓ NYC Autumn Jewelry, Antique & Object Show
+  ✓ Green Day
+  ✓ EL RUBIO ACORDEON + QUE LO QUE!?
+  ✓ The Seaport Holiday Tree Lighting
+  ✓ Downtown Voices Celebrates 10 Years: Britten Saint Nicolas
+  ✓ Brooklyn Navy Yard's 8th Annual Wallabout Wonderland Holiday Market
+  ✓ #LookCloser: Safeguarding transgender young people from exploitation
+  ✓ Networking for Introverts
+  ✓ Creating Employee Experiences That Actually Work
+  ✓ Washington DC Hiring Event
+  ✓ Modern Investor Summit 2025
+  ✓ Career Fair: Exclusive Tech Hiring Event-New Tickets Available
+  ✓ A POSITIVE APPROACH TO CARE WITH TEEPA SNOW
+💾 Saved 29/29 events
+
+📡 Fetching events from https://www.ticketmaster.com/discover/concerts/new-york...
+  → Using direct HTTP scrape (Firecrawl not available)
+  ✓ Direct scrape fetched 11248 chars from https://www.ticketmaster.com/discover/concerts/new-york
+  → Trying Ollama extraction...
+  ✓ Ollama extracted 14 events
+✨ Extracted 14 events (confidence: 60%)
+  ✓ Jonas Brothers: JONAS20 Greetings From Your Hometown
+  ✓ Trans-Siberian Orchestra - The Ghosts Of Christmas Eve
+  ✓ Ed Sheeran: LOOP Tour
+  ✓ Lady Gaga: The MAYHEM Ball
+  ✓ RUSH: Fifty Something
+  ✓ TWICE [THIS IS FOR] WORLD TOUR IN BELMONT PARK
+  ✓ Brandon Lake - King of Hearts Tour
+  ✓ Brandy & Monica: The Boy Is Mine Tour
+  ✓ Amore, goodnight, Lucas, aLex vs aLex
+  ✓ Vince Giordano and the Nighthawks
+  ✓ Kellen Kennedy, Anterra + Peter Stone, Jamie Gray
+  ✓ Waterparks: The Prowler Tour
+  ✓ Punkest • Imaginary Tricks • Reanimators
+  ✓ Die Spitz
+💾 Saved 14/14 events
+
+📡 Fetching events from https://ra.co/events/us/newyork...
+  → Using direct HTTP scrape (Firecrawl not available)
+Direct scrape error for https://ra.co/events/us/newyork: HTTP 403: Forbidden
+⚠️  No events found
+
+📡 Fetching events from https://donyc.com/events...
+  → Using direct HTTP scrape (Firecrawl not available)
+  ✓ Direct scrape fetched 2026 chars from https://donyc.com/events
+  → Trying Ollama extraction...
+  ✓ Ollama extracted 24 events
+✨ Extracted 24 events (confidence: 60%)
+  ✓ Jonas Brothers: JONAS20 Greetings From Your Hometown
+  ✓ Ed Kuepper, Jim White, Mick Harvey TV Eye
+  ✓ cahm, Jackson Laird, Leo Lav
+  ✓ Laila Mach
+  ✓ Sydney Rose: I Know What I Want Tour
+  ✓ Sarah Kinsley: Baby's All Right
+  ✓ Anson Seabra: Racket
+  ✓ Thérapie Clinic – Biggest Black Friday Sale Ever!
+  ✓ Danny Motta hates Zander Small
+  ✓ Starcleaner Reunion
+  ✓ Broadway Goes A Cappella: Homecoming Returns for an Unforgettable Night!
+  ✓ Rev. Vince Anderson & The Love Choir
+  ✓ Ologies with Alie Ward
+  ✓ Love the Struggle feat. Damon Daunno, Amber Gray, Grace McLean & Margo Seibert
+  ✓ WWE Monday Night RAW
+  ✓ WWE Replica Ticket
+  ✓ Love the Struggle feat. Damon Daunno, Amber Gray, Grace McLean & Margo Seibert
+  ✓ Madison Square Garden Tour Experience
+  ✓ John Cena Farewell Tour Commemorative Chair
+  ✓ Rita Sadie Gust
+  ✓ 4batz Warsaw
+  ✓ Spike Wilner Trio featuring Anat Cohen
+  ✓ Classic Tour at Yankee Stadium
+  ✓ Common Jack, Youth In a Roman Field, YONAH Sleepwalk
+💾 Saved 24/24 events
+
+📡 Fetching events from https://www.timeout.com/newyork/things-to-do/best-things-to-do-in-new-york...
+  → Using direct HTTP scrape (Firecrawl not available)
+Direct scrape error for https://www.timeout.com/newyork/things-to-do/best-things-to-do-in-new-york: HTTP 404: Not Found
+⚠️  No events found
+
+📡 Fetching events from https://www.nycgo.com/events...
+  → Using direct HTTP scrape (Firecrawl not available)
+Direct scrape error for https://www.nycgo.com/events: fetch failed
+⚠️  No events found
+
+✅ Complete!
+   Extracted: 67 events
+   Saved: 67 events

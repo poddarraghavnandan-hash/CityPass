@@ -6,6 +6,7 @@
 import { ensureSeedInventory } from './seedJob';
 import { processIngestionQueue } from './ingestionQueueJob';
 import { runVenueIngestionForAllCities } from './venueIngestion';
+import { runEventExtraction } from './eventExtractionJob';
 
 // Optional imports - gracefully handle if modules don't compile
 let refreshSimilarityEdges: (() => Promise<any>) | undefined;
@@ -62,6 +63,12 @@ interface CronJob {
 }
 
 const jobs: CronJob[] = [
+  // Continuous Event Extraction (Ollama + HuggingFace - NO OpenAI)
+  {
+    name: 'event-extraction',
+    intervalMs: parseInt(process.env.EVENT_EXTRACTION_INTERVAL ?? String(2 * 60 * 60 * 1000), 10), // Every 2 hours
+    handler: runEventExtraction,
+  },
   // Venue Knowledge Graph Ingestion - FULL run (weekly)
   {
     name: 'venue-ingestion-full',

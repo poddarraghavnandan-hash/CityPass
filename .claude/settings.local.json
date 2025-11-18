@@ -154,7 +154,11 @@
       "Bash(rd /s /q packagestastedist)",
       "Bash(time pnpm build:*)",
       "Bash(vercel --token=NV6pRCdM96cCoorOUPXrd56G inspect citypass-63giz99gr-raghav-poddars-projects.vercel.app --logs)",
-      "Bash(check-db.mjs)"
+      "Bash(check-db.mjs)",
+      "Bash(if [ -n \"$OPENAI_API_KEY\" ])",
+      "Bash(then echo \"OPENAI_API_KEY is set\")",
+      "Bash(else echo \"OPENAI_API_KEY is NOT set\")",
+      "Bash(fi)"
     ],
     "deny": [],
     "ask": []
