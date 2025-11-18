@@ -4,10 +4,13 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@citypass/db';
+import { requireAdmin } from '@/lib/admin-auth';
 
 export async function GET(req: NextRequest) {
   try {
-    // TODO: Add authentication check for admin users
+    // Check admin authentication
+    const authError = await requireAdmin(req);
+    if (authError) return authError;
 
     const { searchParams } = new URL(req.url);
     const range = searchParams.get('range') || '7d';
