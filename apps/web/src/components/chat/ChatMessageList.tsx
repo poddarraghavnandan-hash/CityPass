@@ -17,13 +17,8 @@ type ChatMessageListProps = {
 export function ChatMessageList({ messages, tail, isStreaming }: ChatMessageListProps) {
   if (!messages.length) {
     return (
-      <div className="rounded-[30px] border border-white/10 bg-white/5 p-8 text-white/80">
-        <p className="text-sm uppercase tracking-[0.4em] text-white/40">CityLens Copilot</p>
-        <h3 className="mt-3 text-3xl font-semibold text-white">What mood are you chasing?</h3>
-        <p className="text-sm text-white/60">
-          Ask anything—“a cinematic jazz speakeasy at 9pm” or “sunrise hike with zero tourists”. We listen and stream back
-          slates tuned to your taste.
-        </p>
+      <div className="rounded-[30px] border border-white/10 bg-white/5 p-6 text-white/70">
+        <p className="text-sm text-white/80">Ask for a vibe to start.</p>
       </div>
     );
   }

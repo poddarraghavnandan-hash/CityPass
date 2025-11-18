@@ -35,11 +35,7 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
 
   return (
     <PageShell>
-      <section className="mx-auto max-w-4xl space-y-6 pt-6">
-        <div className="rounded-[40px] border border-white/10 bg-gradient-to-br from-white/10 via-transparent to-black/30 p-8 text-white shadow-[0_20px_120px_rgba(7,1,26,0.65)]">
-          <GlowBadge>Copilot</GlowBadge>
-          <h1 className="mt-4 text-5xl font-semibold leading-tight">What kind of night?</h1>
-        </div>
+      <section className="mx-auto max-w-4xl space-y-4 pt-4">
         <Suspense fallback={<div className="rounded-3xl border border-white/5 bg-white/5 p-6 text-white/70">Warming up the chat…</div>}>
           <ChatUI city={city} defaultTokens={defaultTokens} initialPrompt={initialPrompt} />
         </Suspense>

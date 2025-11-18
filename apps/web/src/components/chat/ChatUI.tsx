@@ -113,31 +113,34 @@ export function ChatUI({ city, defaultTokens, initialPrompt }: ChatUIProps) {
   };
 
   return (
-    <div className="space-y-8">
-      {error && (
-        <ErrorState
-          title="The signal broke"
-          description={error}
-          onRetry={() => {
-            if (messages.length) {
-              const lastUserPrompt = [...messages].reverse().find((msg) => msg.role === 'user');
-              if (lastUserPrompt) {
-                setInput(lastUserPrompt.text);
-              }
-            }
-            setError(null);
-          }}
-        />
-      )}
+    <div className="space-y-6">
+      <div className="rounded-[32px] border border-white/10 bg-white/5 p-6 text-white">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-semibold text-white">Where to?</h2>
+        </div>
+        <div className="mt-4">
+          <ChatInput
+            inline
+            value={input}
+            onChange={setInput}
+            onSubmit={() => handleSend()}
+            onMicResult={(text) => setInput(text)}
+            onMicError={(err) => setError(err.message)}
+            disabled={isLoading}
+          />
+        </div>
+        {error && (
+          <div className="mt-2 text-sm text-red-300">
+            {error}{' '}
+            <button type="button" className="underline" onClick={() => setError(null)}>
+              dismiss
+            </button>
+          </div>
+        )}
+      </div>
+
       <ChatMessageList messages={messages} isStreaming={isLoading} />
-      <ChatInput
-        value={input}
-        onChange={setInput}
-        onSubmit={() => handleSend()}
-        onMicResult={(text) => setInput(text)}
-        onMicError={(err) => setError(err.message)}
-        disabled={isLoading}
-      />
+
       {isLoading && !slates && (
         <div className="grid gap-4 md:grid-cols-3">
           {Array.from({ length: 3 }).map((_, idx) => (
