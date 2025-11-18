@@ -6,10 +6,8 @@
 import { noveltyForUser, friendOverlap, getSocialHeat } from '@citypass/cag';
 import { getUserTasteVector, calculateTasteSimilarity } from '@citypass/taste';
 import type { AgentState, EnrichedEvent } from '../types';
-
-// Direct imports to avoid barrel export issues
-import { fetchEventEmbeddings } from '../../../../rag/src/embeddings.js';
-import { calculateDistance, estimateTravelTime, getCityCenter } from '@citypass/utils/distance';
+import { fetchEventEmbeddings } from '@citypass/rag';
+import { calculateDistance, estimateTravelTime, getCityCenter } from '@citypass/utils';
 
 export async function enrichNode(state: AgentState): Promise<Partial<AgentState>> {
   if (!state.candidates || state.candidates.length === 0) {

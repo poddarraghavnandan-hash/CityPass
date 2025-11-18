@@ -5,7 +5,7 @@ export const CompanionSchema = z.enum(['solo', 'partner', 'crew', 'family']);
 export const SocialPlatformSchema = z.enum(['instagram', 'tiktok']);
 export const IntentionTokensSchema = z.object({
     mood: MoodSchema,
-    untilMinutes: z.number().int().min(15).max(720).default(120),
+    untilMinutes: z.number().int().min(15).max(10080).default(120),
     distanceKm: z.number().min(0).max(50).default(4),
     budget: BudgetTierSchema.default('casual'),
     companions: z.array(CompanionSchema).default(['solo']),

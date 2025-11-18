@@ -7,4 +7,6 @@ export const prisma = globalForPrisma.prisma ??
 if (process.env.NODE_ENV !== 'production')
     globalForPrisma.prisma = prisma;
 export * from '@prisma/client';
+export * from './search';
+export * from './logging';
 //# sourceMappingURL=index.js.map
