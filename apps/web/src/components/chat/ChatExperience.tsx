@@ -1,16 +1,15 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
+import { useEffect, useState } from 'react';
 import type { Intention, IntentionTokens, RankedItem } from '@citypass/types';
-import { AssistantIntro } from './AssistantIntro';
-import { ExampleQueries } from './ExampleQueries';
-import { ChatHistory, type ChatMessage } from './ChatHistory';
-import { ChatInputRow } from './ChatInputRow';
-import { SlateReveal } from './SlateReveal';
+import { ChatHeader } from './ChatHeader';
+import { ChatMain } from './ChatMain';
+import { ChatMessages, type ChatBubble } from './ChatMessages';
+import { SlateCarousel } from './SlateCarousel';
+import { ChatInputBar } from './ChatInputBar';
 import { EventModal } from './EventModal';
-import { ChatError } from './ChatError';
 import { logClientEvent } from '@/lib/analytics/logClientEvent';
+import { ChatError } from './ChatError';
 
 type ChatExperienceProps = {
   city: string;
@@ -23,7 +22,7 @@ type SlateMap = Partial<Record<SlateKey, RankedItem[]>>;
 
 export function ChatExperience({ city, defaultTokens, initialPrompt }: ChatExperienceProps) {
   const [input, setInput] = useState(initialPrompt ?? '');
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<ChatBubble[]>([]);
   const [slates, setSlates] = useState<SlateMap | null>(null);
   const [intention, setIntention] = useState<Intention | null>(null);
   const [traceId, setTraceId] = useState<string | undefined>();
@@ -37,11 +36,6 @@ export function ChatExperience({ city, defaultTokens, initialPrompt }: ChatExper
     }
   }, [initialPrompt]);
 
-  const handleSelectExample = (query: string) => {
-    setInput(query);
-    handleSubmit(query);
-  };
-
   const makeId = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Math.random().toString(36).slice(2));
 
   const handleSubmit = async (prompt?: string) => {
@@ -53,10 +47,10 @@ export function ChatExperience({ city, defaultTokens, initialPrompt }: ChatExper
     setLoading(true);
     setSlates(null);
 
-    const userMessage: ChatMessage = { id: makeId(), role: 'user', text };
+    const userMessage: ChatBubble = { id: makeId(), role: 'user', text };
     const assistantId = makeId();
 
-    setMessages((prev) => [...prev, userMessage, { id: assistantId, role: 'assistant', text: 'Lining up options…' }]);
+    setMessages((prev) => [...prev, userMessage, { id: assistantId, role: 'assistant', text: 'Pulling the best options…' }]);
 
     try {
       const askResponse = await fetch('/api/ask', {
@@ -113,7 +107,7 @@ export function ChatExperience({ city, defaultTokens, initialPrompt }: ChatExper
       setSlates(slatePayload);
       setIntention(planData.intention ?? askData.intention ?? null);
 
-      setMessages((prev) => prev.map((msg) => (msg.id === assistantId ? { ...msg, text: 'Here are your picks.' } : msg)));
+      setMessages((prev) => prev.map((msg) => (msg.id === assistantId ? { ...msg, text: 'Got it. Here are your picks.' } : msg)));
 
       if (slatePayload) {
         (Object.keys(slatePayload) as SlateKey[]).forEach((key) => {
@@ -138,43 +132,15 @@ export function ChatExperience({ city, defaultTokens, initialPrompt }: ChatExper
     }
   };
 
-  const degradeNote = useMemo(() => {
-    return null; // Degraded flags feature removed
-  }, [intention]);
-
   return (
     <>
-      <motion.header
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="flex items-center justify-between rounded-[28px] border border-white/10 bg-white/5 px-5 py-4 backdrop-blur"
-      >
-        <div className="space-y-1">
-          <p className="text-xs uppercase tracking-[0.4em] text-white/50">CityLens Concierge</p>
-          <p className="text-lg font-semibold text-white">One input. Instant vibe.</p>
-        </div>
-        {degradeNote && <span className="rounded-full border border-yellow-300/30 bg-yellow-300/10 px-3 py-1 text-xs text-yellow-200">{degradeNote}</span>}
-      </motion.header>
-
-      <AssistantIntro />
-      <ExampleQueries onSelect={handleSelectExample} />
-
-      <ChatHistory messages={messages} />
-
-      <SlateReveal slates={slates} loading={loading} onOpen={setOpenItem} traceId={traceId} intention={intention} />
-
-      {error && <ChatError message={error} onRetry={() => handleSubmit()} />}
-
-      <ChatInputRow
-        value={input}
-        onChange={setInput}
-        onSubmit={() => handleSubmit()}
-        onMicResult={(text) => setInput(text)}
-        onMicError={(err) => setError(err.message)}
-        disabled={loading}
-      />
-
+      <ChatHeader city={city} />
+      <ChatMain>
+        <ChatMessages messages={messages} />
+        <SlateCarousel slates={slates} loading={loading} onOpen={(item) => setOpenItem(item)} traceId={traceId} intention={intention} />
+        {error && <ChatError message={error} onRetry={() => handleSubmit()} />}
+      </ChatMain>
+      <ChatInputBar value={input} onChange={setInput} onSubmit={() => handleSubmit()} disabled={loading} />
       <EventModal item={openItem} onClose={() => setOpenItem(null)} traceId={traceId} />
     </>
   );

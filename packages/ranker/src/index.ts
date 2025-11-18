@@ -280,8 +280,8 @@ export function calculateMoodAlignment(
 ): number {
   const moodCategoryMap: Record<string, string[]> = {
     calm: ['FITNESS', 'ARTS', 'WELLNESS', 'FOOD'],
-    social: ['FOOD', 'NETWORKING', 'MUSIC'],
-    electric: ['MUSIC', 'DANCE', 'COMEDY'],
+    social: ['FOOD', 'NETWORKING'],  // Remove MUSIC to avoid restaurant matches for "rave"
+    electric: ['MUSIC', 'DANCE'],     // Prioritize MUSIC/DANCE for nightlife queries
     artistic: ['ARTS', 'THEATRE', 'DANCE'],
     grounded: ['FAMILY', 'FITNESS', 'OTHER'],
   };

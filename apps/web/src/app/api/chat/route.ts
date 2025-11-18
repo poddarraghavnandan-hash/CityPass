@@ -98,10 +98,15 @@ export async function POST(req: NextRequest) {
 I found these events for them:
 ${eventsContext}
 
-Mood: ${intention?.tokens?.mood || 'exploring'}
-City: ${intention?.city || city}
+Context:
+- Mood: ${intention?.tokens?.mood || 'exploring'}
+- City: ${intention?.city || city}
+- Time: ${intention?.tokens?.untilMinutes ? (intention.tokens.untilMinutes <= 720 ? 'today' : intention.tokens.untilMinutes <= 1440 ? 'tonight/tomorrow' : 'upcoming') : 'upcoming'}
 
-Write a brief, personalized response (1-2 sentences) explaining what you found that matches their request.`
+Write a brief, personalized response (1-2 sentences) that:
+1. Confirms what they searched for ("${freeText}")
+2. Mentions the time frame and number of events
+Example: "I found 5 music events happening today in Brooklyn that match your vibe."`
                 }
               ],
               temperature: 0.7,

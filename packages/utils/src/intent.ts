@@ -55,6 +55,38 @@ function extractTimeWindow(text: string, now: Date = new Date()): ExtractedToken
     };
   }
 
+  // Today: until midnight tonight (rest of the day)
+  if (/\btoday\b/.test(lower)) {
+    const endOfDay = new Date(now);
+    endOfDay.setHours(23, 59, 59, 999);
+    const untilMinutes = Math.max(0, (endOfDay.getTime() - now.getTime()) / 60000);
+
+    return {
+      fromMinutes: 0,
+      untilMinutes: Math.round(untilMinutes),
+      humanReadable: 'today',
+    };
+  }
+
+  // Tomorrow: all day tomorrow
+  if (/\btomorrow\b/.test(lower)) {
+    const tomorrowStart = new Date(now);
+    tomorrowStart.setDate(now.getDate() + 1);
+    tomorrowStart.setHours(0, 0, 0, 0);
+
+    const tomorrowEnd = new Date(tomorrowStart);
+    tomorrowEnd.setHours(23, 59, 59, 999);
+
+    const fromMinutes = Math.max(0, (tomorrowStart.getTime() - now.getTime()) / 60000);
+    const untilMinutes = Math.max(0, (tomorrowEnd.getTime() - now.getTime()) / 60000);
+
+    return {
+      fromMinutes: Math.round(fromMinutes),
+      untilMinutes: Math.round(untilMinutes),
+      humanReadable: 'tomorrow',
+    };
+  }
+
   // This weekend: Friday 6pm - Sunday 11:59pm
   if (/\b(this\s+)?weekend\b/.test(lower)) {
     const dayOfWeek = now.getDay();
