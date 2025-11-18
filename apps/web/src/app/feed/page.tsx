@@ -31,8 +31,7 @@ export default async function FeedPage({ searchParams }: FeedPageProps) {
       <div className="space-y-8">
         <SectionTitle
           eyebrow="CityLens Feed"
-          title="Story cards stitched directly from the city"
-          description="Swipeable slates, context modals, and a single live neon stack."
+          title="Story cards from the city"
         />
         <FeedShell
           city={city}

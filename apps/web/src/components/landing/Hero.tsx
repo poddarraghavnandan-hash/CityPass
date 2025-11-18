@@ -22,10 +22,8 @@ export function Hero({ onAsk }: HeroProps) {
       <GlowBadge>Dark Neon Preview</GlowBadge>
       <div className="mt-6 grid gap-10 md:grid-cols-[1.2fr,0.8fr]">
         <div className="space-y-6">
-          <h1 className="text-5xl font-semibold leading-tight text-white">CityLens · cinematic nights on demand.</h1>
-          <p className="text-lg text-white/70">
-            Tell us the vibe. We stream back a plan, three slates, and a feed you can explore instantly.
-          </p>
+          <h1 className="text-5xl font-semibold leading-tight text-white">CityLens. Dark. Fast. To the point.</h1>
+          <p className="text-lg text-white/70">Type a vibe, get slates, jump into feed. That’s it.</p>
           <ChatLikeInput onAsk={onAsk} />
           <div className="flex flex-wrap gap-3">
             <Button asChild className="rounded-full bg-white text-black hover:bg-white/80">

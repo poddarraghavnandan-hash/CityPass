@@ -23,9 +23,8 @@ export function HowItWorks() {
   return (
     <section className="space-y-6">
       <div>
-        <GlowBadge variant="outline">How it works</GlowBadge>
-        <h2 className="mt-3 text-3xl font-semibold text-white">Chat → plan → slates → feed.</h2>
-        <p className="text-sm text-white/70">Three slates every time, consistent cards across chat and feed.</p>
+        <GlowBadge variant="outline">Flow</GlowBadge>
+        <h2 className="mt-3 text-3xl font-semibold text-white">Chat → slates → feed.</h2>
       </div>
       <div className="grid gap-4 md:grid-cols-3">
         {steps.map((step) => (
