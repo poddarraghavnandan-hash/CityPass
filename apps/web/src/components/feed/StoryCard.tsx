@@ -60,6 +60,17 @@ export function StoryCard({ item, onOpen, slateLabel = 'feed_primary', traceId, 
           onHide={() => logClientEvent('hide', { screen: 'feed', traceId, slateLabel, eventId: item.id, position: index })}
         />
         <div className="mt-auto space-y-2">
+          {item.bookingUrl && (
+            <a
+              href={item.bookingUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="block rounded-full border border-white/20 px-4 py-2 text-center text-sm text-white/80 transition hover:border-white/40"
+              onClick={() => logClientEvent('click_book', { screen: 'feed', traceId, slateLabel, eventId: item.id, position: index, viewType: 'open_event' })}
+            >
+              Open event page
+            </a>
+          )}
           <div className="flex gap-3">
             <button
               className="flex-1 rounded-full bg-white text-black py-3 text-sm font-semibold"

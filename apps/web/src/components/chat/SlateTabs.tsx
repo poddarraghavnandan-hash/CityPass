@@ -108,6 +108,18 @@ function SlateCard({ item, slateLabel, traceId, intention }: SlateCardProps) {
           onHide={() => logClientEvent('hide', { screen: 'chat', traceId, slateLabel, eventId: item.id })}
         />
         <div className="mt-auto flex flex-col gap-2 text-sm text-white/70">
+          {item.bookingUrl && (
+            <Button
+              asChild
+              variant="ghost"
+              className="rounded-full border border-white/30 text-white hover:bg-white/10"
+              onClick={() => logClientEvent('click_book', { screen: 'chat', traceId, slateLabel, eventId: item.id, viewType: 'open_event' })}
+            >
+              <a href={item.bookingUrl} target="_blank" rel="noreferrer">
+                Open event page
+              </a>
+            </Button>
+          )}
           {mapUrl && (
             <Button asChild className="rounded-full bg-white text-black hover:bg-white/90" onClick={() => logClientEvent('click_route', { screen: 'chat', traceId, slateLabel, eventId: item.id })}>
               <a href={mapUrl} target="_blank" rel="noreferrer">
