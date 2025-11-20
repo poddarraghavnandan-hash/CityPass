@@ -38,13 +38,13 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
         />
       </head>
-      <body className={cn('bg-[#05030b] text-white antialiased', inter.className)}>
+      <body className={cn('flex min-h-screen flex-col bg-gradient-to-b from-[#050509] via-[#060a13] to-[#0A0F18] text-slate-100 antialiased', inter.className)}>
         <WebVitals />
         <NhostProvider>
           <ToastProvider>
-            <div className="flex min-h-screen flex-col bg-[radial-gradient(circle_at_10%_5%,rgba(77,123,255,0.2),transparent_45%),_radial-gradient(circle_at_90%_0%,rgba(244,91,255,0.15),transparent_35%)]">
+            <div className="flex flex-1 flex-col">
               <TopNav />
-              <main className="flex-1">{children}</main>
+              <main className="flex-1 min-h-0 overflow-hidden">{children}</main>
               <Footer />
             </div>
           </ToastProvider>

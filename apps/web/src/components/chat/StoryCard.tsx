@@ -2,8 +2,9 @@
 
 import { motion } from 'framer-motion';
 import type { RankedItem } from '@citypass/types';
-import { ReasonChips } from '@/components/chat/ReasonChips';
+import { Chip } from '@/components/ui/Chip';
 import { logClientEvent } from '@/lib/analytics/logClientEvent';
+import { cn } from '@/lib/utils';
 
 type StoryCardProps = {
   item: RankedItem;
@@ -14,72 +15,113 @@ type StoryCardProps = {
 };
 
 export function StoryCard({ item, onOpen, traceId, slateLabel = 'chat', index = 0 }: StoryCardProps) {
-  const eventTime = item.startTime ? new Date(item.startTime) : null;
+  const startTime = item.startTime ? new Date(item.startTime) : null;
+  const timeLabel = startTime ? formatTimeLabel(startTime) : 'Anytime';
+  const areaLabel = item.neighborhood || item.city;
+  const vibeLine = cleanReason(item.reasons?.[0]);
+  const priceLabel = getPriceLabel(item);
+  const distanceLabel = getDistanceLabel(item.distanceKm);
+  const moodLabel = getMoodLabel(item.category);
+
+  const handleOpen = () => {
+    logClientEvent('card_view', { screen: 'chat', slateLabel, traceId, eventId: item.id, position: index, viewType: 'open_modal' });
+    onOpen(item);
+  };
 
   return (
     <motion.article
       layout
       whileHover={{ y: -4 }}
-      className="relative flex min-w-[240px] max-w-[260px] flex-col overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-white/10 via-transparent to-black/20 text-white shadow-[0_15px_80px_rgba(2,0,19,0.6)]"
-      onClick={() => onOpen(item)}
+      className="overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.03] shadow-[0_25px_70px_rgba(5,5,12,0.55)]"
+      onClick={handleOpen}
     >
-      <div className="relative aspect-[3/4] overflow-hidden">
+      <div className="relative aspect-[4/3] overflow-hidden">
         {item.imageUrl ? (
           <img src={item.imageUrl} alt={item.title} className="h-full w-full object-cover" loading="lazy" />
         ) : (
-          <div className="flex h-full items-center justify-center bg-black/40 text-white/50">CityLens</div>
+          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#111629] via-[#0B0F1C] to-[#050509] text-sm font-semibold text-white/40">
+            CityLens
+          </div>
         )}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
-        <div className="absolute bottom-3 left-3 flex items-center gap-2 text-[11px] uppercase tracking-[0.3em] text-white/80">
-          <span className="rounded-full bg-white/10 px-3 py-1">{item.neighborhood ?? item.category ?? 'City'}</span>
-          <span className="rounded-full bg-black/50 px-3 py-1">{item.distanceKm ? `${item.distanceKm}km` : 'nearby'}</span>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+        <div className="absolute bottom-4 left-4 flex items-center gap-2 text-xs text-white/80">
+          <span className="rounded-full bg-black/60 px-3 py-1">{areaLabel}</span>
+          <span className="rounded-full bg-white/20 px-3 py-1 text-black">{timeLabel.split('·')[0]}</span>
         </div>
       </div>
-      <div className="flex flex-1 flex-col gap-3 p-4">
-        <div>
-          <p className="text-[11px] uppercase tracking-[0.4em] text-white/40">Because you like {item.category ?? 'this vibe'}</p>
-          <h3 className="mt-1 text-lg font-semibold leading-tight">{item.title}</h3>
-          {eventTime && (
-            <p className="text-xs text-white/60">
-              {eventTime.toLocaleDateString([], { weekday: 'short' })} · {eventTime.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
-            </p>
+      <div className="space-y-3 px-4 pb-4 pt-5">
+        <p className="text-xs text-white/60">{timeLabel}</p>
+        <h3 className="text-lg font-semibold text-white">{item.title}</h3>
+        <p className="text-sm text-white/70">{vibeLine}</p>
+        <div className="flex flex-wrap gap-2">
+          <Chip asChild variant="outline" size="sm">
+            <span>{priceLabel}</span>
+          </Chip>
+          <Chip asChild variant="outline" size="sm">
+            <span>{distanceLabel}</span>
+          </Chip>
+          <Chip asChild variant="soft" size="sm" className="bg-white/10">
+            <span className="text-white/80">{moodLabel}</span>
+          </Chip>
+        </div>
+        <button
+          type="button"
+          className={cn(
+            'w-full rounded-2xl border border-white/10 bg-white text-sm font-semibold text-[#050509] transition hover:bg-white/90'
           )}
-        </div>
-        <ReasonChips reasons={item.reasons} />
-        <div className="flex gap-2 text-[11px] text-white/70">
-          <span className="rounded-full border border-white/15 px-3 py-1">
-            {item.priceMin ? `$${item.priceMin}` : 'Free'}
-            {item.priceMax ? ` - $${item.priceMax}` : ''}
-          </span>
-          {typeof item.fitScore === 'number' && <span className="rounded-full border border-white/15 px-3 py-1">Fit {item.fitScore.toFixed(2)}</span>}
-        </div>
-        <div className="mt-auto flex gap-2 text-sm">
-          <button
-            className="flex-1 rounded-full bg-white text-black py-2 font-semibold"
-            onClick={(e) => {
-              e.stopPropagation();
-              logClientEvent('card_view', { screen: 'chat', slateLabel, traceId, eventId: item.id, position: index, viewType: 'open_modal' });
-              onOpen(item);
-            }}
-          >
-            Details
-          </button>
-          {item.bookingUrl && (
-            <a
-              href={item.bookingUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="whitespace-nowrap rounded-full border border-white/20 px-3 py-2 text-white"
-              onClick={(e) => {
-                e.stopPropagation();
-                logClientEvent('click_book', { screen: 'chat', slateLabel, traceId, eventId: item.id, position: index, viewType: 'open_event' });
-              }}
-            >
-              Open
-            </a>
-          )}
-        </div>
+          onClick={(event) => {
+            event.stopPropagation();
+            handleOpen();
+          }}
+        >
+          View details
+        </button>
       </div>
     </motion.article>
   );
+}
+
+function formatTimeLabel(date: Date) {
+  const today = new Date();
+  const diff = differenceInDays(date, today);
+  const dayLabel = diff === 0 ? 'Today' : diff === 1 ? 'Tomorrow' : date.toLocaleDateString(undefined, { weekday: 'long' });
+  const time = date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  return `${dayLabel} · ${time}`;
+}
+
+function differenceInDays(a: Date, b: Date) {
+  const startA = new Date(a.getFullYear(), a.getMonth(), a.getDate());
+  const startB = new Date(b.getFullYear(), b.getMonth(), b.getDate());
+  return Math.round((startA.getTime() - startB.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function cleanReason(reason?: string) {
+  if (!reason) return 'Picked because it fits how you like to spend your time.';
+  const trimmed = reason.replace(/^[•\-–\s]+/, '').trim();
+  return trimmed.length > 120 ? `${trimmed.slice(0, 117)}…` : trimmed;
+}
+
+function getPriceLabel(item: RankedItem) {
+  const maxPrice = item.priceMax ?? item.priceMin ?? 0;
+  if (!maxPrice) return 'Free';
+  if (maxPrice <= 30) return '$';
+  if (maxPrice <= 75) return '$$';
+  if (maxPrice <= 150) return '$$$';
+  return '$$$$';
+}
+
+function getDistanceLabel(distanceKm?: number | null) {
+  if (distanceKm == null) return 'Nearby';
+  const miles = distanceKm * 0.621371;
+  if (miles < 0.5) return 'Walkable';
+  return `${miles.toFixed(1)} mi away`;
+}
+
+function getMoodLabel(category?: string | null) {
+  if (!category) return 'Flexible vibe';
+  return category
+    .toLowerCase()
+    .split(/[\s_]/)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
 }

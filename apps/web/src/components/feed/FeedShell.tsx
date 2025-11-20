@@ -2,19 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { IntentionTokens, RankedItem } from '@citypass/types';
-import { MoodRail } from './MoodRail';
-import { NowBar } from './NowBar';
 import { FilterBar } from './FilterBar';
-import { StoryRow } from './StoryRow';
-import { ContextModal } from './ContextModal';
-import { SkeletonStoryCard } from './SkeletonStoryCard';
-import { FeedEmptyState } from './EmptyState';
-import { ErrorState } from '@/components/common/ErrorState';
+import { StoryCard } from '@/components/chat/StoryCard';
+import { SkeletonStoryCard } from '@/components/chat/SkeletonStoryCard';
+import { EmptyFeedState } from './EmptyFeedState';
+import { EventModal } from '@/components/chat/EventModal';
 import { logClientEvent } from '@/lib/analytics/logClientEvent';
 
 const DEFAULT_TOKENS: IntentionTokens = {
   mood: 'electric',
-  untilMinutes: 180,
+  untilMinutes: 240,
   distanceKm: 5,
   budget: 'casual',
   companions: ['solo'],
@@ -27,14 +24,22 @@ type FeedShellProps = {
   initialTokens?: Partial<IntentionTokens>;
 };
 
+type TimeFilter = 'now' | 'today' | 'tonight' | 'weekend';
+type DistanceFilter = 'walkable' | 'short' | 'open';
+
 export function FeedShell({ city, defaultMood, presetIds, initialTokens }: FeedShellProps) {
-  const [tokens, setTokens] = useState<IntentionTokens>({ ...DEFAULT_TOKENS, ...initialTokens, mood: initialTokens?.mood ?? defaultMood });
-  const [timeWindow, setTimeWindow] = useState('tonight');
+  const [tokens, setTokens] = useState<IntentionTokens>({
+    ...DEFAULT_TOKENS,
+    ...initialTokens,
+    mood: initialTokens?.mood ?? defaultMood,
+  });
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>('today');
+  const [distanceFilter, setDistanceFilter] = useState<DistanceFilter>('short');
   const [items, setItems] = useState<RankedItem[]>([]);
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('loading');
   const [error, setError] = useState<string | null>(null);
-  const [selected, setSelected] = useState<RankedItem | null>(null);
-  const [traceId, setTraceId] = useState<string | undefined>(undefined);
+  const [traceId, setTraceId] = useState<string | undefined>();
+  const [selected, setSelected] = useState<{ item: RankedItem; index: number } | null>(null);
 
   const idsKey = useMemo(() => JSON.stringify(presetIds ?? []), [presetIds]);
   const resolvedIds = useMemo(() => {
@@ -54,6 +59,7 @@ export function FeedShell({ city, defaultMood, presetIds, initialTokens }: FeedS
       intention: tokens,
       source: 'feed',
     });
+
     try {
       const response = await fetch('/api/lens/recommend', {
         method: 'POST',
@@ -75,8 +81,6 @@ export function FeedShell({ city, defaultMood, presetIds, initialTokens }: FeedS
           traceId: payload.traceId,
           slateLabel: 'feed_primary',
           eventIds: payload.items.map((item) => item.id),
-          scores: payload.items.map((item: any) => item.fitScore).filter((v) => typeof v === 'number'),
-          position: 0,
           intention: tokens,
         });
       }
@@ -100,8 +104,8 @@ export function FeedShell({ city, defaultMood, presetIds, initialTokens }: FeedS
         const parsed = JSON.parse(stored);
         setTokens((prev) => ({ ...prev, ...parsed, mood: parsed.mood ?? prev.mood }));
       }
-    } catch (err) {
-      console.warn('Failed to hydrate feed tokens', err);
+    } catch {
+      // ignore hydration errors
     }
   }, []);
 
@@ -110,54 +114,78 @@ export function FeedShell({ city, defaultMood, presetIds, initialTokens }: FeedS
     window.localStorage.setItem('citylens:intention', JSON.stringify(tokens));
   }, [tokens]);
 
+  const handleMoodChange = (value: IntentionTokens['mood']) => {
+    setTokens((prev) => ({ ...prev, mood: value }));
+  };
+
+  const handleTimeChange = (value: TimeFilter) => {
+    setTimeFilter(value);
+    const until = value === 'now' ? 90 : value === 'today' ? 6 * 60 : value === 'tonight' ? 12 * 60 : 72 * 60;
+    setTokens((prev) => ({ ...prev, untilMinutes: until }));
+  };
+
+  const handleDistanceChange = (value: DistanceFilter) => {
+    setDistanceFilter(value);
+    const distance = value === 'walkable' ? 2 : value === 'short' ? 6 : 15;
+    setTokens((prev) => ({ ...prev, distanceKm: distance }));
+  };
+
   const isLoading = status === 'loading';
 
   return (
-    <div className="space-y-8">
-      <MoodRail
-        value={tokens.mood}
-        onChange={(mood) => setTokens((prev) => ({ ...prev, mood }))}
-        onLog={(mood) =>
-          logClientEvent('query', {
-            screen: 'feed',
-            intention: { ...tokens, mood },
-            source: 'feed',
-          })
-        }
+    <section className="flex h-full min-h-0 flex-col text-white">
+      <div className="space-y-2">
+        <p className="text-xs uppercase tracking-[0.3em] text-white/50">CityLens feed</p>
+        <h1 className="text-2xl font-semibold">Browse things to do</h1>
+        <p className="text-sm text-white/70">Tuned to your recent searches and saved vibes.</p>
+      </div>
+      <div className="mt-4 flex-1 min-h-0 overflow-y-auto space-y-6 pb-6">
+        <FilterBar
+          mood={tokens.mood}
+          time={timeFilter}
+          distance={distanceFilter}
+          onMoodChange={handleMoodChange}
+          onTimeChange={handleTimeChange}
+          onDistanceChange={handleDistanceChange}
+        />
+        {status === 'error' && (
+          <div className="rounded-3xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-100">
+            {error ?? 'We could not load the feed.'}{' '}
+            <button type="button" className="underline" onClick={fetchFeed}>
+              Try again
+            </button>
+          </div>
+        )}
+        {isLoading && (
+          <div className="space-y-4">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <SkeletonStoryCard key={index} />
+            ))}
+          </div>
+        )}
+        {!isLoading && !error && items.length === 0 && <EmptyFeedState />}
+        {!isLoading && items.length > 0 && (
+          <div className="space-y-4">
+            {items.map((item, index) => (
+              <StoryCard
+                key={item.id}
+                item={item}
+                onOpen={() => setSelected({ item, index })}
+                slateLabel="feed_primary"
+                traceId={traceId}
+                index={index}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+      <EventModal
+        item={selected?.item ?? null}
+        onClose={() => setSelected(null)}
+        traceId={traceId}
+        slateLabel="feed_primary"
+        position={selected?.index}
       />
-      <NowBar city={city} tokens={tokens} />
-      <FilterBar
-        distanceKm={tokens.distanceKm}
-        onDistanceChange={(distanceKm) => setTokens((prev) => ({ ...prev, distanceKm }))}
-        budget={tokens.budget}
-        onBudgetChange={(budget) => setTokens((prev) => ({ ...prev, budget }))}
-        timeWindow={timeWindow}
-        onTimeWindowChange={(value) => {
-          setTimeWindow(value);
-          const until = value === 'now' ? 90 : value === 'this weekend' ? 72 * 60 : 6 * 60;
-          setTokens((prev) => ({ ...prev, untilMinutes: until }));
-        }}
-        onLog={(payload) =>
-          logClientEvent('query', {
-            screen: 'feed',
-            intention: { ...tokens, ...payload },
-            source: 'feed',
-          })
-        }
-      />
-      {status === 'error' && <ErrorState description={error ?? undefined} onRetry={fetchFeed} />}
-      {isLoading && (
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <SkeletonStoryCard key={index} />
-          ))}
-        </div>
-      )}
-      {!isLoading && !error && items.length === 0 && <FeedEmptyState />}
-      {!isLoading && items.length > 0 && (
-        <StoryRow items={items} onOpen={setSelected} traceId={traceId} slateLabel="feed_primary" />
-      )}
-      <ContextModal item={selected} onClose={() => setSelected(null)} traceId={traceId} slateLabel="feed_primary" />
-    </div>
+    </section>
   );
 }

@@ -1,9 +1,8 @@
 import type { IntentionTokens } from '@citypass/types';
-import { PageShell } from '@/components/layout/PageShell';
 import { FeedShell } from '@/components/feed/FeedShell';
-import { SectionTitle } from '@/components/ui/SectionTitle';
 import { cookies } from 'next/headers';
 import { parsePreferencesCookie } from '@/lib/preferences';
+import { PageShell } from '@/components/layout/PageShell';
 
 export const metadata = {
   title: 'CityLens Feed',
@@ -28,22 +27,16 @@ export default async function FeedPage({ searchParams }: FeedPageProps) {
 
   return (
     <PageShell>
-      <div className="space-y-8">
-        <SectionTitle
-          eyebrow="CityLens Feed"
-          title="Story cards from the city"
-        />
-        <FeedShell
-          city={city}
-          defaultMood={prefs?.mood ?? defaultMood}
-          presetIds={presetIds}
-          initialTokens={{
-            mood: prefs?.mood ?? defaultMood,
-            distanceKm: prefs?.distanceKm ?? undefined,
-            budget: prefs?.budget ?? undefined,
-          }}
-        />
-      </div>
+      <FeedShell
+        city={city}
+        defaultMood={prefs?.mood ?? defaultMood}
+        presetIds={presetIds}
+        initialTokens={{
+          mood: prefs?.mood ?? defaultMood,
+          distanceKm: prefs?.distanceKm ?? undefined,
+          budget: prefs?.budget ?? undefined,
+        }}
+      />
     </PageShell>
   );
 }

@@ -5,14 +5,11 @@ import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { BrandMark } from '@/components/ui/BrandMark';
 
 const links = [
-  { href: '/', label: 'Home' },
   { href: '/chat', label: 'Chat' },
   { href: '/feed', label: 'Feed' },
   { href: '/profile', label: 'Profile' },
-  { href: '/onboarding', label: 'Onboarding' },
   { href: '/investors', label: 'Investors' },
 ];
 
@@ -21,25 +18,33 @@ export function TopNav() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-white/5 bg-black/60 backdrop-blur-2xl">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 md:px-8">
-        <BrandMark />
+    <header className="sticky top-0 z-40 border-b border-white/5 bg-[rgba(5,5,9,0.75)] backdrop-blur-xl">
+      <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-3">
+        <Link href="/chat" className="text-lg font-semibold tracking-tight text-white">
+          CityLens
+        </Link>
         <nav className="hidden items-center gap-6 text-sm text-white/70 md:flex">
-          {links.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={cn(
-                'relative transition hover:text-white',
-                pathname === link.href && 'text-white'
-              )}
-            >
-              {link.label}
-              {pathname === link.href && <span className="absolute -bottom-2 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white to-transparent" />}
-            </Link>
-          ))}
-          <Button asChild className="rounded-full border border-white/30 bg-white text-black hover:bg-white/90 shadow-[0_8px_30px_rgba(77,123,255,0.35)]">
-            <Link href="/chat">Launch Copilot</Link>
+          {links.map((link) => {
+            const active = pathname.startsWith(link.href);
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={cn(
+                  'relative pb-1 transition-colors hover:text-white',
+                  active && 'text-white'
+                )}
+              >
+                {link.label}
+                {active && <span className="absolute bottom-0 left-0 right-0 mx-auto h-0.5 w-6 rounded-full bg-teal-300" />}
+              </Link>
+            );
+          })}
+          <Button
+            asChild
+            className="rounded-full bg-gradient-to-r from-teal-400 to-sky-500 px-4 py-2 text-sm font-semibold text-black shadow-[0_10px_30px_rgba(45,212,191,0.35)] hover:opacity-90"
+          >
+            <Link href="/chat">Open chat</Link>
           </Button>
         </nav>
         <button
@@ -52,29 +57,32 @@ export function TopNav() {
         </button>
       </div>
       {menuOpen && (
-        <div className="border-t border-white/10 bg-black/80 px-4 py-4 text-sm text-white/70 md:hidden">
+        <div className="border-t border-white/10 bg-[#050509]/95 px-4 py-4 text-sm text-white/80 md:hidden">
           <ul className="space-y-3">
-            {links.map((link) => (
-              <li key={link.href}>
-                <Link
-                  href={link.href}
-                  className={cn(
-                    'block rounded-2xl px-4 py-2',
-                    pathname === link.href ? 'bg-white/10 text-white' : 'hover:bg-white/5'
-                  )}
-                  onClick={() => setMenuOpen(false)}
-                >
-                  {link.label}
-                </Link>
-              </li>
-            ))}
+            {links.map((link) => {
+              const active = pathname.startsWith(link.href);
+              return (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className={cn(
+                      'block rounded-2xl px-4 py-2',
+                      active ? 'bg-white/10 text-white' : 'hover:bg-white/5'
+                    )}
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              );
+            })}
             <li>
               <Button
                 asChild
-                className="w-full rounded-full border border-white/20 bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-[0_5px_25px_rgba(77,123,255,0.55)]"
+                className="w-full rounded-full bg-gradient-to-r from-teal-400 to-sky-500 text-black"
               >
                 <Link href="/chat" onClick={() => setMenuOpen(false)}>
-                  Launch Copilot
+                  Open chat
                 </Link>
               </Button>
             </li>

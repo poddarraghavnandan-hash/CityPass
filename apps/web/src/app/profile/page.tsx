@@ -1,32 +1,46 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { IntentionTokens } from '@citypass/types';
+import { ProfileShell } from '@/components/profile/ProfileShell';
+import { TasteForm } from '@/components/profile/TasteForm';
 import { PageShell } from '@/components/layout/PageShell';
-import { SectionTitle } from '@/components/ui/SectionTitle';
-import { TasteGraph } from '@/components/profile/TasteGraph';
-import { PreferenceToggles } from '@/components/profile/PreferenceToggles';
-import { BudgetAndDistance } from '@/components/profile/BudgetAndDistance';
-import { Button } from '@/components/ui/button';
-import { MoodStep } from '@/components/onboarding/MoodStep';
 import type { Preferences } from '@/lib/preferences';
 import { useToast } from '@/components/ui/toast';
 import { logClientEvent } from '@/lib/analytics/logClientEvent';
 
+type Status = 'idle' | 'loading' | 'saving' | 'saved' | 'error';
+
+const budgetDisplayMap: Record<Preferences['budget'], 'free' | '$' | '$$' | '$$$'> = {
+  free: 'free',
+  casual: '$',
+  splurge: '$$',
+};
+
+const displayToBudget = (display: 'free' | '$' | '$$' | '$$$'): Preferences['budget'] => {
+  if (display === 'free') return 'free';
+  if (display === '$') return 'casual';
+  return 'splurge';
+};
+
+const minutesFromDistance = (distanceKm: number) => Math.min(45, Math.max(10, Math.round(distanceKm * 6)));
+const kmFromMinutes = (minutes: number) => Math.max(1, Math.round((minutes / 5) * 10) / 10);
+
 export default function ProfilePage() {
-  const [socialProof, setSocialProof] = useState(true);
-  const [soloFriendly, setSoloFriendly] = useState(false);
-  const [budget, setBudget] = useState('casual');
-  const [distanceKm, setDistanceKm] = useState(6);
+  const [status, setStatus] = useState<Status>('loading');
   const [mood, setMood] = useState<IntentionTokens['mood']>('electric');
   const [interests, setInterests] = useState<string[]>([]);
-  const [status, setStatus] = useState<'idle' | 'loading' | 'saving' | 'error' | 'saved'>('loading');
+  const [distanceKm, setDistanceKm] = useState(5);
+  const [travelMinutes, setTravelMinutes] = useState(minutesFromDistance(5));
+  const [budget, setBudget] = useState<Preferences['budget']>('casual');
+  const [budgetDisplay, setBudgetDisplay] = useState<'free' | '$' | '$$' | '$$$'>(budgetDisplayMap.casual);
+  const [socialProof, setSocialProof] = useState(true);
+  const [soloFriendly, setSoloFriendly] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { success, error: errorToast } = useToast();
 
   useEffect(() => {
     const load = async () => {
-      setStatus('loading');
       try {
         const response = await fetch('/api/preferences');
         if (!response.ok) throw new Error('Unable to load preferences');
@@ -35,8 +49,10 @@ export default function ProfilePage() {
         if (prefs) {
           setMood(prefs.mood);
           setInterests(prefs.interests ?? []);
-          setDistanceKm(prefs.distanceKm ?? 6);
+          setDistanceKm(prefs.distanceKm ?? 5);
+          setTravelMinutes(minutesFromDistance(prefs.distanceKm ?? 5));
           setBudget(prefs.budget ?? 'casual');
+          setBudgetDisplay(budgetDisplayMap[prefs.budget ?? 'casual']);
           setSocialProof(prefs.socialProof ?? true);
           setSoloFriendly(prefs.soloFriendly ?? false);
         }
@@ -49,103 +65,65 @@ export default function ProfilePage() {
     load();
   }, []);
 
-  const tasteScores = useMemo(
-    () => ({
-      music: interests.some((item) => /sound/i.test(item)) ? 0.9 : 0.6,
-      movement: interests.some((item) => /movement|active/i.test(item)) ? 0.85 : 0.55,
-      social: soloFriendly ? 0.55 : 0.8,
-      arts: interests.some((item) => /art/i.test(item)) ? 0.9 : 0.6,
-      nature: interests.some((item) => /nature/i.test(item)) ? 0.8 : 0.5,
-    }),
-    [interests, soloFriendly]
-  );
+  const handleTravelChange = (minutes: number) => {
+    setTravelMinutes(minutes);
+    setDistanceKm(kmFromMinutes(minutes));
+  };
 
-  const saveProfile = async () => {
+  const handleBudgetDisplayChange = (display: 'free' | '$' | '$$' | '$$$') => {
+    setBudgetDisplay(display);
+    setBudget(displayToBudget(display));
+  };
+
+  const handleSave = async () => {
     setStatus('saving');
     setError(null);
     try {
-      const payload = { mood, interests, distanceKm, budget, socialProof, soloFriendly };
-      const response = await fetch('/api/preferences', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!response.ok) throw new Error('Failed to save profile');
-      setStatus('saved');
-      setTimeout(() => setStatus('idle'), 1500);
-      success('Profile saved', 'Preferences stored for chat and feed.');
-      logClientEvent('profile_update', {
-        screen: 'profile',
+      const payload: Preferences = {
         mood,
         interests,
         distanceKm,
         budget,
         socialProof,
         soloFriendly,
+      };
+      const response = await fetch('/api/preferences', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       });
+      if (!response.ok) throw new Error('Failed to save preferences');
+      setStatus('saved');
+      success('Preferences saved', 'We’ll use these for chat and feed.');
+      logClientEvent('profile_update', payload);
+      setTimeout(() => setStatus('idle'), 1500);
     } catch (err: any) {
+      const message = err?.message || 'Unable to save preferences';
       setStatus('error');
-      setError(err?.message || 'Save failed');
-      errorToast('Save failed', err?.message || 'Unable to save preferences');
-      logClientEvent('error', { screen: 'profile', message: err?.message || 'Save failed' });
+      setError(message);
+      errorToast('Save failed', message);
+      logClientEvent('error', { screen: 'profile', message });
     }
-  };
-
-  const onChangeAndLog = (payload: Partial<Preferences>) => {
-    logClientEvent('profile_update', { screen: 'profile', ...payload });
   };
 
   return (
     <PageShell>
-      <div className="space-y-8">
-        <SectionTitle
-          eyebrow="Profile"
-          title="Tune your taste graph"
-          description="We listen to every chat, feed open, and booking to sharpen your orbit."
+      <ProfileShell status={status} onSave={handleSave} error={error}>
+        <TasteForm
+          mood={mood}
+          onMoodChange={setMood}
+          interests={interests}
+          onInterestsChange={setInterests}
+          soloFriendly={soloFriendly}
+          onSoloChange={setSoloFriendly}
+          socialProof={socialProof}
+          onSocialChange={setSocialProof}
+          budgetDisplay={budgetDisplay}
+          onBudgetDisplayChange={handleBudgetDisplayChange}
+          travelMinutes={travelMinutes}
+          onTravelChange={handleTravelChange}
         />
-        <div className="grid gap-8 md:grid-cols-[1.2fr,0.8fr]">
-          <div className="rounded-[40px] border border-white/10 bg-white/5 p-8">
-            <TasteGraph scores={tasteScores} />
-          </div>
-          <div className="space-y-4">
-            <MoodStep
-              value={mood}
-              onChange={(val) => {
-                setMood(val);
-                onChangeAndLog({ mood: val });
-              }}
-            />
-            <PreferenceToggles
-              social={soloFriendly}
-              setSocial={(val) => {
-                setSoloFriendly(val);
-                onChangeAndLog({ soloFriendly: val });
-              }}
-              proof={socialProof}
-              setProof={(val) => {
-                setSocialProof(val);
-                onChangeAndLog({ socialProof: val });
-              }}
-            />
-            <BudgetAndDistance
-              budget={budget}
-              onBudgetChange={(val) => {
-                setBudget(val);
-                onChangeAndLog({ budget: val as 'free' | 'casual' | 'splurge' });
-              }}
-              distanceKm={distanceKm}
-              onDistanceChange={(val) => {
-                setDistanceKm(val);
-                onChangeAndLog({ distanceKm: val });
-              }}
-            />
-            {error && <p className="text-sm text-red-400">{error}</p>}
-            <Button className="w-full rounded-full bg-white text-black hover:bg-white/80" onClick={saveProfile} disabled={status === 'saving'}>
-              {status === 'saving' ? 'Saving…' : status === 'saved' ? 'Saved ✓' : 'Save profile'}
-            </Button>
-          </div>
-        </div>
-      </div>
+      </ProfileShell>
     </PageShell>
   );
 }

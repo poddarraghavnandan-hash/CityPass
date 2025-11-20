@@ -2,44 +2,66 @@
 
 @layer base {
   :root {
-    --background: 240 60% 3%;
-    --foreground: 229 59% 96%;
-    --card: 235 55% 12%;
-    --card-foreground: 229 59% 96%;
-    --popover: 240 60% 6%;
-    --popover-foreground: 229 59% 96%;
-    --primary: 225 100% 65%;
-    --primary-foreground: 240 33% 5%;
-    --secondary: 278 98% 66%;
-    --secondary-foreground: 240 33% 5%;
-    --muted: 232 21% 21%;
-    --muted-foreground: 224 19% 74%;
-    --accent: 173 92% 56%;
-    --accent-foreground: 240 33% 5%;
-    --destructive: 349 100% 63%;
-    --destructive-foreground: 240 33% 5%;
-    --border: 231 32% 18%;
-    --input: 231 32% 18%;
-    --ring: 225 100% 65%;
-    --glow: 225 100% 65%;
+    --background: 225 70% 4%;
+    --foreground: 220 15% 94%;
+    --surface: 224 45% 9%;
+    --surface-muted: 230 34% 12%;
+    --card: 224 44% 11%;
+    --card-foreground: 220 15% 94%;
+    --popover: 225 52% 8%;
+    --popover-foreground: 220 15% 94%;
+    --primary: 183 64% 58%;
+    --primary-foreground: 225 80% 5%;
+    --secondary: 261 77% 65%;
+    --secondary-foreground: 220 18% 12%;
+    --muted: 226 25% 30%;
+    --muted-foreground: 225 22% 70%;
+    --accent: 261 77% 65%;
+    --accent-foreground: 220 18% 12%;
+    --destructive: 358 75% 59%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 225 32% 20%;
+    --input: 225 32% 20%;
+    --ring: 183 64% 58%;
+    --glow: 183 64% 58%;
     --radius: 1.5rem;
   }
 
-  * {
+  *, *::before, *::after {
     border-color: hsl(var(--border));
   }
 
+  html,
   body {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
-    font-family: 'Inter', 'Space Grotesk', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    min-height: 100vh;
+    font-family: 'Inter', 'Space Grotesk', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
   }
 
   ::selection {
-    background-color: rgba(77, 123, 255, 0.4);
+    background-color: rgba(64, 224, 208, 0.35);
     color: white;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.12);
+    border-radius: 9999px;
   }
 
   @media (prefers-reduced-motion: reduce) {

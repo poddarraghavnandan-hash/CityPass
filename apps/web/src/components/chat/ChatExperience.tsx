@@ -3,9 +3,9 @@
 import { useEffect, useState } from 'react';
 import type { Intention, IntentionTokens, RankedItem } from '@citypass/types';
 import { ChatHeader } from './ChatHeader';
-import { ChatMain } from './ChatMain';
 import { ChatMessages, type ChatBubble } from './ChatMessages';
-import { SlateCarousel } from './SlateCarousel';
+import { ChatContent } from './ChatContent';
+import { SlateSection, type SlateKey } from './SlateSection';
 import { ChatInputBar } from './ChatInputBar';
 import { EventModal } from './EventModal';
 import { logClientEvent } from '@/lib/analytics/logClientEvent';
@@ -17,7 +17,6 @@ type ChatExperienceProps = {
   initialPrompt?: string;
 };
 
-type SlateKey = 'best' | 'wildcard' | 'closeAndEasy';
 type SlateMap = Partial<Record<SlateKey, RankedItem[]>>;
 
 export function ChatExperience({ city, defaultTokens, initialPrompt }: ChatExperienceProps) {
@@ -28,7 +27,7 @@ export function ChatExperience({ city, defaultTokens, initialPrompt }: ChatExper
   const [traceId, setTraceId] = useState<string | undefined>();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [openItem, setOpenItem] = useState<RankedItem | null>(null);
+  const [openItem, setOpenItem] = useState<{ item: RankedItem; slateLabel: SlateKey; index: number } | null>(null);
 
   useEffect(() => {
     if (initialPrompt) {
@@ -135,13 +134,25 @@ export function ChatExperience({ city, defaultTokens, initialPrompt }: ChatExper
   return (
     <>
       <ChatHeader city={city} />
-      <ChatMain>
+      <ChatContent>
         <ChatMessages messages={messages} />
-        <SlateCarousel slates={slates} loading={loading} onOpen={(item) => setOpenItem(item)} traceId={traceId} intention={intention} />
+        <SlateSection
+          slates={slates}
+          loading={loading}
+          onOpen={(item, index, slateLabel) => setOpenItem({ item, slateLabel, index })}
+          traceId={traceId}
+          intention={intention}
+        />
         {error && <ChatError message={error} onRetry={() => handleSubmit()} />}
-      </ChatMain>
+      </ChatContent>
       <ChatInputBar value={input} onChange={setInput} onSubmit={() => handleSubmit()} disabled={loading} />
-      <EventModal item={openItem} onClose={() => setOpenItem(null)} traceId={traceId} />
+      <EventModal
+        item={openItem?.item ?? null}
+        slateLabel={openItem?.slateLabel}
+        position={openItem?.index}
+        onClose={() => setOpenItem(null)}
+        traceId={traceId}
+      />
     </>
   );
 }
