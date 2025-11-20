@@ -315,8 +315,8 @@ export async function POST(req: NextRequest) {
                 id: dbEvent.id,
                 title: dbEvent.title,
                 venueName: dbEvent.venueName || null,
-                city: dbEvent.city || null,
-                startTime: dbEvent.startTime,
+                city: dbEvent.city,
+                startTime: dbEvent.startTime.toISOString(),
                 priceMin: dbEvent.priceMin,
                 priceMax: dbEvent.priceMax,
                 imageUrl: dbEvent.imageUrl || null,
@@ -334,7 +334,7 @@ export async function POST(req: NextRequest) {
                 subtitle: dbEvent.subtitle || null,
                 description: dbEvent.description || null,
                 neighborhood: dbEvent.neighborhood || null,
-                endTime: dbEvent.endTime || null,
+                endTime: dbEvent.endTime ? dbEvent.endTime.toISOString() : null,
                 distanceKm: null,
               };
             };
