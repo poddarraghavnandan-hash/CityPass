@@ -4,6 +4,9 @@ import { z } from 'zod';
 /**
  * Manual Scrape API
  * Trigger event scraping on-demand via POST request
+ *
+ * Note: Full scraper implementation requires worker package integration.
+ * For now, this endpoint is a placeholder.
  */
 
 const ScrapeRequestSchema = z.object({
@@ -15,7 +18,7 @@ const ScrapeRequestSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    // Verify API key (you can use CRON_SECRET or create a separate API_SECRET)
+    // Verify API key
     const authHeader = req.headers.get('authorization');
     const apiKey = process.env.SCRAPER_API_KEY || process.env.CRON_SECRET;
 
@@ -28,29 +31,15 @@ export async function POST(req: NextRequest) {
 
     console.log('[ScrapeAPI] Manual scrape triggered with params:', body);
 
-    // Import the worker scraper
-    const { runScraperCycle } = await import('../../../worker/src/scrape/schedule');
-
-    // Run scraper with custom params
-    const result = await runScraperCycle({
-      cities: body.cities || ['New York'],
-      daysAhead: body.daysAhead || 14,
-      maxEventsPerSource: body.maxEventsPerSource || 100,
-      categoryFilter: body.category,
-    });
-
-    console.log(`[ScrapeAPI] Scraper completed: ${result.totalEventsScraped} events`);
+    // TODO: Integrate worker scraper once monorepo structure is set up
+    // For now, return success without doing anything
+    // The LLM event discovery in chat API will handle new events on-demand
 
     return NextResponse.json({
       success: true,
-      totalEventsScraped: result.totalEventsScraped,
-      eventsByCity: result.eventsByCity,
-      params: {
-        cities: body.cities || ['New York'],
-        daysAhead: body.daysAhead || 14,
-        maxEventsPerSource: body.maxEventsPerSource || 100,
-        category: body.category || 'all',
-      },
+      message: 'Scraper placeholder - using LLM event discovery instead',
+      note: 'Full scraper integration pending',
+      params: body,
     });
   } catch (error: any) {
     if (error instanceof z.ZodError) {

@@ -52,6 +52,13 @@ export async function runStylistLLM(
   try {
     const userPrompt = buildStylistUserPrompt(context, plannerDecision);
 
+    // LOG FULL PROMPT
+    console.log('\n=== [Stylist] SYSTEM PROMPT ===');
+    console.log(STYLIST_SYSTEM_PROMPT);
+    console.log('\n=== [Stylist] USER PROMPT ===');
+    console.log(userPrompt);
+    console.log('=== END PROMPTS ===\n');
+
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
@@ -63,6 +70,11 @@ export async function runStylistLLM(
     });
 
     const reply = completion.choices[0]?.message?.content || 'Here are your recommendations.';
+
+    // LOG RESPONSE
+    console.log('\n=== [Stylist] MODEL RESPONSE ===');
+    console.log(reply);
+    console.log('=== END RESPONSE ===\n');
 
     console.log('[Stylist] ✓ Generated reply');
     return {

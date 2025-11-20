@@ -2,7 +2,10 @@ import { NextResponse } from 'next/server';
 
 /**
  * Vercel Cron Job: Scrape events from external sources
- * Runs every 6 hours to keep event database fresh
+ * Runs daily at 2 AM to keep event database fresh
+ *
+ * Note: Full scraper implementation requires worker package integration.
+ * For now, this endpoint is a placeholder.
  */
 
 export async function GET(request: Request) {
@@ -13,25 +16,16 @@ export async function GET(request: Request) {
   }
 
   try {
-    console.log('[Cron] Starting event scraper...');
+    console.log('[Cron] Event scraper cron triggered');
 
-    // Import the worker scraper
-    const { runScraperCycle } = await import('../../../../worker/src/scrape/schedule');
-
-    // Run scraper for all configured cities
-    const result = await runScraperCycle({
-      cities: ['New York', 'Los Angeles', 'San Francisco', 'Chicago'],
-      daysAhead: 14,
-      maxEventsPerSource: 100,
-    });
-
-    console.log(`[Cron] Scraper completed: ${result.totalEventsScraped} events`);
+    // TODO: Integrate worker scraper once monorepo structure is set up
+    // For now, return success without doing anything
+    // The LLM event discovery in chat API will handle new events
 
     return NextResponse.json({
       success: true,
-      totalEventsScraped: result.totalEventsScraped,
-      eventsByCity: result.eventsByCity,
-      message: `Successfully scraped ${result.totalEventsScraped} events`,
+      message: 'Scraper placeholder - using LLM event discovery instead',
+      note: 'Full scraper integration pending',
     });
   } catch (error: any) {
     console.error('[Cron] Scraper error:', error);

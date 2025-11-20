@@ -57,17 +57,19 @@ export async function runChatTurn(input: RunChatTurnInput): Promise<RunChatTurnO
       threadId: persistedThreadId,
       plannerDecision,
       reply: stylistOutput.reply,
+      context: contextSnapshot,
     };
   } catch (error) {
     console.error('[Orchestrator] Chat turn failed:', error);
 
     // Graceful degradation
+    const nowISO = new Date().toISOString();
     return {
       threadId: threadId || 'error',
       plannerDecision: {
         intention: {
           primaryGoal: freeText,
-          timeWindow: { fromISO: new Date().toISOString(), toISO: new Date().toISOString() },
+          timeWindow: { fromISO: nowISO, toISO: nowISO },
           city: cityHint || 'New York',
           vibeDescriptors: [],
           constraints: [],
@@ -82,6 +84,34 @@ export async function runChatTurn(input: RunChatTurnInput): Promise<RunChatTurnO
         },
       },
       reply: 'Sorry, I encountered an error processing your request. Please try again.',
+      context: {
+        userId,
+        anonId,
+        sessionId: threadId || 'error',
+        freeText,
+        nowISO,
+        city: cityHint || 'New York',
+        locationApprox: null,
+        profile: {
+          moodsPreferred: [],
+          dislikes: [],
+          budgetBand: null,
+          maxTravelMinutes: null,
+          scheduleBias: null,
+          socialStyle: null,
+          tasteVectorId: null,
+        },
+        learnerState: {
+          explorationLevel: 'MEDIUM',
+          noveltyTarget: 0.3,
+          banditPolicyName: 'default',
+        },
+        chatHistorySummary: 'Error occurred',
+        recentPicksSummary: '',
+        searchWindow: { fromISO: nowISO, toISO: nowISO },
+        candidateEvents: [],
+        traceId: 'error',
+      } as any,
     };
   }
 }

@@ -201,6 +201,7 @@ export interface RunChatTurnOutput {
   threadId: string;
   plannerDecision: PlannerDecision;
   reply: string;
+  context: ChatContextSnapshot;
 }
 
 export interface AnalystLLMOutput {
