@@ -16,5 +16,9 @@ export { runStylistLLM } from './stylist';
 // Deterministic planner
 export { runPlanner } from './planner';
 
+// Event discovery and scoring
+export { discoverEventsWithLLM, convertDiscoveredToCandidateEvents, type DiscoveredEvent } from './eventDiscoverer';
+export { scoreEventMatch, scoreEventBatch, sortByMatchScore, type EventScore } from './matchScorer';
+
 // Types
 export * from './types';

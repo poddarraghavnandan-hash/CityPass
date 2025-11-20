@@ -7,9 +7,14 @@ import { NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { cookies } from 'next/headers';
-import { runChatTurn } from '@citypass/chat';
-import { discoverEventsWithLLM, convertDiscoveredToCandidateEvents, type DiscoveredEvent } from '@citypass/chat/eventDiscoverer';
-import { scoreEventBatch, sortByMatchScore } from '@citypass/chat/matchScorer';
+import {
+  runChatTurn,
+  discoverEventsWithLLM,
+  convertDiscoveredToCandidateEvents,
+  scoreEventBatch,
+  sortByMatchScore,
+  type DiscoveredEvent
+} from '@citypass/chat';
 import type { RankedItem } from '@citypass/types';
 import { z } from 'zod';
 import { checkRateLimit, getRateLimitIdentifier } from '@/lib/rate-limit';
