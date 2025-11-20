@@ -9,7 +9,7 @@ import { z } from 'zod';
 // CHAT CONTEXT SNAPSHOT
 // ============================================================================
 
-export const BudgetBandSchema = z.enum(['LOW', 'MID', 'HIGH', 'LUXE']);
+export const BudgetBandSchema = z.enum(['FREE', 'LOW', 'MID', 'HIGH', 'LUXE']);
 export type BudgetBand = z.infer<typeof BudgetBandSchema>;
 
 export const ExplorationLevelSchema = z.enum(['LOW', 'MEDIUM', 'HIGH']);

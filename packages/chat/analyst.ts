@@ -42,7 +42,7 @@ Output format (strict JSON):
     "neighborhoodPreference": "..." | null,
     "exertionLevel": "LOW" | "MEDIUM" | "HIGH" | null,
     "socialContext": "SOLO" | "WITH_FRIENDS" | "DATE" | "FAMILY" | null,
-    "budgetBand": "LOW" | "MID" | "HIGH" | "LUXE" | null,
+    "budgetBand": "FREE" | "LOW" | "MID" | "HIGH" | "LUXE" | null,
     "vibeDescriptors": ["...", "..."],
     "constraints": ["...", "..."],
     "notes": "any additional context"

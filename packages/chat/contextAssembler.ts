@@ -352,16 +352,40 @@ function determineSearchWindow(
     const toDate = new Date(now);
     toDate.setMinutes(toDate.getMinutes() + extracted.timeWindow.untilMinutes);
 
-    return {
-      fromISO: fromDate.toISOString(),
-      toISO: toDate.toISOString(),
-    };
+    // Validate that time window is in the future
+    if (toDate.getTime() < now.getTime()) {
+      console.warn('[ContextAssembler] Extracted time window is in the past, using default window instead', {
+        freeText,
+        extractedFrom: fromDate.toISOString(),
+        extractedTo: toDate.toISOString(),
+        now: now.toISOString()
+      });
+
+      // Fall through to default window
+    } else {
+      console.log('[ContextAssembler] Using extracted time window', {
+        freeText,
+        fromISO: fromDate.toISOString(),
+        toISO: toDate.toISOString(),
+        durationHours: ((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60)).toFixed(1)
+      });
+
+      return {
+        fromISO: fromDate.toISOString(),
+        toISO: toDate.toISOString(),
+      };
+    }
   }
 
-  // Default: next 48 hours (2 days) for better event coverage
+  // Default: next 24 hours for better relevance (reduced from 48h)
   const fromDate = new Date(now);
   const toDate = new Date(now);
-  toDate.setHours(toDate.getHours() + 48);
+  toDate.setHours(toDate.getHours() + 24);
+
+  console.log('[ContextAssembler] Using default 24h time window', {
+    fromISO: fromDate.toISOString(),
+    toISO: toDate.toISOString()
+  });
 
   return {
     fromISO: fromDate.toISOString(),
@@ -370,25 +394,65 @@ function determineSearchWindow(
 }
 
 /**
- * Query candidate events from existing search/RAG system
+ * PHASE 1 (WEEK 1-2): Multi-strategy Retrieval
+ * Get trending events based on recent engagement
  */
-async function queryCandidateEvents(params: {
-  freeText: string;
-  searchWindow: { fromISO: string; toISO: string };
+async function getTrendingEvents(params: {
   city: string;
-  userId?: string;
-  profile: Profile;
-}): Promise<CandidateEvent[]> {
-  const { freeText, searchWindow, city } = params;
+  searchWindow: { fromISO: string; toISO: string };
+  limit: number;
+}): Promise<any[]> {
+  const { city, searchWindow, limit } = params;
 
   try {
-    // Extract category hints from free text
-    const categoryHint = extractCategoryFromText(freeText);
-    const keywords = extractKeywords(freeText);
+    // Get events with high recent engagement
+    const events = await prisma.event.findMany({
+      where: {
+        city,
+        startTime: {
+          gte: new Date(searchWindow.fromISO),
+          lte: new Date(searchWindow.toISO),
+        },
+      },
+      take: limit,
+      orderBy: [
+        { saveCount24h: 'desc' },
+        { viewCount24h: 'desc' },
+      ],
+      select: {
+        id: true,
+        title: true,
+        startTime: true,
+        endTime: true,
+        neighborhood: true,
+        venueName: true,
+        category: true,
+        priceMin: true,
+        priceMax: true,
+        tags: true,
+      },
+    });
 
-    console.log(`[ContextAssembler] Searching for events with category: ${categoryHint || 'any'}, keywords: ${keywords.join(', ') || 'none'}`);
+    console.log(`[ContextAssembler:Trending] Found ${events.length} trending events`);
+    return events;
+  } catch (error) {
+    console.error('[ContextAssembler:Trending] Failed:', error);
+    return [];
+  }
+}
 
-    // Build where clause with text search
+/**
+ * Get popular events by category
+ */
+async function getPopularByCategory(params: {
+  city: string;
+  searchWindow: { fromISO: string; toISO: string };
+  categoryHint: string | null;
+  limit: number;
+}): Promise<any[]> {
+  const { city, searchWindow, categoryHint, limit } = params;
+
+  try {
     const whereClause: any = {
       city,
       startTime: {
@@ -397,23 +461,91 @@ async function queryCandidateEvents(params: {
       },
     };
 
-    // Add category filter if we detected one
+    // If category hint, prioritize that category
     if (categoryHint) {
       whereClause.category = categoryHint;
     }
 
-    // Add text search with keywords (now works WITH category filter)
-    if (keywords.length > 0) {
-      whereClause.OR = keywords.flatMap((keyword) => [
-        { title: { contains: keyword, mode: 'insensitive' } },
-        { description: { contains: keyword, mode: 'insensitive' } },
-      ]);
-    }
-
-    // Query events from database with smart filters
-    let events = await prisma.event.findMany({
+    const events = await prisma.event.findMany({
       where: whereClause,
-      take: 50,
+      take: limit,
+      orderBy: [
+        { saveCount24h: 'desc' },
+        { startTime: 'asc' },
+      ],
+      select: {
+        id: true,
+        title: true,
+        startTime: true,
+        endTime: true,
+        neighborhood: true,
+        venueName: true,
+        category: true,
+        priceMin: true,
+        priceMax: true,
+        tags: true,
+      },
+    });
+
+    console.log(`[ContextAssembler:Popular] Found ${events.length} popular events in category ${categoryHint || 'any'}`);
+    return events;
+  } catch (error) {
+    console.error('[ContextAssembler:Popular] Failed:', error);
+    return [];
+  }
+}
+
+/**
+ * Get events liked by users with similar preferences (collaborative filtering)
+ */
+async function getCollaborativeEvents(params: {
+  userId?: string;
+  city: string;
+  searchWindow: { fromISO: string; toISO: string };
+  limit: number;
+}): Promise<any[]> {
+  const { userId, city, searchWindow, limit } = params;
+
+  if (!userId) {
+    return [];
+  }
+
+  try {
+    // Simplified collaborative filtering without complex JSON queries
+    // For now, return empty array - this can be enhanced with proper JSON filtering later
+    // or by adding a proper event-user interaction table
+    console.log(`[ContextAssembler:Collaborative] Skipping collaborative filtering (requires JSON query optimization)`);
+    return [];
+  } catch (error) {
+    console.error('[ContextAssembler:Collaborative] Failed:', error);
+    return [];
+  }
+}
+
+/**
+ * Get events near user location
+ */
+async function getLocationBasedEvents(params: {
+  city: string;
+  searchWindow: { fromISO: string; toISO: string };
+  profile: Profile;
+  limit: number;
+}): Promise<any[]> {
+  const { city, searchWindow, profile, limit } = params;
+
+  // TODO: Implement location-based search when user location is available
+  // For now, prioritize events in preferred neighborhoods
+
+  try {
+    const events = await prisma.event.findMany({
+      where: {
+        city,
+        startTime: {
+          gte: new Date(searchWindow.fromISO),
+          lte: new Date(searchWindow.toISO),
+        },
+      },
+      take: limit,
       orderBy: {
         startTime: 'asc',
       },
@@ -431,7 +563,117 @@ async function queryCandidateEvents(params: {
       },
     });
 
-    console.log(`[ContextAssembler] Found ${events.length} candidate events`);
+    console.log(`[ContextAssembler:Location] Found ${events.length} location-based events`);
+    return events;
+  } catch (error) {
+    console.error('[ContextAssembler:Location] Failed:', error);
+    return [];
+  }
+}
+
+/**
+ * Merge and deduplicate events from multiple strategies
+ */
+function deduplicateAndMerge(eventLists: any[][]): any[] {
+  const seen = new Set<string>();
+  const merged: any[] = [];
+
+  // Flatten all event lists
+  const allEvents = eventLists.flat();
+
+  for (const event of allEvents) {
+    if (!seen.has(event.id)) {
+      seen.add(event.id);
+      merged.push(event);
+    }
+  }
+
+  console.log(`[ContextAssembler:Merge] Merged ${allEvents.length} events into ${merged.length} unique events`);
+  return merged;
+}
+
+/**
+ * Query candidate events using multi-strategy retrieval
+ * PHASE 1 (WEEK 1-2): Enhanced with trending, popular, collaborative, and location strategies
+ */
+async function queryCandidateEvents(params: {
+  freeText: string;
+  searchWindow: { fromISO: string; toISO: string };
+  city: string;
+  userId?: string;
+  profile: Profile;
+}): Promise<CandidateEvent[]> {
+  const { freeText, searchWindow, city, userId, profile } = params;
+
+  try {
+    // Extract category hints from free text
+    const categoryHint = extractCategoryFromText(freeText);
+    const keywords = extractKeywords(freeText);
+
+    console.log(`[ContextAssembler] Multi-strategy search: category=${categoryHint || 'any'}, keywords=${keywords.join(', ') || 'none'}`);
+
+    // STRATEGY 1: Semantic/Keyword search (existing logic)
+    const whereClause: any = {
+      city,
+      startTime: {
+        gte: new Date(searchWindow.fromISO),
+        lte: new Date(searchWindow.toISO),
+      },
+    };
+
+    if (categoryHint) {
+      whereClause.category = categoryHint;
+    }
+
+    if (keywords.length > 0) {
+      whereClause.OR = keywords.flatMap((keyword) => [
+        { title: { contains: keyword, mode: 'insensitive' } },
+        { description: { contains: keyword, mode: 'insensitive' } },
+      ]);
+    }
+
+    // Run all retrieval strategies in parallel
+    const [semanticEvents, trendingEvents, popularEvents, collaborativeEvents, locationEvents] = await Promise.all([
+      // Strategy 1: Semantic/Keyword search
+      prisma.event.findMany({
+        where: whereClause,
+        take: 100,
+        orderBy: { startTime: 'asc' },
+        select: {
+          id: true,
+          title: true,
+          startTime: true,
+          endTime: true,
+          neighborhood: true,
+          venueName: true,
+          category: true,
+          priceMin: true,
+          priceMax: true,
+          tags: true,
+        },
+      }),
+      // Strategy 2: Trending events
+      getTrendingEvents({ city, searchWindow, limit: 50 }),
+      // Strategy 3: Popular by category
+      getPopularByCategory({ city, searchWindow, categoryHint, limit: 100 }),
+      // Strategy 4: Collaborative filtering
+      getCollaborativeEvents({ userId, city, searchWindow, limit: 50 }),
+      // Strategy 5: Location-based
+      getLocationBasedEvents({ city, searchWindow, profile, limit: 100 }),
+    ]);
+
+    console.log(`[ContextAssembler] Strategy results - Semantic: ${semanticEvents.length}, Trending: ${trendingEvents.length}, Popular: ${popularEvents.length}, Collaborative: ${collaborativeEvents.length}, Location: ${locationEvents.length}`);
+
+    // Merge and deduplicate results
+    let events = deduplicateAndMerge([
+      semanticEvents,
+      trendingEvents,
+      popularEvents,
+      collaborativeEvents,
+      locationEvents,
+    ]);
+
+    console.log(`[ContextAssembler] Found ${events.length} unique candidate events from all strategies`);
 
     // FALLBACK 1: If category filter returned 0 results, try related categories
     if (events.length === 0 && categoryHint) {
@@ -532,6 +774,43 @@ async function queryCandidateEvents(params: {
       }
     }
 
+    // FALLBACK 3 (FINAL): If still no results after all strategies, return popular/diverse events
+    // This prevents showing empty results and helps users discover what's available
+    if (events.length === 0) {
+      console.warn('[ContextAssembler] All search strategies returned 0 results, using popular events fallback');
+
+      const popularFallbackWhere: any = {
+        city,
+        startTime: {
+          gte: new Date(searchWindow.fromISO),
+          lte: new Date(searchWindow.toISO),
+        },
+      };
+
+      events = await prisma.event.findMany({
+        where: popularFallbackWhere,
+        take: 30,
+        orderBy: [
+          { category: 'asc' }, // Diversity across categories
+          { startTime: 'asc' },
+        ],
+        select: {
+          id: true,
+          title: true,
+          startTime: true,
+          endTime: true,
+          neighborhood: true,
+          venueName: true,
+          category: true,
+          priceMin: true,
+          priceMax: true,
+          tags: true,
+        },
+      });
+
+      console.log(`[ContextAssembler] Popular events fallback found ${events.length} events`);
+    }
+
     // Map to CandidateEvent format
     return events.map((event) => ({
       id: event.id,
@@ -607,12 +886,14 @@ function extractCategoryFromText(text: string): string | null {
     }
   }
 
-  // Fallback: check for generic "music" or "show" only if no specific category matched
-  if (textWithBoundaries.includes(' music ')) return 'MUSIC';
-  if (textWithBoundaries.includes(' show ') && !textWithBoundaries.includes(' fitness ') && !textWithBoundaries.includes(' workout ')) {
+  // Fallback: check for generic "music" only if clearly standalone
+  // Removed overly aggressive "show" fallback as it catches too many false positives
+  if (textWithBoundaries.includes(' music ') && !textWithBoundaries.includes(' live music ') && !textWithBoundaries.includes(' music concert ')) {
+    // Only use as fallback if "music" appears standalone (already checked live music/concert above)
     return 'MUSIC';
   }
 
+  // No category match - return null to allow keyword-based search
   return null;
 }
 
@@ -621,12 +902,21 @@ function extractCategoryFromText(text: string): string | null {
  */
 function extractKeywords(text: string): string[] {
   // Remove common stopwords and extract meaningful keywords
-  const stopwords = ['i', 'want', 'to', 'go', 'for', 'a', 'the', 'tonight', 'today', 'now', 'something', 'find', 'show', 'me'];
+  const stopwords = ['i', 'want', 'to', 'go', 'for', 'a', 'the', 'tonight', 'today', 'now', 'something', 'find', 'show', 'me', 'and', 'or', 'in', 'at', 'on'];
+
+  // List of valid 2-character keywords that should NOT be filtered
+  const validShortKeywords = ['dj', 'ai', 'vr', 'ar', 'ui', 'ux'];
+
   const words = text
     .toLowerCase()
     .replace(/[^\w\s]/g, '')
     .split(/\s+/)
-    .filter((word) => word.length > 2 && !stopwords.includes(word));
+    .filter((word) => {
+      // Keep valid 2-char keywords
+      if (validShortKeywords.includes(word)) return true;
+      // Otherwise require length > 2 and not a stopword
+      return word.length > 2 && !stopwords.includes(word);
+    });
 
   return [...new Set(words)]; // Remove duplicates
 }

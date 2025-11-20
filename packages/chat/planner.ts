@@ -22,7 +22,41 @@ interface ScoredEvent {
 }
 
 /**
+ * PHASE 4 (WEEK 8-10): Causal debiasing using inverse propensity weighting
+ * Reduces popularity bias by downweighting over-exposed events
+ */
+function debiasPopularity(scoredEvents: ScoredEvent[], alpha: number = 0.3): ScoredEvent[] {
+  if (scoredEvents.length === 0) return [];
+
+  // Calculate average view count for normalization
+  const totalViews = scoredEvents.reduce(
+    (sum, se) => sum + (se.event.socialHeatScore || 0),
+    0
+  );
+  const avgViews = totalViews / scoredEvents.length || 1;
+
+  // Apply inverse propensity weighting
+  const debiased = scoredEvents.map((se) => {
+    const views = se.event.socialHeatScore || 0;
+    const propensity = (views + 1) / (avgViews + 1); // +1 for smoothing
+    const debiasWeight = Math.pow(propensity, -alpha); // Inverse propensity with calibration
+
+    return {
+      ...se,
+      score: se.score * debiasWeight,
+    };
+  });
+
+  // Re-sort by debiased scores
+  const sorted = debiased.sort((a, b) => b.score - a.score);
+
+  console.log(`[Planner:Debias] Applied popularity debiasing (α=${alpha})`);
+  return sorted;
+}
+
+/**
  * Run deterministic planner to score events and build slates
+ * PHASE 4 (WEEK 8-10): Enhanced with popularity debiasing
  */
 export async function runPlanner(
   context: ChatContextSnapshot,
@@ -37,12 +71,15 @@ export async function runPlanner(
   const ranker = await createRanker();
 
   // 2. Score all candidate events
-  const scoredEvents = await scoreEvents(candidateEvents, intention, context, ranker);
+  let scoredEvents = await scoreEvents(candidateEvents, intention, context, ranker);
 
-  // 3. Select bandit policy
+  // 3. PHASE 4: Apply popularity debiasing to prevent feedback loops
+  scoredEvents = debiasPopularity(scoredEvents, 0.3);
+
+  // 4. Select bandit policy
   const banditPolicy = await selectBanditPolicy(userId, explorationPlan);
 
-  // 4. Build slates using policy
+  // 5. Build slates using policy (now with debiased scores)
   const slates = buildSlates(scoredEvents, intention, explorationPlan, banditPolicy);
 
   // 5. Compile reasons for each slate item
@@ -172,7 +209,7 @@ function matchBudget(
   if (!priceBand || !budgetBand) return 0.7;
 
   const priceValue = { FREE: 0, LOW: 1, MID: 2, HIGH: 3, LUXE: 4 }[priceBand] || 2;
-  const budgetValue = { LOW: 1, MID: 2, HIGH: 3, LUXE: 4 }[budgetBand] || 2;
+  const budgetValue = { FREE: 0, LOW: 1, MID: 2, HIGH: 3, LUXE: 4 }[budgetBand] || 2;
 
   const diff = Math.abs(priceValue - budgetValue);
   if (diff === 0) return 1.0;
@@ -234,7 +271,103 @@ async function selectBanditPolicy(
 }
 
 /**
+ * PHASE 2 (WEEK 3-4): MMR Diversity - Calculate similarity between two events
+ * Returns value between 0 (very different) and 1 (very similar)
+ */
+function calculateEventSimilarity(event1: ScoredEvent, event2: ScoredEvent): number {
+  let similarity = 0;
+
+  // Category similarity (40% weight)
+  const categories1 = event1.event.categories || [];
+  const categories2 = event2.event.categories || [];
+  const categoriesMatch = categories1.some((c) => categories2.includes(c));
+  if (categoriesMatch) similarity += 0.4;
+
+  // Venue similarity (30% weight)
+  if (event1.event.venueName && event2.event.venueName) {
+    if (event1.event.venueName === event2.event.venueName) {
+      similarity += 0.3;
+    }
+  }
+
+  // Time proximity (20% weight) - same day?
+  const start1 = new Date(event1.event.startISO);
+  const start2 = new Date(event2.event.startISO);
+  const isSameDay =
+    start1.getFullYear() === start2.getFullYear() &&
+    start1.getMonth() === start2.getMonth() &&
+    start1.getDate() === start2.getDate();
+  if (isSameDay) similarity += 0.2;
+
+  // Price proximity (10% weight)
+  const price1 = event1.event.priceBand;
+  const price2 = event2.event.priceBand;
+  if (price1 && price2 && price1 === price2) {
+    similarity += 0.1;
+  }
+
+  return similarity;
+}
+
+/**
+ * PHASE 2 (WEEK 3-4): Maximal Marginal Relevance (MMR) algorithm
+ * Balances relevance vs diversity to avoid showing redundant events
+ *
+ * Algorithm:
+ * 1. Start with best event
+ * 2. For remaining events: score = λ*relevance - (1-λ)*max_similarity_to_selected
+ * 3. Pick event with highest MMR score
+ * 4. Repeat until slate is full
+ *
+ * @param lambda - Weight for relevance vs diversity (0.7 = 70% relevance, 30% diversity)
+ */
+function diversifySlateMMR(
+  scoredEvents: ScoredEvent[],
+  slateSize: number,
+  lambda: number = 0.7
+): ScoredEvent[] {
+  if (scoredEvents.length === 0) return [];
+  if (scoredEvents.length <= slateSize) return scoredEvents.slice(0, slateSize);
+
+  const selected: ScoredEvent[] = [scoredEvents[0]]; // Start with best
+  const remaining = [...scoredEvents.slice(1)];
+
+  while (selected.length < slateSize && remaining.length > 0) {
+    let bestMMRScore = -Infinity;
+    let bestMMRIdx = 0;
+
+    for (let i = 0; i < remaining.length; i++) {
+      const candidate = remaining[i];
+
+      // Relevance score (normalized 0-1)
+      const relevanceScore = candidate.score / 100;
+
+      // Max similarity to any already-selected event
+      const maxSimilarity = Math.max(
+        ...selected.map((s) => calculateEventSimilarity(candidate, s))
+      );
+
+      // MMR formula
+      const mmrScore = lambda * relevanceScore - (1 - lambda) * maxSimilarity;
+
+      if (mmrScore > bestMMRScore) {
+        bestMMRScore = mmrScore;
+        bestMMRIdx = i;
+      }
+    }
+
+    // Add best MMR candidate to selected
+    selected.push(remaining[bestMMRIdx]);
+    remaining.splice(bestMMRIdx, 1);
+  }
+
+  console.log(`[Planner:MMR] Diversified ${scoredEvents.length} events → ${selected.length} diverse events (λ=${lambda})`);
+  return selected;
+}
+
+/**
  * Build three slates: Best, Wildcard, Close & Easy
+ * PHASE 2 (WEEK 3-4): Enhanced with MMR diversity optimization
  */
 function buildSlates(
   scoredEvents: ScoredEvent[],
@@ -244,8 +377,10 @@ function buildSlates(
 ): SlateDecision[] {
   const slates: SlateDecision[] = [];
 
-  // 1. Best Slate: Top-ranked events
-  const bestItems: SlateItemDecision[] = scoredEvents.slice(0, 5).map((se, idx) => ({
+  // 1. Best Slate: Top-ranked events with MMR diversity
+  // λ=0.7 means 70% relevance, 30% diversity
+  const diverseBestEvents = diversifySlateMMR(scoredEvents, 10, 0.7);
+  const bestItems: SlateItemDecision[] = diverseBestEvents.slice(0, 5).map((se, idx) => ({
     eventId: se.event.id,
     priority: idx + 1,
     reasons: [],
@@ -260,7 +395,7 @@ function buildSlates(
   // 2. Wildcard Slate: High novelty if allowed
   if (explorationPlan.allowWildcardSlate) {
     const wildcardCandidates = scoredEvents.filter(
-      (se) => se.factorScores.noveltyScore > 0.6 && se.score > 0.4
+      (se) => se.factorScores.noveltyScore > 0.4 && se.score > 0.35
     );
 
     const wildcardItems: SlateItemDecision[] = wildcardCandidates.slice(0, 5).map((se, idx) => ({
@@ -270,9 +405,11 @@ function buildSlates(
       factorScores: se.factorScores,
     }));
 
+    // Don't fallback to Best slate - if wildcard is empty, that's meaningful
+    // The UI will show an explanation for why wildcard is empty
     slates.push({
       label: 'Wildcard',
-      items: wildcardItems.length > 0 ? wildcardItems : bestItems,
+      items: wildcardItems,
     });
   }
 

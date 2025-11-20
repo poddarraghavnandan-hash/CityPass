@@ -90,10 +90,12 @@ const banditMemory = new BanditMemory();
  * Epsilon-Greedy Bandit
  * With probability ε, explore random policy
  * With probability 1-ε, exploit best policy
+ *
+ * PHASE 2 (WEEK 3-4): Increased epsilon from 0.15 → 0.25 for more exploration
  */
 export function epsilonGreedySelect(
   policies: SlatePolicy[],
-  epsilon: number = 0.15,
+  epsilon: number = 0.25,
   context?: BanditContext
 ): { policy: SlatePolicy; policyName: string; wasExploration: boolean } {
   if (policies.length === 0) {
@@ -217,8 +219,9 @@ export async function choosePolicyForUser(
     isNewUser: context.isNewUser ?? !userId,
   };
 
-  // Use higher epsilon for new users (more exploration)
-  const epsilon = fullContext.isNewUser ? 0.25 : 0.15;
+  // PHASE 2 (WEEK 3-4): Increased exploration rate to 25% for all users
+  // Research shows event discovery benefits from higher exploration (TikTok uses 30-50%)
+  const epsilon = 0.25;
 
   return epsilonGreedySelect(policies, epsilon, fullContext);
 }

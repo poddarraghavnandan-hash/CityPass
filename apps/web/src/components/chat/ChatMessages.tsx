@@ -48,13 +48,13 @@ export function ChatMessages({ messages }: ChatMessagesProps) {
           animate={reducedMotion ? undefined : { opacity: 1, y: 0 }}
           transition={{ duration: 0.2 }}
           className={cn(
-            'max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-[0_15px_45px_rgba(5,5,12,0.45)]',
+            'max-w-[85%] rounded-2xl px-4 py-3 text-base leading-relaxed shadow-[var(--shadow-lg)]',
             message.role === 'assistant'
-              ? 'bg-white/[0.04] text-white backdrop-blur'
-              : 'ml-auto bg-gradient-to-r from-teal-300 to-sky-400 text-slate-900'
+              ? 'bg-white/[0.08] text-white backdrop-blur'
+              : 'ml-auto bg-gradient-to-r from-teal-300 to-sky-400 text-slate-900 font-medium'
           )}
         >
-          <p className="text-[10px] uppercase tracking-[0.3em] text-white/60">
+          <p className="text-xs uppercase tracking-widest text-white/74 font-semibold mb-1">
             {message.role === 'assistant' ? 'CityLens' : 'You'}
           </p>
           <p>{message.text}</p>

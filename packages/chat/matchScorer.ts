@@ -2,13 +2,17 @@
  * Chat Brain V2 - Event Match Scorer
  * Scores events 0-100 based on relevance to user intention
  * Used for real-time restacking when LLM discovers new events
+ *
+ * PHASE 1 (WEEK 1-2): Enhanced with temporal urgency multipliers
  */
 
 import type { CandidateEvent, IntentionV2, Profile } from './types';
 
 export interface EventScore {
   eventId: string;
-  totalScore: number; // 0-105 (includes starting soon bonus)
+  totalScore: number; // 0-105 (includes starting soon bonus) + urgency multiplier
+  baseScore: number; // Score before urgency multiplier
+  urgencyMultiplier: number; // 1.0-2.0 based on time until event
   breakdown: {
     categoryMatch: number; // 0-30
     vibeAlignment: number; // 0-25
@@ -19,7 +23,21 @@ export interface EventScore {
 }
 
 /**
+ * PHASE 1 (WEEK 1-2): Temporal urgency multiplier
+ * Boost events starting soon to help users find immediate options
+ * Critical for event discovery (unlike video/music, events can't be replayed)
+ */
+export function getUrgencyMultiplier(hoursUntilEvent: number): number {
+  if (hoursUntilEvent < 0) return 0; // Past events (shouldn't happen)
+  if (hoursUntilEvent < 3) return 2.0; // Starting very soon - highest urgency
+  if (hoursUntilEvent < 24) return 1.5; // Tonight - high urgency
+  if (hoursUntilEvent < 72) return 1.2; // This weekend - moderate urgency
+  return 1.0; // Future events - no boost
+}
+
+/**
  * Score a single event against user intention
+ * PHASE 1 (WEEK 1-2): Enhanced with temporal urgency multiplier
  */
 export function scoreEventMatch(
   event: CandidateEvent,
@@ -35,11 +53,22 @@ export function scoreEventMatch(
     socialFit: scoreSocialFit(event, intention),
   };
 
-  const totalScore = Object.values(breakdown).reduce((sum, score) => sum + score, 0);
+  const baseScore = Object.values(breakdown).reduce((sum, score) => sum + score, 0);
+
+  // Calculate hours until event for urgency multiplier
+  const now = new Date(nowISO);
+  const eventStart = new Date(event.startISO);
+  const hoursUntilEvent = (eventStart.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+  // Apply temporal urgency multiplier
+  const urgencyMultiplier = getUrgencyMultiplier(hoursUntilEvent);
+  const totalScore = baseScore * urgencyMultiplier;
 
   return {
     eventId: event.id,
-    totalScore: Math.min(100, Math.max(0, totalScore)),
+    totalScore: Math.max(0, totalScore),
+    baseScore: Math.min(100, Math.max(0, baseScore)),
+    urgencyMultiplier,
     breakdown,
   };
 }
@@ -202,14 +231,22 @@ function scorePriceComfort(
     return 10; // Neutral score if no price info
   }
 
-  const budgetRank = { LOW: 1, MID: 2, HIGH: 3, LUXE: 4 };
+  // Standardized 5-band system matching contextAssembler
+  const budgetRank = { FREE: 0, LOW: 1, MID: 2, HIGH: 3, LUXE: 4 };
   const priceRank = { FREE: 0, LOW: 1, MID: 2, HIGH: 3, LUXE: 4 };
 
-  const userRank = budgetRank[userBudget];
+  const userRank = budgetRank[userBudget] ?? 1; // Default to LOW if invalid
   const eventRank = priceRank[event.priceBand];
 
+  // Special handling for FREE events - only prefer them for FREE/LOW budget users
   if (event.priceBand === 'FREE') {
-    return 15; // Free is always good
+    if (userBudget === 'FREE' || userBudget === 'LOW') {
+      return 15; // Free is great for budget-conscious users
+    } else {
+      // For users with higher budgets, free events score moderately
+      // They might want premium/ticketed experiences
+      return 8;
+    }
   }
 
   // Perfect match
