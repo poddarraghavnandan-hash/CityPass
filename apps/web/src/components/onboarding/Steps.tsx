@@ -41,7 +41,7 @@ export function Steps() {
     setNoList((prev) => (prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value]));
   };
 
-  const nextStep = () => setStep((prev) => Math.min(prev + 1, 2));
+  const nextStep = () => setStep((prev) => Math.min(prev + 1, 3));
   const prevStep = () => setStep((prev) => Math.max(prev - 1, 0));
 
   const handleComplete = async () => {
@@ -56,6 +56,9 @@ export function Steps() {
       budget: 'casual',
       socialProof: true,
       soloFriendly: selectedArchetypes.includes('work'),
+      dislikes: noList,
+      scheduleBias: 'flexible',
+      socialStyle: 'flexible',
     };
 
     try {
@@ -129,8 +132,8 @@ export function Steps() {
         )}
         {step === 2 && (
           <div className="space-y-3">
-            <h2 className="text-xl font-semibold">Any hard no’s?</h2>
-            <p className="text-sm text-white/70">We’ll keep these out of the feed unless you explicitly ask.</p>
+            <h2 className="text-xl font-semibold">Any hard no's?</h2>
+            <p className="text-sm text-white/70">We'll keep these out of the feed unless you explicitly ask.</p>
             <div className="flex flex-wrap gap-2">
               {noOptions.map((option) => (
                 <Chip
@@ -146,6 +149,30 @@ export function Steps() {
             {error && <p className="text-sm text-red-400">{error}</p>}
           </div>
         )}
+        {step === 3 && (
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold">Power tips for the chat</h2>
+            <p className="text-sm text-white/70">Our concierge understands natural language. Try these advanced queries:</p>
+            <div className="space-y-3">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+                <p className="text-sm font-medium text-teal-300">Budget constraints</p>
+                <p className="mt-1 text-sm text-white/60">"Date night under $50"</p>
+                <p className="mt-1 text-sm text-white/60">"Free events this weekend"</p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+                <p className="text-sm font-medium text-teal-300">Social context + vibes</p>
+                <p className="mt-1 text-sm text-white/60">"Solo-friendly without crowds"</p>
+                <p className="mt-1 text-sm text-white/60">"Electric vibes to impress a party-lover"</p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+                <p className="text-sm font-medium text-teal-300">Time + location + intensity</p>
+                <p className="mt-1 text-sm text-white/60">"Strenuous workout near Midtown at 6pm"</p>
+                <p className="mt-1 text-sm text-white/60">"Calm artistic events in Brooklyn tomorrow"</p>
+              </div>
+            </div>
+            <p className="text-xs text-white/50">Mix and match: budgets, vibes, timing, locations, who you're with, and things to avoid.</p>
+          </div>
+        )}
       </div>
       <div className="mt-4 flex items-center justify-between">
         <button
@@ -158,11 +185,11 @@ export function Steps() {
         </button>
         <button
           type="button"
-          onClick={step === 2 ? handleComplete : nextStep}
+          onClick={step === 3 ? handleComplete : nextStep}
           disabled={status === 'saving' || disabledNext}
           className="rounded-full bg-white px-5 py-2 text-sm font-semibold text-[#050509] disabled:opacity-50"
         >
-          {status === 'saving' ? 'Saving…' : step === 2 ? 'Finish & open chat' : 'Continue'}
+          {status === 'saving' ? 'Saving…' : step === 3 ? 'Finish & open chat' : 'Continue'}
         </button>
       </div>
     </section>

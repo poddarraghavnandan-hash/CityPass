@@ -1,0 +1,1 @@
+- always build locally before deploying any changes to vercel

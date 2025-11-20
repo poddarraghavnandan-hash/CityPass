@@ -15,7 +15,7 @@
     --secondary: 261 77% 65%;
     --secondary-foreground: 220 18% 12%;
     --muted: 226 25% 30%;
-    --muted-foreground: 225 22% 70%;
+    --muted-foreground: 220 20% 74%; /* Improved from 70% for better contrast */
     --accent: 261 77% 65%;
     --accent-foreground: 220 18% 12%;
     --destructive: 358 75% 59%;
@@ -25,6 +25,77 @@
     --ring: 183 64% 58%;
     --glow: 183 64% 58%;
     --radius: 1.5rem;
+
+    /* Typography Scale - 1.25 ratio (Major Third) */
+    --font-size-xs: 0.75rem;      /* 12px - small labels, captions */
+    --font-size-sm: 0.875rem;     /* 14px - body small, secondary text */
+    --font-size-base: 1rem;       /* 16px - primary body text */
+    --font-size-lg: 1.125rem;     /* 18px - large body, small headings */
+    --font-size-xl: 1.25rem;      /* 20px - card titles */
+    --font-size-2xl: 1.5rem;      /* 24px - section headings */
+    --font-size-3xl: 1.875rem;    /* 30px - page titles */
+    --font-size-4xl: 2.25rem;     /* 36px - hero text */
+
+    /* Line Heights - relative to font size */
+    --leading-none: 1;
+    --leading-tight: 1.25;
+    --leading-snug: 1.375;
+    --leading-normal: 1.5;
+    --leading-relaxed: 1.625;
+    --leading-loose: 2;
+
+    /* Font Weights */
+    --font-normal: 400;
+    --font-medium: 500;
+    --font-semibold: 600;
+    --font-bold: 700;
+
+    /* Letter Spacing */
+    --tracking-tighter: -0.05em;
+    --tracking-tight: -0.025em;
+    --tracking-normal: 0em;
+    --tracking-wide: 0.025em;
+    --tracking-wider: 0.05em;
+    --tracking-widest: 0.1em;
+
+    /* Spacing Scale - 4px/8px base grid */
+    --space-0: 0;
+    --space-1: 0.25rem;    /* 4px */
+    --space-2: 0.5rem;     /* 8px */
+    --space-3: 0.75rem;    /* 12px */
+    --space-4: 1rem;       /* 16px */
+    --space-5: 1.25rem;    /* 20px */
+    --space-6: 1.5rem;     /* 24px */
+    --space-8: 2rem;       /* 32px */
+    --space-10: 2.5rem;    /* 40px */
+    --space-12: 3rem;      /* 48px */
+    --space-16: 4rem;      /* 64px */
+
+    /* Semantic Opacity Levels */
+    --opacity-disabled: 0.38;
+    --opacity-muted: 0.60;
+    --opacity-secondary: 0.74;
+    --opacity-primary: 0.87;
+    --opacity-full: 1;
+
+    /* Background Opacity Levels */
+    --bg-overlay-subtle: 0.04;
+    --bg-overlay-moderate: 0.08;
+    --bg-overlay-strong: 0.12;
+
+    /* Border Opacity Levels */
+    --border-subtle: 0.12;
+    --border-moderate: 0.20;
+    --border-strong: 0.30;
+
+    /* Shadow System */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    --shadow-card: 0 25px 70px rgba(5, 5, 12, 0.55);
+    --shadow-glow: 0 0 30px rgba(45, 212, 191, 0.3);
   }
 
   *, *::before, *::after {
@@ -71,5 +142,46 @@
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
     }
+  }
+
+  /* Custom Range Input Styling */
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 6px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.12);
+    outline: none;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: white;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    transition: box-shadow 0.2s ease;
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: white;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    transition: box-shadow 0.2s ease;
+  }
+
+  input[type="range"]:focus::-webkit-slider-thumb {
+    box-shadow: 0 0 0 4px rgba(45, 212, 191, 0.2), 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  input[type="range"]:focus::-moz-range-thumb {
+    box-shadow: 0 0 0 4px rgba(45, 212, 191, 0.2), 0 2px 8px rgba(0, 0, 0, 0.3);
   }
 }

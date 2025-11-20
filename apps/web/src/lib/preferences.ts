@@ -8,6 +8,10 @@ export const PreferencesSchema = z.object({
   budget: BudgetTierSchema.default('casual'),
   socialProof: z.boolean().default(true),
   soloFriendly: z.boolean().default(false),
+  // Advanced settings
+  dislikes: z.array(z.string()).max(10).default([]),
+  scheduleBias: z.enum(['morning', 'afternoon', 'evening', 'night', 'flexible']).optional(),
+  socialStyle: z.enum(['solo', 'small_groups', 'large_crowds', 'flexible']).optional(),
 });
 
 export type Preferences = z.infer<typeof PreferencesSchema>;

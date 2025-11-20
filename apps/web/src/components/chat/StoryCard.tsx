@@ -32,30 +32,30 @@ export function StoryCard({ item, onOpen, traceId, slateLabel = 'chat', index = 
     <motion.article
       layout
       whileHover={{ y: -4 }}
-      className="overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.03] shadow-[0_25px_70px_rgba(5,5,12,0.55)]"
+      className="overflow-hidden rounded-2xl border border-white/12 bg-white/[0.04] shadow-[var(--shadow-card)] hover:shadow-2xl transition-shadow duration-300"
       onClick={handleOpen}
     >
       <div className="relative aspect-[4/3] overflow-hidden">
         {item.imageUrl ? (
           <img src={item.imageUrl} alt={item.title} className="h-full w-full object-cover" loading="lazy" />
         ) : (
-          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#111629] via-[#0B0F1C] to-[#050509] text-sm font-semibold text-white/40">
+          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#111629] via-[#0B0F1C] to-[#050509] text-base font-semibold text-white/60">
             CityLens
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-        <div className="absolute bottom-4 left-4 flex items-center gap-2 text-xs text-white/80">
-          <span className="rounded-full bg-black/60 px-3 py-1">{areaLabel}</span>
-          <span className="rounded-full bg-white/20 px-3 py-1 text-black">{timeLabel.split('·')[0]}</span>
+        <div className="absolute bottom-4 left-4 flex items-center gap-2 text-sm text-white/87 font-medium">
+          <span className="rounded-full bg-black/60 px-3 py-1.5">{areaLabel}</span>
+          <span className="rounded-full bg-white/20 px-3 py-1.5 text-black font-semibold">{timeLabel.split('·')[0]}</span>
         </div>
       </div>
-      <div className="space-y-3 px-4 pb-4 pt-5">
-        <p className="text-xs text-white/60">{timeLabel}</p>
-        <h3 className="text-lg font-semibold text-white">{item.title}</h3>
+      <div className="space-y-4 p-6">
+        <p className="text-sm text-white/74 font-medium">{timeLabel}</p>
+        <h3 className="text-xl font-semibold text-white leading-tight">{item.title}</h3>
         {topReasons.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2">
             {topReasons.map((reason, idx) => (
-              <span key={idx} className="rounded-full bg-teal-500/10 px-2.5 py-1 text-xs text-teal-300/90">
+              <span key={idx} className="rounded-full bg-teal-500/10 px-3 py-1.5 text-xs text-teal-300/90 font-medium">
                 {reason}
               </span>
             ))}
@@ -75,7 +75,7 @@ export function StoryCard({ item, onOpen, traceId, slateLabel = 'chat', index = 
         <button
           type="button"
           className={cn(
-            'w-full rounded-2xl border border-white/10 bg-white text-sm font-semibold text-[#050509] transition hover:bg-white/90'
+            'w-full h-11 rounded-2xl border-0 bg-white text-base font-semibold text-[#050509] transition-all duration-200 hover:bg-white/90 hover:shadow-lg'
           )}
           onClick={(event) => {
             event.stopPropagation();

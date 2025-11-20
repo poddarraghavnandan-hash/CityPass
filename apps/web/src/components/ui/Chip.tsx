@@ -6,18 +6,18 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const chipVariants = cva(
-  'inline-flex items-center justify-center gap-1 rounded-full border text-[11px] font-medium tracking-tight transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 disabled:pointer-events-none disabled:opacity-50',
+  'inline-flex items-center justify-center gap-1.5 rounded-full border font-medium tracking-normal transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 disabled:pointer-events-none disabled:opacity-50',
   {
     variants: {
       variant: {
-        solid: 'border-transparent bg-gradient-to-r from-teal-400 to-cyan-300 text-slate-900 shadow-[0_12px_35px_rgba(45,212,191,0.35)]',
-        soft: 'border-white/10 bg-white/5 text-white/80 hover:bg-white/10',
-        ghost: 'border-transparent text-white/70',
-        outline: 'border-white/20 text-white/80',
+        solid: 'border-transparent bg-gradient-to-r from-teal-400 to-cyan-300 text-slate-900 shadow-lg hover:shadow-xl',
+        soft: 'border-white/12 bg-white/8 text-white/87 hover:bg-white/12 hover:border-white/20',
+        ghost: 'border-transparent text-white/74 hover:bg-white/8',
+        outline: 'border-white/20 text-white/87 hover:border-white/30 hover:bg-white/8',
       },
       size: {
-        sm: 'px-3 py-1 text-[11px]',
-        md: 'px-4 py-1.5 text-sm',
+        sm: 'px-3 py-1.5 text-xs',      /* 12px font, better padding */
+        md: 'px-4 py-2 text-sm',        /* 14px font, improved padding */
       },
     },
     defaultVariants: {

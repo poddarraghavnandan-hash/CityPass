@@ -86,7 +86,7 @@ export async function runAnalystLLM(
         { role: 'user', content: userPrompt },
       ],
       temperature: 0.3,
-      max_tokens: 800,
+      max_tokens: 1200, // Increased from 800 for better reasoning
       response_format: { type: 'json_object' },
     });
 
@@ -129,14 +129,24 @@ function buildAnalystUserPrompt(context: ChatContextSnapshot): string {
     nowISO,
   } = context;
 
-  // Summarize candidate events (ids + key fields only)
-  const eventsSummary = candidateEvents
-    .slice(0, 20)
-    .map(
-      (ev) =>
-        `${ev.id.slice(0, 8)}: [${ev.categories[0] || 'N/A'}] ${ev.title} @ ${ev.venueName || 'TBD'} (${ev.startISO.slice(0, 16)}, ${ev.priceBand || 'N/A'})`
-    )
-    .join('\n');
+  // Summarize candidate events with statistics instead of full list (reduces LLM context)
+  const categoryBreakdown = candidateEvents.reduce((acc, ev) => {
+    const cat = ev.categories[0] || 'Other';
+    acc[cat] = (acc[cat] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const priceBreakdown = candidateEvents.reduce((acc, ev) => {
+    const band = ev.priceBand || 'Free';
+    acc[band] = (acc[band] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const eventsSummary = `Total: ${candidateEvents.length} events
+Categories: ${Object.entries(categoryBreakdown).map(([cat, count]) => `${cat}(${count})`).join(', ')}
+Price bands: ${Object.entries(priceBreakdown).map(([band, count]) => `${band}(${count})`).join(', ')}
+Time range: ${searchWindow.fromISO.slice(0, 16)} to ${searchWindow.toISO.slice(0, 16)}
+City: ${city}`;
 
   return `USER REQUEST:
 "${freeText}"

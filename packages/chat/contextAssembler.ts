@@ -482,46 +482,54 @@ async function queryCandidateEvents(params: {
     }
 
     // FALLBACK 2: If still no results, try keyword search without category constraint
+    // BUT only if we have enough meaningful keywords to avoid returning random results
     if (events.length === 0 && categoryHint) {
-      console.log(`[ContextAssembler] Still no events, broadening search with keywords only...`);
+      const meaningfulKeywordCount = countMeaningfulKeywords(keywords);
+      const MIN_KEYWORDS_FOR_BROAD_FALLBACK = 2;
 
-      const fallbackWhere: any = {
-        city,
-        startTime: {
-          gte: new Date(searchWindow.fromISO),
-          lte: new Date(searchWindow.toISO),
-        },
-      };
+      if (meaningfulKeywordCount >= MIN_KEYWORDS_FOR_BROAD_FALLBACK) {
+        console.log(`[ContextAssembler] Still no events, broadening search with ${meaningfulKeywordCount} meaningful keywords...`);
 
-      // Use keyword search without category constraint
-      if (keywords.length > 0) {
-        fallbackWhere.OR = keywords.flatMap((keyword) => [
-          { title: { contains: keyword, mode: 'insensitive' } },
-          { description: { contains: keyword, mode: 'insensitive' } },
-        ]);
+        const fallbackWhere: any = {
+          city,
+          startTime: {
+            gte: new Date(searchWindow.fromISO),
+            lte: new Date(searchWindow.toISO),
+          },
+        };
+
+        // Use keyword search without category constraint
+        if (keywords.length > 0) {
+          fallbackWhere.OR = keywords.flatMap((keyword) => [
+            { title: { contains: keyword, mode: 'insensitive' } },
+            { description: { contains: keyword, mode: 'insensitive' } },
+          ]);
+        }
+
+        events = await prisma.event.findMany({
+          where: fallbackWhere,
+          take: 50,
+          orderBy: {
+            startTime: 'asc',
+          },
+          select: {
+            id: true,
+            title: true,
+            startTime: true,
+            endTime: true,
+            neighborhood: true,
+            venueName: true,
+            category: true,
+            priceMin: true,
+            priceMax: true,
+            tags: true,
+          },
+        });
+
+        console.log(`[ContextAssembler] Final fallback search found ${events.length} events`);
+      } else {
+        console.log(`[ContextAssembler] Skipping broad fallback - only ${meaningfulKeywordCount} meaningful keywords (need ${MIN_KEYWORDS_FOR_BROAD_FALLBACK})`);
       }
-
-      events = await prisma.event.findMany({
-        where: fallbackWhere,
-        take: 50,
-        orderBy: {
-          startTime: 'asc',
-        },
-        select: {
-          id: true,
-          title: true,
-          startTime: true,
-          endTime: true,
-          neighborhood: true,
-          venueName: true,
-          category: true,
-          priceMin: true,
-          priceMax: true,
-          tags: true,
-        },
-      });
-
-      console.log(`[ContextAssembler] Final fallback search found ${events.length} events`);
     }
 
     // Map to CandidateEvent format
@@ -621,6 +629,21 @@ function extractKeywords(text: string): string[] {
     .filter((word) => word.length > 2 && !stopwords.includes(word));
 
   return [...new Set(words)]; // Remove duplicates
+}
+
+/**
+ * Count meaningful keywords (exclude very generic/weak words)
+ * Used to determine if we have enough specificity for broad fallback searches
+ */
+function countMeaningfulKeywords(keywords: string[]): number {
+  // Words that are too generic to provide good search specificity
+  const weakKeywords = [
+    'event', 'events', 'things', 'thing', 'activity', 'activities',
+    'place', 'places', 'stuff', 'fun', 'cool', 'nice', 'good',
+    'best', 'great', 'awesome', 'amazing', 'interesting'
+  ];
+
+  return keywords.filter(keyword => !weakKeywords.includes(keyword.toLowerCase())).length;
 }
 
 /**

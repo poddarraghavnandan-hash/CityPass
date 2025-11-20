@@ -45,9 +45,16 @@ const config: Config = {
         },
       },
       borderRadius: {
-        lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)',
+        none: '0',
+        xs: '0.25rem',    /* 4px - small chips */
+        sm: '0.5rem',     /* 8px - inputs, small buttons */
+        DEFAULT: '0.75rem', /* 12px - cards, medium elements */
+        md: '1rem',       /* 16px - large cards */
+        lg: '1.25rem',    /* 20px - featured cards */
+        xl: '1.5rem',     /* 24px - modals, drawers */
+        '2xl': '2rem',    /* 32px - hero cards (maximum) */
+        '3xl': '2.5rem',  /* 40px - preserve for compatibility */
+        full: '9999px',   /* Pills, circular buttons */
       },
     },
   },

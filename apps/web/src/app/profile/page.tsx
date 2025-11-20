@@ -36,6 +36,9 @@ export default function ProfilePage() {
   const [budgetDisplay, setBudgetDisplay] = useState<'free' | '$' | '$$' | '$$$'>(budgetDisplayMap.casual);
   const [socialProof, setSocialProof] = useState(true);
   const [soloFriendly, setSoloFriendly] = useState(false);
+  const [dislikes, setDislikes] = useState<string[]>([]);
+  const [scheduleBias, setScheduleBias] = useState<'morning' | 'afternoon' | 'evening' | 'night' | 'flexible'>('flexible');
+  const [socialStyle, setSocialStyle] = useState<'solo' | 'small_groups' | 'large_crowds' | 'flexible'>('flexible');
   const [error, setError] = useState<string | null>(null);
   const { success, error: errorToast } = useToast();
 
@@ -55,6 +58,9 @@ export default function ProfilePage() {
           setBudgetDisplay(budgetDisplayMap[prefs.budget ?? 'casual']);
           setSocialProof(prefs.socialProof ?? true);
           setSoloFriendly(prefs.soloFriendly ?? false);
+          setDislikes(prefs.dislikes ?? []);
+          setScheduleBias(prefs.scheduleBias ?? 'flexible');
+          setSocialStyle(prefs.socialStyle ?? 'flexible');
         }
         setStatus('idle');
       } catch (err: any) {
@@ -86,6 +92,9 @@ export default function ProfilePage() {
         budget,
         socialProof,
         soloFriendly,
+        dislikes,
+        scheduleBias,
+        socialStyle,
       };
       const response = await fetch('/api/preferences', {
         method: 'POST',
@@ -122,6 +131,12 @@ export default function ProfilePage() {
           onBudgetDisplayChange={handleBudgetDisplayChange}
           travelMinutes={travelMinutes}
           onTravelChange={handleTravelChange}
+          dislikes={dislikes}
+          onDislikesChange={setDislikes}
+          scheduleBias={scheduleBias}
+          onScheduleBiasChange={setScheduleBias}
+          socialStyle={socialStyle}
+          onSocialStyleChange={setSocialStyle}
         />
       </ProfileShell>
     </PageShell>
