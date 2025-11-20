@@ -11,8 +11,9 @@ export function AssistantIntro() {
     >
       <NeonOrb />
       <div>
-        <p className="text-lg font-semibold text-white">What kind of night are you in the mood for?</p>
-        <p className="text-sm text-white/60">Drop a vibe, a time, a neighborhood—or just how you want to feel.</p>
+        <p className="text-lg font-semibold text-white">Hey! I'm your CityLens concierge.</p>
+        <p className="text-sm text-white/70">Tell me what you're looking for—I understand budgets, vibes, timing, who you're with, and even things you want to avoid.</p>
+        <p className="mt-1 text-xs text-white/50">Try: "Free events tonight", "Date night under $50", "Solo-friendly without crowds"</p>
       </div>
     </motion.div>
   );

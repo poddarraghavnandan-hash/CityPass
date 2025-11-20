@@ -2,11 +2,12 @@ import { GlowPill } from '@/components/ui/GlowPill';
 import { motion } from 'framer-motion';
 
 const EXAMPLES = [
-  'Something strenuous near Midtown at 6pm',
-  'Fun workout close to Hudson Yards',
-  'Eclectic music in Brooklyn',
-  'Impress someone who likes to party',
-  'Analog synths after 9pm',
+  'Free events tonight in Brooklyn',
+  'Date night under $50 with electric vibes',
+  'Solo-friendly without crowds',
+  'Strenuous workout near Midtown at 6pm',
+  'Calm artistic events this weekend',
+  'Something to impress a party-lover',
 ];
 
 type ExampleQueriesProps = {

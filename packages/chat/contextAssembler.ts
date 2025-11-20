@@ -358,10 +358,10 @@ function determineSearchWindow(
     };
   }
 
-  // Default: next 3 hours
+  // Default: next 48 hours (2 days) for better event coverage
   const fromDate = new Date(now);
   const toDate = new Date(now);
-  toDate.setHours(toDate.getHours() + 3);
+  toDate.setHours(toDate.getHours() + 48);
 
   return {
     fromISO: fromDate.toISOString(),
@@ -573,49 +573,36 @@ function getRelatedCategories(primaryCategory: string): string[] {
 function extractCategoryFromText(text: string): string | null {
   const lowerText = text.toLowerCase();
 
-  // Map keywords to EventCategory enum values
-  const categoryMap: Record<string, string> = {
-    'music': 'MUSIC',
-    'concert': 'MUSIC',
-    'show': 'MUSIC',
-    'band': 'MUSIC',
-    'comedy': 'COMEDY',
-    'standup': 'COMEDY',
-    'stand up': 'COMEDY',
-    'comedian': 'COMEDY',
-    'theatre': 'THEATRE',
-    'theater': 'THEATRE',
-    'play': 'THEATRE',
-    'musical': 'THEATRE',
-    'dance': 'DANCE',
-    'dancing': 'DANCE',
-    'ballet': 'DANCE',
-    'fitness': 'FITNESS',
-    'workout': 'FITNESS',
-    'yoga': 'FITNESS',
-    'gym': 'FITNESS',
-    'art': 'ARTS',
-    'arts': 'ARTS',
-    'gallery': 'ARTS',
-    'museum': 'ARTS',
-    'exhibition': 'ARTS',
-    'food': 'FOOD',
-    'restaurant': 'FOOD',
-    'dining': 'FOOD',
-    'brunch': 'FOOD',
-    'dinner': 'FOOD',
-    'networking': 'NETWORKING',
-    'meetup': 'NETWORKING',
-    'professional': 'NETWORKING',
-    'family': 'FAMILY',
-    'kids': 'FAMILY',
-    'children': 'FAMILY',
-  };
+  // Add word boundaries for better matching
+  const textWithBoundaries = ` ${lowerText} `;
 
-  for (const [keyword, category] of Object.entries(categoryMap)) {
-    if (lowerText.includes(keyword)) {
-      return category;
+  // Priority categories checked first (more specific terms)
+  const priorityCategories: Array<{ patterns: string[]; category: string }> = [
+    { patterns: ['fitness', 'workout', 'yoga', 'gym', 'exercise', 'pilates', 'crossfit'], category: 'FITNESS' },
+    { patterns: ['comedy', 'standup', 'stand up', 'comedian', 'improv'], category: 'COMEDY' },
+    { patterns: ['dance', 'dancing', 'ballet', 'choreography', 'salsa', 'tango'], category: 'DANCE' },
+    { patterns: ['theatre', 'theater', 'play', 'musical', 'broadway'], category: 'THEATRE' },
+    { patterns: ['music concert', 'live music', 'band', 'concert'], category: 'MUSIC' },
+    { patterns: ['art', 'arts', 'gallery', 'museum', 'exhibition'], category: 'ARTS' },
+    { patterns: ['food', 'restaurant', 'dining', 'brunch', 'dinner'], category: 'FOOD' },
+    { patterns: ['networking', 'meetup', 'professional'], category: 'NETWORKING' },
+    { patterns: ['family', 'kids', 'children'], category: 'FAMILY' },
+  ];
+
+  // Check priority categories first with word boundaries
+  for (const { patterns, category } of priorityCategories) {
+    for (const pattern of patterns) {
+      const regex = new RegExp(`\\b${pattern}\\b`, 'i');
+      if (regex.test(lowerText)) {
+        return category;
+      }
     }
+  }
+
+  // Fallback: check for generic "music" or "show" only if no specific category matched
+  if (textWithBoundaries.includes(' music ')) return 'MUSIC';
+  if (textWithBoundaries.includes(' show ') && !textWithBoundaries.includes(' fitness ') && !textWithBoundaries.includes(' workout ')) {
+    return 'MUSIC';
   }
 
   return null;

@@ -164,7 +164,8 @@
       "Bash(vercel --token=NV6pRCdM96cCoorOUPXrd56G inspect citypass-864mfqzel-raghav-poddars-projects.vercel.app --logs)",
       "Bash(vercel --token=NV6pRCdM96cCoorOUPXrd56G inspect citypass-e2naexbpt-raghav-poddars-projects.vercel.app --logs)",
       "Bash(vercel --token=NV6pRCdM96cCoorOUPXrd56G inspect citypass-ld4lubx4s-raghav-poddars-projects.vercel.app --logs)",
-      "Bash(npx next build)"
+      "Bash(npx next build)",
+      "Bash(vercel --token=NV6pRCdM96cCoorOUPXrd56G inspect citypass-rfu3bhlvt-raghav-poddars-projects.vercel.app --logs)"
     ],
     "deny": [],
     "ask": []

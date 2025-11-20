@@ -18,7 +18,7 @@ export function StoryCard({ item, onOpen, traceId, slateLabel = 'chat', index = 
   const startTime = item.startTime ? new Date(item.startTime) : null;
   const timeLabel = startTime ? formatTimeLabel(startTime) : 'Anytime';
   const areaLabel = item.neighborhood || item.city;
-  const vibeLine = cleanReason(item.reasons?.[0]);
+  const topReasons = (item.reasons || []).slice(0, 3).map(cleanReason);
   const priceLabel = getPriceLabel(item);
   const distanceLabel = getDistanceLabel(item.distanceKm);
   const moodLabel = getMoodLabel(item.category);
@@ -52,7 +52,15 @@ export function StoryCard({ item, onOpen, traceId, slateLabel = 'chat', index = 
       <div className="space-y-3 px-4 pb-4 pt-5">
         <p className="text-xs text-white/60">{timeLabel}</p>
         <h3 className="text-lg font-semibold text-white">{item.title}</h3>
-        <p className="text-sm text-white/70">{vibeLine}</p>
+        {topReasons.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {topReasons.map((reason, idx) => (
+              <span key={idx} className="rounded-full bg-teal-500/10 px-2.5 py-1 text-xs text-teal-300/90">
+                {reason}
+              </span>
+            ))}
+          </div>
+        )}
         <div className="flex flex-wrap gap-2">
           <Chip asChild variant="outline" size="sm">
             <span>{priceLabel}</span>

@@ -58,6 +58,9 @@ export async function POST(req: NextRequest) {
     });
 
     console.log(`✨ [${traceId}] Intent extracted via ${extractionResult.method}`);
+    console.log(`[${traceId}] User query:`, body.freeText);
+    console.log(`[${traceId}] Extracted tokens:`, JSON.stringify(extractionResult.tokens, null, 2));
+    console.log(`[${traceId}] City context:`, body.context?.city || 'none');
 
     const agentResult = await askAgent({
       freeText: body.freeText,
