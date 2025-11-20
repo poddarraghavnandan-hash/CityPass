@@ -72,6 +72,13 @@ export async function runAnalystLLM(
   try {
     const userPrompt = buildAnalystUserPrompt(context);
 
+    // LOG FULL PROMPT
+    console.log('\n=== [Analyst] SYSTEM PROMPT ===');
+    console.log(ANALYST_SYSTEM_PROMPT);
+    console.log('\n=== [Analyst] USER PROMPT ===');
+    console.log(userPrompt);
+    console.log('=== END PROMPTS ===\n');
+
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
@@ -84,6 +91,12 @@ export async function runAnalystLLM(
     });
 
     const rawResponse = completion.choices[0]?.message?.content || '{}';
+
+    // LOG RESPONSE
+    console.log('\n=== [Analyst] MODEL RESPONSE ===');
+    console.log(rawResponse);
+    console.log('=== END RESPONSE ===\n');
+
     const parsed = JSON.parse(rawResponse);
 
     // Validate with Zod
@@ -121,7 +134,7 @@ function buildAnalystUserPrompt(context: ChatContextSnapshot): string {
     .slice(0, 20)
     .map(
       (ev) =>
-        `${ev.id.slice(0, 8)}: ${ev.title} @ ${ev.venueName || 'TBD'} (${ev.startISO.slice(0, 16)}, ${ev.priceBand || 'N/A'})`
+        `${ev.id.slice(0, 8)}: [${ev.categories[0] || 'N/A'}] ${ev.title} @ ${ev.venueName || 'TBD'} (${ev.startISO.slice(0, 16)}, ${ev.priceBand || 'N/A'})`
     )
     .join('\n');
 

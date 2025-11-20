@@ -356,15 +356,37 @@ async function queryCandidateEvents(params: {
   const { freeText, searchWindow, city } = params;
 
   try {
-    // Query events from database with basic filters
-    const events = await prisma.event.findMany({
-      where: {
-        city,
-        startTime: {
-          gte: new Date(searchWindow.fromISO),
-          lte: new Date(searchWindow.toISO),
-        },
+    // Extract category hints from free text
+    const categoryHint = extractCategoryFromText(freeText);
+    const keywords = extractKeywords(freeText);
+
+    console.log(`[ContextAssembler] Searching for events with category: ${categoryHint || 'any'}, keywords: ${keywords.join(', ') || 'none'}`);
+
+    // Build where clause with text search
+    const whereClause: any = {
+      city,
+      startTime: {
+        gte: new Date(searchWindow.fromISO),
+        lte: new Date(searchWindow.toISO),
       },
+    };
+
+    // Add category filter if we detected one
+    if (categoryHint) {
+      whereClause.category = categoryHint;
+    }
+
+    // Add text search with keywords (now works WITH category filter)
+    if (keywords.length > 0) {
+      whereClause.OR = keywords.flatMap((keyword) => [
+        { title: { contains: keyword, mode: 'insensitive' } },
+        { description: { contains: keyword, mode: 'insensitive' } },
+      ]);
+    }
+
+    // Query events from database with smart filters
+    let events = await prisma.event.findMany({
+      where: whereClause,
       take: 50,
       orderBy: {
         startTime: 'asc',
@@ -382,6 +404,51 @@ async function queryCandidateEvents(params: {
         tags: true,
       },
     });
+
+    console.log(`[ContextAssembler] Found ${events.length} candidate events`);
+
+    // FALLBACK: If category filter returned 0 results, try again with just keywords
+    if (events.length === 0 && categoryHint) {
+      console.log(`[ContextAssembler] No ${categoryHint} events found, broadening search with keywords...`);
+
+      const fallbackWhere: any = {
+        city,
+        startTime: {
+          gte: new Date(searchWindow.fromISO),
+          lte: new Date(searchWindow.toISO),
+        },
+      };
+
+      // Use keyword search without category constraint
+      if (keywords.length > 0) {
+        fallbackWhere.OR = keywords.flatMap((keyword) => [
+          { title: { contains: keyword, mode: 'insensitive' } },
+          { description: { contains: keyword, mode: 'insensitive' } },
+        ]);
+      }
+
+      events = await prisma.event.findMany({
+        where: fallbackWhere,
+        take: 50,
+        orderBy: {
+          startTime: 'asc',
+        },
+        select: {
+          id: true,
+          title: true,
+          startTime: true,
+          endTime: true,
+          neighborhood: true,
+          venueName: true,
+          category: true,
+          priceMin: true,
+          priceMax: true,
+          tags: true,
+        },
+      });
+
+      console.log(`[ContextAssembler] Fallback search found ${events.length} events`);
+    }
 
     // Map to CandidateEvent format
     return events.map((event) => ({
@@ -403,6 +470,75 @@ async function queryCandidateEvents(params: {
     console.error('[ContextAssembler] Failed to query candidate events:', error);
     return [];
   }
+}
+
+/**
+ * Extract category hint from free text
+ */
+function extractCategoryFromText(text: string): string | null {
+  const lowerText = text.toLowerCase();
+
+  // Map keywords to EventCategory enum values
+  const categoryMap: Record<string, string> = {
+    'music': 'MUSIC',
+    'concert': 'MUSIC',
+    'show': 'MUSIC',
+    'band': 'MUSIC',
+    'comedy': 'COMEDY',
+    'standup': 'COMEDY',
+    'stand up': 'COMEDY',
+    'comedian': 'COMEDY',
+    'theatre': 'THEATRE',
+    'theater': 'THEATRE',
+    'play': 'THEATRE',
+    'musical': 'THEATRE',
+    'dance': 'DANCE',
+    'dancing': 'DANCE',
+    'ballet': 'DANCE',
+    'fitness': 'FITNESS',
+    'workout': 'FITNESS',
+    'yoga': 'FITNESS',
+    'gym': 'FITNESS',
+    'art': 'ARTS',
+    'arts': 'ARTS',
+    'gallery': 'ARTS',
+    'museum': 'ARTS',
+    'exhibition': 'ARTS',
+    'food': 'FOOD',
+    'restaurant': 'FOOD',
+    'dining': 'FOOD',
+    'brunch': 'FOOD',
+    'dinner': 'FOOD',
+    'networking': 'NETWORKING',
+    'meetup': 'NETWORKING',
+    'professional': 'NETWORKING',
+    'family': 'FAMILY',
+    'kids': 'FAMILY',
+    'children': 'FAMILY',
+  };
+
+  for (const [keyword, category] of Object.entries(categoryMap)) {
+    if (lowerText.includes(keyword)) {
+      return category;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Extract search keywords from free text
+ */
+function extractKeywords(text: string): string[] {
+  // Remove common stopwords and extract meaningful keywords
+  const stopwords = ['i', 'want', 'to', 'go', 'for', 'a', 'the', 'tonight', 'today', 'now', 'something', 'find', 'show', 'me'];
+  const words = text
+    .toLowerCase()
+    .replace(/[^\w\s]/g, '')
+    .split(/\s+/)
+    .filter((word) => word.length > 2 && !stopwords.includes(word));
+
+  return [...new Set(words)]; // Remove duplicates
 }
 
 /**
