@@ -324,7 +324,7 @@ async function scrapeWebpage(url: string): Promise<string> {
       return `Failed to scrape: ${response.statusText}`;
     }
 
-    const data = await response.json();
+    const data = await response.json() as any;
     const markdown = data.markdown || data.data?.markdown || '';
 
     // Limit markdown length to avoid token limits
