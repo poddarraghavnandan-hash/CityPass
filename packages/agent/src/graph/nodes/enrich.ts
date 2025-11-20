@@ -7,7 +7,7 @@ import { noveltyForUser, friendOverlap, getSocialHeat } from '@citypass/cag';
 import { getUserTasteVector, calculateTasteSimilarity } from '@citypass/taste';
 import type { AgentState, EnrichedEvent } from '../types';
 import { fetchEventEmbeddings } from '@citypass/rag';
-import { calculateDistance, estimateTravelTime, getCityCenter } from '@citypass/utils';
+import { calculateDistance, estimateTravelTime, getUserLocation } from '@citypass/utils';
 
 export async function enrichNode(state: AgentState): Promise<Partial<AgentState>> {
   if (!state.candidates || state.candidates.length === 0) {
@@ -55,9 +55,12 @@ export async function enrichNode(state: AgentState): Promise<Partial<AgentState>
   const friendMap = new Map(friendSignals.map(f => [f.eventId, f.friendCount]));
 
   // Get user/city location for distance calculation
-  const userLocation = state.intention?.city
-    ? getCityCenter(state.intention.city)
-    : null;
+  // Uses 3-tier fallback: saved profile → IP lookup → city center
+  const userLocation = await getUserLocation(
+    userId,
+    undefined, // sessionId not available in state
+    state.intention?.city
+  );
 
   // Enrich each candidate
   const enrichedCandidates: EnrichedEvent[] = state.candidates.map(candidate => {

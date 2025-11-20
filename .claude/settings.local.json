@@ -163,7 +163,8 @@
       "Bash(if exist \"C:\\Users\\ragha\\citypass\\check-db.mjs\" del /F /Q \"C:\\Users\\ragha\\citypass\\check-db.mjs\")",
       "Bash(vercel --token=NV6pRCdM96cCoorOUPXrd56G inspect citypass-864mfqzel-raghav-poddars-projects.vercel.app --logs)",
       "Bash(vercel --token=NV6pRCdM96cCoorOUPXrd56G inspect citypass-e2naexbpt-raghav-poddars-projects.vercel.app --logs)",
-      "Bash(vercel --token=NV6pRCdM96cCoorOUPXrd56G inspect citypass-ld4lubx4s-raghav-poddars-projects.vercel.app --logs)"
+      "Bash(vercel --token=NV6pRCdM96cCoorOUPXrd56G inspect citypass-ld4lubx4s-raghav-poddars-projects.vercel.app --logs)",
+      "Bash(npx next build)"
     ],
     "deny": [],
     "ask": []

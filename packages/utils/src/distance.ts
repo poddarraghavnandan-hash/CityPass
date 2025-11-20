@@ -57,15 +57,51 @@ export function estimateTravelTime(distanceKm: number): number {
  */
 export async function getUserLocation(
   userId?: string,
-  sessionId?: string
+  sessionId?: string,
+  city?: string
 ): Promise<{ lat: number; lon: number } | null> {
-  // TODO: Implement location inference
-  // 1. Check if user has saved location in profile
-  // 2. Check if session has location from IP lookup
-  // 3. Fall back to city center coordinates
+  try {
+    // Import dynamically to avoid circular dependency
+    const { prisma } = await import('@citypass/db');
 
-  // For now, return null (will use default behavior)
-  return null;
+    // 1. Check if user has saved location in profile
+    if (userId) {
+      const profile = await prisma.userProfile.findUnique({
+        where: { userId },
+        select: { meta: true },
+      });
+
+      const savedLocation = profile?.meta && typeof profile.meta === 'object'
+        ? (profile.meta as any).location
+        : null;
+
+      if (savedLocation?.lat && savedLocation?.lon) {
+        console.log('[getUserLocation] Using saved profile location');
+        return { lat: savedLocation.lat, lon: savedLocation.lon };
+      }
+    }
+
+    // 2. Check if session has location from IP lookup (stored in session meta)
+    if (sessionId) {
+      // Note: IP geolocation could be implemented via Vercel headers or MaxMind
+      // For now, we'll skip this step and go to city center fallback
+    }
+
+    // 3. Fall back to city center coordinates
+    if (city) {
+      const cityCenter = getCityCenter(city);
+      if (cityCenter) {
+        console.log(`[getUserLocation] Using city center for ${city}`);
+        return cityCenter;
+      }
+    }
+
+    // No location could be determined
+    return null;
+  } catch (error) {
+    console.error('[getUserLocation] Failed to get user location:', error);
+    return null;
+  }
 }
 
 /**

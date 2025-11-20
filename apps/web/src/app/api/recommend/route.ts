@@ -14,6 +14,8 @@ import {
   addExplorationBonus,
   UserContext,
 } from '@citypass/search';
+import { getUserTasteVector, calculateTasteSimilarity } from '@citypass/taste';
+import { fetchEventEmbeddings } from '@citypass/rag';
 
 const RecommendRequestSchema = z.object({
   query: z.string().optional(),
@@ -106,6 +108,21 @@ export async function POST(req: NextRequest) {
       params.userId
     );
 
+    // Step 4a: Fetch user taste vector and event embeddings for semantic search
+    const eventIds = candidates.map(e => e.id);
+    const [tasteVector, eventEmbeddingsMap] = await Promise.all([
+      params.userId && canPersonalize
+        ? getUserTasteVector(params.userId).catch((err) => {
+            console.warn('[recommend] Failed to fetch taste vector:', err.message);
+            return null;
+          })
+        : Promise.resolve(null),
+      fetchEventEmbeddings(eventIds).catch((err) => {
+        console.warn('[recommend] Failed to fetch event embeddings:', err.message);
+        return new Map<string, number[]>();
+      }),
+    ]);
+
     // Step 5: Extract features and compute scores
     const scoredEvents = candidates.map((event) => {
       const features = extractFeatures(
@@ -122,7 +139,13 @@ export async function POST(req: NextRequest) {
 
       // Set textual similarity from Typesense rank (placeholder)
       features.textualSimilarity = event._score || 0.5;
-      features.semanticSimilarity = 0.5; // TODO: Add Qdrant semantic search
+
+      // Calculate semantic similarity using Qdrant embeddings
+      const eventEmbedding = eventEmbeddingsMap.get(event.id);
+      features.semanticSimilarity =
+        tasteVector && eventEmbedding
+          ? calculateTasteSimilarity(tasteVector, eventEmbedding)
+          : 0.5; // Default to neutral if no embeddings available
 
       const baseScore = computeScore(features, weights as any);
 
