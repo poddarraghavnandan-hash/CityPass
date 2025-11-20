@@ -300,41 +300,84 @@ function buildSlates(
 
 /**
  * Compile human-friendly reasons from factor scores
+ * Enhanced to provide clear, specific explanations for recommendations
  */
 function compileReasons(factorScores: Record<string, number>): string[] {
   const reasons: string[] = [];
 
-  if (factorScores.timeFit > 0.8) {
-    reasons.push('Perfect timing for your schedule');
+  // Check for new matchScorer breakdown (raw point values)
+  // categoryMatch: 0-30, vibeAlignment: 0-25, timeFit: 0-25, priceComfort: 0-15, socialFit: 0-10
+
+  // Legacy normalized scores (0-1) support
+  const isLegacyScores = Object.values(factorScores).some((score) => score > 0 && score <= 1);
+
+  if (isLegacyScores) {
+    // Legacy scoring system (0-1 normalized)
+    if (factorScores.timeFit > 0.8) {
+      reasons.push('Perfect timing for your schedule');
+    }
+    if (factorScores.moodAlignment > 0.7) {
+      reasons.push('Matches your vibe');
+    }
+    if (factorScores.priceComfort > 0.8) {
+      reasons.push('Within your budget');
+    }
+    if (factorScores.distanceComfort > 0.8) {
+      reasons.push('Close by');
+    }
+    if (factorScores.socialHeatScore > 0.7) {
+      reasons.push('Popular right now');
+    }
+    if (factorScores.noveltyScore > 0.7) {
+      reasons.push('Something new to try');
+    }
+    if (factorScores.tasteMatchScore > 0.7) {
+      reasons.push('Based on your past likes');
+    }
+  } else {
+    // New matchScorer breakdown (raw points)
+
+    // Category match (0-30 points)
+    if (factorScores.categoryMatch >= 25) {
+      reasons.push('Perfect match for what you\'re looking for');
+    } else if (factorScores.categoryMatch >= 15) {
+      reasons.push('Matches your interests');
+    }
+
+    // Vibe alignment (0-25 points)
+    if (factorScores.vibeAlignment >= 18) {
+      reasons.push('Great vibe match');
+    } else if (factorScores.vibeAlignment >= 12) {
+      reasons.push('Fits your mood');
+    }
+
+    // Time fit (0-25 points) - includes starting soon bonus
+    if (factorScores.timeFit >= 22) {
+      reasons.push('Starting very soon - grab it now!');
+    } else if (factorScores.timeFit >= 18) {
+      reasons.push('Starting soon');
+    } else if (factorScores.timeFit >= 10) {
+      reasons.push('Good timing');
+    }
+
+    // Price comfort (0-15 points)
+    if (factorScores.priceComfort >= 14) {
+      reasons.push('Great price');
+    } else if (factorScores.priceComfort >= 10) {
+      reasons.push('Fair price');
+    }
+
+    // Social fit (0-10 points)
+    if (factorScores.socialFit >= 8) {
+      reasons.push('Perfect for your plans');
+    }
   }
 
-  if (factorScores.moodAlignment > 0.7) {
-    reasons.push('Matches your vibe');
-  }
-
-  if (factorScores.priceComfort > 0.8) {
-    reasons.push('Within your budget');
-  }
-
-  if (factorScores.distanceComfort > 0.8) {
-    reasons.push('Close by');
-  }
-
-  if (factorScores.socialHeatScore > 0.7) {
-    reasons.push('Popular right now');
-  }
-
-  if (factorScores.noveltyScore > 0.7) {
-    reasons.push('Something new to try');
-  }
-
-  if (factorScores.tasteMatchScore > 0.7) {
-    reasons.push('Based on your past likes');
-  }
-
+  // If still no reasons, provide a default
   if (reasons.length === 0) {
-    reasons.push('Recommended for you');
+    reasons.push('Popular in your area');
   }
 
-  return reasons.slice(0, 3); // Max 3 reasons
+  // Prioritize and limit to top 3 most compelling reasons
+  return reasons.slice(0, 3);
 }

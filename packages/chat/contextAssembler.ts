@@ -13,6 +13,7 @@ import type {
   CandidateEvent,
 } from './types';
 import { extractIntentTokens, mapToIntentionTokens } from '@citypass/utils';
+import { getPopularEventsForColdStart, isUserInColdStart } from './coldStartStrategy';
 
 /**
  * Build a complete ChatContextSnapshot from user input
@@ -46,13 +47,38 @@ export async function buildChatContextSnapshot(
   const searchWindow = determineSearchWindow(freeText, nowISO);
 
   // 7. Query candidate events from repository
-  const candidateEvents = await queryCandidateEvents({
+  let candidateEvents = await queryCandidateEvents({
     freeText,
     searchWindow,
     city,
     userId,
     profile,
   });
+
+  // 7a. Cold Start Enhancement: If user is new and has few results, augment with popular events
+  if (isUserInColdStart(profile) && candidateEvents.length < 20) {
+    console.log('[ContextAssembler] Cold start detected, augmenting with popular events...');
+
+    const popularEvents = await getPopularEventsForColdStart({
+      city,
+      timeWindow: searchWindow,
+      maxEvents: 30,
+      diversityBoost: true,
+    });
+
+    // Merge, keeping user-matched events first, then popular events
+    const mergedEvents = [...candidateEvents];
+    const existingIds = new Set(candidateEvents.map((e) => e.id));
+
+    for (const popEvent of popularEvents) {
+      if (!existingIds.has(popEvent.id) && mergedEvents.length < 50) {
+        mergedEvents.push(popEvent);
+      }
+    }
+
+    console.log(`[ContextAssembler] Enhanced from ${candidateEvents.length} to ${mergedEvents.length} events for cold start user`);
+    candidateEvents = mergedEvents;
+  }
 
   // 8. Load user location from cookie if available
   const locationApprox = await loadUserLocation();
@@ -407,9 +433,57 @@ async function queryCandidateEvents(params: {
 
     console.log(`[ContextAssembler] Found ${events.length} candidate events`);
 
-    // FALLBACK: If category filter returned 0 results, try again with just keywords
+    // FALLBACK 1: If category filter returned 0 results, try related categories
     if (events.length === 0 && categoryHint) {
-      console.log(`[ContextAssembler] No ${categoryHint} events found, broadening search with keywords...`);
+      const relatedCategories = getRelatedCategories(categoryHint);
+
+      if (relatedCategories.length > 0) {
+        console.log(`[ContextAssembler] No ${categoryHint} events found, trying related categories: ${relatedCategories.join(', ')}...`);
+
+        const relatedWhere: any = {
+          city,
+          startTime: {
+            gte: new Date(searchWindow.fromISO),
+            lte: new Date(searchWindow.toISO),
+          },
+          category: { in: relatedCategories },
+        };
+
+        // Include keyword search with related categories
+        if (keywords.length > 0) {
+          relatedWhere.OR = keywords.flatMap((keyword) => [
+            { title: { contains: keyword, mode: 'insensitive' } },
+            { description: { contains: keyword, mode: 'insensitive' } },
+          ]);
+        }
+
+        events = await prisma.event.findMany({
+          where: relatedWhere,
+          take: 50,
+          orderBy: {
+            startTime: 'asc',
+          },
+          select: {
+            id: true,
+            title: true,
+            startTime: true,
+            endTime: true,
+            neighborhood: true,
+            venueName: true,
+            category: true,
+            priceMin: true,
+            priceMax: true,
+            tags: true,
+          },
+        });
+
+        console.log(`[ContextAssembler] Related category search found ${events.length} events`);
+      }
+    }
+
+    // FALLBACK 2: If still no results, try keyword search without category constraint
+    if (events.length === 0 && categoryHint) {
+      console.log(`[ContextAssembler] Still no events, broadening search with keywords only...`);
 
       const fallbackWhere: any = {
         city,
@@ -447,7 +521,7 @@ async function queryCandidateEvents(params: {
         },
       });
 
-      console.log(`[ContextAssembler] Fallback search found ${events.length} events`);
+      console.log(`[ContextAssembler] Final fallback search found ${events.length} events`);
     }
 
     // Map to CandidateEvent format
@@ -470,6 +544,27 @@ async function queryCandidateEvents(params: {
     console.error('[ContextAssembler] Failed to query candidate events:', error);
     return [];
   }
+}
+
+/**
+ * Get related categories for fallback search
+ * Helps find relevant alternatives when primary category has no events
+ */
+function getRelatedCategories(primaryCategory: string): string[] {
+  const relatedCategoriesMap: Record<string, string[]> = {
+    FITNESS: ['DANCE', 'WELLNESS', 'SPORTS'],
+    MUSIC: ['DANCE', 'ARTS', 'THEATRE', 'COMEDY'],
+    COMEDY: ['THEATRE', 'MUSIC', 'ARTS'],
+    THEATRE: ['DANCE', 'MUSIC', 'ARTS', 'COMEDY'],
+    DANCE: ['MUSIC', 'THEATRE', 'FITNESS'],
+    ARTS: ['MUSIC', 'THEATRE', 'DANCE'],
+    FOOD: ['NETWORKING', 'FAMILY'],
+    NETWORKING: ['FOOD'],
+    FAMILY: ['FOOD', 'ARTS'],
+    OTHER: [],
+  };
+
+  return relatedCategoriesMap[primaryCategory] || [];
 }
 
 /**

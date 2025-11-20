@@ -8,11 +8,11 @@ import type { CandidateEvent, IntentionV2, Profile } from './types';
 
 export interface EventScore {
   eventId: string;
-  totalScore: number; // 0-100
+  totalScore: number; // 0-105 (includes starting soon bonus)
   breakdown: {
     categoryMatch: number; // 0-30
     vibeAlignment: number; // 0-25
-    timeFit: number; // 0-20
+    timeFit: number; // 0-25 (includes +5 starting soon bonus)
     priceComfort: number; // 0-15
     socialFit: number; // 0-10
   };
@@ -138,7 +138,8 @@ function scoreVibeAlignment(event: CandidateEvent, intention: IntentionV2): numb
 }
 
 /**
- * Time fit score (0-20)
+ * Time fit score (0-20 base + up to 5 bonus)
+ * Includes "starting soon" boost to prioritize immediate availability
  */
 function scoreTimeFit(event: CandidateEvent, intention: IntentionV2, nowISO: string): number {
   const eventStart = new Date(event.startISO);
@@ -159,16 +160,33 @@ function scoreTimeFit(event: CandidateEvent, intention: IntentionV2, nowISO: str
     return 0; // Event already started
   }
 
-  // Prefer events happening soon (within first 25% of window)
+  let baseScore = 0;
+
+  // Base score: Prefer events happening soon (within first 25% of window)
   if (minutesUntilEvent < windowDurationMinutes * 0.25) {
-    return 20; // Starting very soon
+    baseScore = 20; // Starting very soon
   } else if (minutesUntilEvent < windowDurationMinutes * 0.5) {
-    return 15; // Starting soon
+    baseScore = 15; // Starting soon
   } else if (minutesUntilEvent < windowDurationMinutes * 0.75) {
-    return 10; // Mid-window
+    baseScore = 10; // Mid-window
   } else {
-    return 5; // Later in window
+    baseScore = 5; // Later in window
   }
+
+  // BONUS: "Starting soon" boost for events within next few hours
+  // This helps cold start users find immediate options
+  let bonusScore = 0;
+  if (minutesUntilEvent <= 60) {
+    bonusScore = 5; // Starting within 1 hour - highest urgency
+  } else if (minutesUntilEvent <= 120) {
+    bonusScore = 4; // Starting within 2 hours
+  } else if (minutesUntilEvent <= 240) {
+    bonusScore = 3; // Starting within 4 hours
+  } else if (minutesUntilEvent <= 360) {
+    bonusScore = 2; // Starting within 6 hours
+  }
+
+  return Math.min(25, baseScore + bonusScore); // Cap at 25 to maintain score distribution
 }
 
 /**

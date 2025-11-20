@@ -5,6 +5,7 @@
 
 import OpenAI from 'openai';
 import type { ChatContextSnapshot, CandidateEvent, IntentionV2 } from './types';
+import { searchAllPlatforms } from './eventApis';
 
 const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
@@ -189,7 +190,7 @@ export async function discoverEventsWithLLM(
         let toolResult: string;
 
         if (functionName === 'web_search') {
-          toolResult = await executeWebSearch(functionArgs.query);
+          toolResult = await executeWebSearch(functionArgs.query, context, intention);
         } else if (functionName === 'scrape_webpage') {
           toolResult = await scrapeWebpage(functionArgs.url);
         } else if (functionName === 'return_discovered_events') {
@@ -268,31 +269,56 @@ IMPORTANT:
 }
 
 /**
- * Execute web search using available search API
+ * Execute web search using event platform APIs
  */
-async function executeWebSearch(query: string): Promise<string> {
-  console.log(`[EventDiscoverer] Web search: "${query}"`);
+async function executeWebSearch(
+  query: string,
+  context: ChatContextSnapshot,
+  intention: IntentionV2
+): Promise<string> {
+  console.log(`[EventDiscoverer] Searching event platforms: "${query}"`);
 
   try {
-    // Use a simple web search approach - in production you'd use Google Custom Search API, Bing API, etc.
-    // For now, we'll construct a search results string with common event sites
+    // Extract date range from intention
+    const startDate = intention.timeWindow.fromISO.split('T')[0]; // YYYY-MM-DD
+    const endDate = intention.timeWindow.toISO.split('T')[0];
 
-    const eventSites = [
-      `eventbrite.com/d/${encodeURIComponent(query)}`,
-      `meetup.com/find/?keywords=${encodeURIComponent(query)}`,
-      `classpass.com/search?query=${encodeURIComponent(query)}`,
-      `timeout.com/search?q=${encodeURIComponent(query)}`,
-    ];
+    // Extract category if specified
+    const category = intention.vibeDescriptors.find((v) =>
+      ['MUSIC', 'COMEDY', 'THEATRE', 'FITNESS', 'DANCE', 'ARTS', 'FOOD', 'NETWORKING', 'FAMILY'].includes(v.toUpperCase())
+    );
 
-    return `Search results for "${query}":
+    // Search all platforms
+    const discoveredEvents = await searchAllPlatforms({
+      query,
+      city: intention.city,
+      startDate,
+      endDate,
+      category: category?.toUpperCase(),
+    });
 
-Suggested event sources to scrape:
-${eventSites.map((url, i) => `${i + 1}. https://${url}`).join('\n')}
+    if (discoveredEvents.length === 0) {
+      return `No events found for "${query}" in ${intention.city} from ${startDate} to ${endDate}. Try a different search query or broader criteria.`;
+    }
 
-Use scrape_webpage to extract event details from these URLs.`;
+    // Format events as search results
+    const results = discoveredEvents.slice(0, 20).map((event, i) => {
+      return `${i + 1}. ${event.title}
+   Venue: ${event.venueName || 'TBD'}
+   Date: ${event.startTime}
+   Price: ${event.priceMin ? `$${event.priceMin}${event.priceMax ? `-$${event.priceMax}` : '+'}` : 'Free/TBD'}
+   Category: ${event.category}
+   URL: ${event.sourceUrl}`;
+    }).join('\n\n');
+
+    return `Found ${discoveredEvents.length} events for "${query}" in ${intention.city}:
+
+${results}
+
+You can now use the return_discovered_events function to return these events. Extract the event details from the search results above.`;
   } catch (error) {
-    console.error('[EventDiscoverer] Web search failed:', error);
-    return 'Search failed';
+    console.error('[EventDiscoverer] Event platform search failed:', error);
+    return `Search failed: ${error}. Try a different query.`;
   }
 }
 

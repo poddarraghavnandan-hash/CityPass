@@ -19,6 +19,7 @@ export { runPlanner } from './planner';
 // Event discovery and scoring
 export { discoverEventsWithLLM, convertDiscoveredToCandidateEvents, type DiscoveredEvent } from './eventDiscoverer';
 export { scoreEventMatch, scoreEventBatch, sortByMatchScore, type EventScore } from './matchScorer';
+export { getPopularEventsForColdStart, isUserInColdStart, type ColdStartOptions } from './coldStartStrategy';
 
 // Types
 export * from './types';

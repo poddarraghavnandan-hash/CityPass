@@ -64,7 +64,7 @@ export function Steps() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      logClientEvent('onboarding_complete', payload);
+      logClientEvent('onboarding_complete' as any, { ...payload, screen: 'onboarding' });
       setStatus('done');
       router.push('/chat?prompt=Surprise%20me%20with%20a%20plan');
     } catch (err: any) {

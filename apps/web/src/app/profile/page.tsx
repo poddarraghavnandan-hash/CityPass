@@ -94,8 +94,8 @@ export default function ProfilePage() {
       });
       if (!response.ok) throw new Error('Failed to save preferences');
       setStatus('saved');
-      success('Preferences saved', 'We’ll use these for chat and feed.');
-      logClientEvent('profile_update', payload);
+      success('Preferences saved', "We'll use these for chat and feed.");
+      logClientEvent('profile_update', { ...payload, screen: 'profile' });
       setTimeout(() => setStatus('idle'), 1500);
     } catch (err: any) {
       const message = err?.message || 'Unable to save preferences';
