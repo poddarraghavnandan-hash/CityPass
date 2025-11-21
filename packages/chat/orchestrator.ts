@@ -62,14 +62,17 @@ export async function runChatTurn(input: RunChatTurnInput): Promise<RunChatTurnO
   } catch (error) {
     console.error('[Orchestrator] Chat turn failed:', error);
 
-    // Graceful degradation
-    const nowISO = new Date().toISOString();
+    // Graceful degradation with valid time window
+    const now = new Date();
+    const nowISO = now.toISOString();
+    const futureISO = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString(); // +24 hours
+
     return {
       threadId: threadId || 'error',
       plannerDecision: {
         intention: {
           primaryGoal: freeText,
-          timeWindow: { fromISO: nowISO, toISO: nowISO },
+          timeWindow: { fromISO: nowISO, toISO: futureISO }, // Fixed: valid 24h window
           city: cityHint || 'New York',
           vibeDescriptors: [],
           constraints: [],
@@ -108,7 +111,7 @@ export async function runChatTurn(input: RunChatTurnInput): Promise<RunChatTurnO
         },
         chatHistorySummary: 'Error occurred',
         recentPicksSummary: '',
-        searchWindow: { fromISO: nowISO, toISO: nowISO },
+        searchWindow: { fromISO: nowISO, toISO: futureISO }, // Fixed: valid 24h window
         candidateEvents: [],
         traceId: 'error',
       } as any,
