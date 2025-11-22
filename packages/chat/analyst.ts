@@ -4,6 +4,7 @@
  */
 
 import OpenAI from 'openai';
+import { prisma } from '@citypass/db';
 import {
   ChatContextSnapshot,
   AnalystLLMOutput,
@@ -17,6 +18,54 @@ import {
 const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   : null;
+
+/**
+ * Log LLM call to database for debugging and monitoring
+ */
+async function logLLMCall(params: {
+  traceId?: string;
+  userId?: string;
+  threadId?: string;
+  llmType: string;
+  model: string;
+  provider: string;
+  systemPrompt?: string;
+  userPrompt: string;
+  temperature?: number;
+  maxTokens?: number;
+  response: string;
+  parsedOutput?: any;
+  tokensUsed?: number;
+  latencyMs?: number;
+  success: boolean;
+  errorMessage?: string;
+}): Promise<void> {
+  try {
+    await prisma.lLMLog.create({
+      data: {
+        traceId: params.traceId,
+        userId: params.userId,
+        threadId: params.threadId,
+        llmType: params.llmType,
+        model: params.model,
+        provider: params.provider,
+        systemPrompt: params.systemPrompt,
+        userPrompt: params.userPrompt,
+        temperature: params.temperature,
+        maxTokens: params.maxTokens,
+        response: params.response,
+        parsedOutput: params.parsedOutput || null,
+        tokensUsed: params.tokensUsed,
+        latencyMs: params.latencyMs,
+        success: params.success,
+        errorMessage: params.errorMessage,
+      },
+    });
+  } catch (error) {
+    console.error('[Analyst] Failed to log LLM call to database:', error);
+    // Don't throw - logging should not break the main flow
+  }
+}
 
 const ANALYST_SYSTEM_PROMPT = `You are CityLens Analyst, an expert at interpreting user intentions for event discovery.
 
@@ -69,6 +118,8 @@ export async function runAnalystLLM(
     return createFallbackAnalystOutput(context);
   }
 
+  const startTime = Date.now();
+
   try {
     const userPrompt = buildAnalystUserPrompt(context);
 
@@ -91,6 +142,8 @@ export async function runAnalystLLM(
     });
 
     const rawResponse = completion.choices[0]?.message?.content || '{}';
+    const latencyMs = Date.now() - startTime;
+    const tokensUsed = completion.usage?.total_tokens;
 
     // LOG RESPONSE
     console.log('\n=== [Analyst] MODEL RESPONSE ===');
@@ -103,12 +156,51 @@ export async function runAnalystLLM(
     const validated = AnalystOutputSchema.parse(parsed);
 
     console.log('[Analyst] ✓ Successfully parsed intention');
+
+    // Log to database
+    await logLLMCall({
+      traceId: context.traceId,
+      userId: context.userId,
+      threadId: context.sessionId,
+      llmType: 'analyst',
+      model: 'gpt-4o-mini',
+      provider: 'openai',
+      systemPrompt: ANALYST_SYSTEM_PROMPT,
+      userPrompt,
+      temperature: 0.3,
+      maxTokens: 1200,
+      response: rawResponse,
+      parsedOutput: validated,
+      tokensUsed,
+      latencyMs,
+      success: true,
+    });
+
     return {
       ...validated,
       rawModelResponse: rawResponse,
     };
   } catch (error) {
+    const latencyMs = Date.now() - startTime;
     console.error('[Analyst] LLM call failed:', error);
+
+    // Log failure to database
+    await logLLMCall({
+      traceId: context.traceId,
+      userId: context.userId,
+      threadId: context.sessionId,
+      llmType: 'analyst',
+      model: 'gpt-4o-mini',
+      provider: 'openai',
+      userPrompt: buildAnalystUserPrompt(context),
+      temperature: 0.3,
+      maxTokens: 1200,
+      response: '',
+      latencyMs,
+      success: false,
+      errorMessage: error instanceof Error ? error.message : String(error),
+    });
+
     return createFallbackAnalystOutput(context);
   }
 }

@@ -4,11 +4,60 @@
  */
 
 import OpenAI from 'openai';
+import { prisma } from '@citypass/db';
 import type { ChatContextSnapshot, PlannerDecision, StylistLLMOutput } from './types';
 
 const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   : null;
+
+/**
+ * Log LLM call to database for debugging and monitoring
+ */
+async function logLLMCall(params: {
+  traceId?: string;
+  userId?: string;
+  threadId?: string;
+  llmType: string;
+  model: string;
+  provider: string;
+  systemPrompt?: string;
+  userPrompt: string;
+  temperature?: number;
+  maxTokens?: number;
+  response: string;
+  parsedOutput?: any;
+  tokensUsed?: number;
+  latencyMs?: number;
+  success: boolean;
+  errorMessage?: string;
+}): Promise<void> {
+  try {
+    await prisma.lLMLog.create({
+      data: {
+        traceId: params.traceId,
+        userId: params.userId,
+        threadId: params.threadId,
+        llmType: params.llmType,
+        model: params.model,
+        provider: params.provider,
+        systemPrompt: params.systemPrompt,
+        userPrompt: params.userPrompt,
+        temperature: params.temperature,
+        maxTokens: params.maxTokens,
+        response: params.response,
+        parsedOutput: params.parsedOutput || null,
+        tokensUsed: params.tokensUsed,
+        latencyMs: params.latencyMs,
+        success: params.success,
+        errorMessage: params.errorMessage,
+      },
+    });
+  } catch (error) {
+    console.error('[Stylist] Failed to log LLM call to database:', error);
+    // Don't throw - logging should not break the main flow
+  }
+}
 
 const STYLIST_SYSTEM_PROMPT = `You are CityLens Stylist, a friendly, concise experience concierge.
 
@@ -49,6 +98,8 @@ export async function runStylistLLM(
     return createFallbackStylistOutput(context, plannerDecision);
   }
 
+  const startTime = Date.now();
+
   try {
     const userPrompt = buildStylistUserPrompt(context, plannerDecision);
 
@@ -70,6 +121,8 @@ export async function runStylistLLM(
     });
 
     const reply = completion.choices[0]?.message?.content || 'Here are your recommendations.';
+    const latencyMs = Date.now() - startTime;
+    const tokensUsed = completion.usage?.total_tokens;
 
     // LOG RESPONSE
     console.log('\n=== [Stylist] MODEL RESPONSE ===');
@@ -77,12 +130,50 @@ export async function runStylistLLM(
     console.log('=== END RESPONSE ===\n');
 
     console.log('[Stylist] ✓ Generated reply');
+
+    // Log to database
+    await logLLMCall({
+      traceId: context.traceId,
+      userId: context.userId,
+      threadId: context.sessionId,
+      llmType: 'stylist',
+      model: 'gpt-4o-mini',
+      provider: 'openai',
+      systemPrompt: STYLIST_SYSTEM_PROMPT,
+      userPrompt,
+      temperature: 0.7,
+      maxTokens: 150,
+      response: reply,
+      tokensUsed,
+      latencyMs,
+      success: true,
+    });
+
     return {
       reply: reply.trim(),
       rawModelResponse: reply,
     };
   } catch (error) {
+    const latencyMs = Date.now() - startTime;
     console.error('[Stylist] LLM call failed:', error);
+
+    // Log failure to database
+    await logLLMCall({
+      traceId: context.traceId,
+      userId: context.userId,
+      threadId: context.sessionId,
+      llmType: 'stylist',
+      model: 'gpt-4o-mini',
+      provider: 'openai',
+      userPrompt: buildStylistUserPrompt(context, plannerDecision),
+      temperature: 0.7,
+      maxTokens: 150,
+      response: '',
+      latencyMs,
+      success: false,
+      errorMessage: error instanceof Error ? error.message : String(error),
+    });
+
     return createFallbackStylistOutput(context, plannerDecision);
   }
 }

@@ -1135,3 +1135,45 @@ model UserContextSnapshot {
   @@index([userId])
   @@map("user_context_snapshots")
 }
+
+// LLM Logging for debugging and monitoring
+model LLMLog {
+  id              String   @id @default(cuid())
+
+  // Context
+  traceId         String?  @map("trace_id")
+  userId          String?  @map("user_id")
+  threadId        String?  @map("thread_id")
+
+  // LLM details
+  llmType         String   @map("llm_type") // 'analyst' | 'stylist' | 'event_discoverer'
+  model           String   // 'gpt-4o-mini' | 'gpt-4' | etc
+  provider        String   // 'openai' | 'anthropic'
+
+  // Request
+  systemPrompt    String?  @db.Text @map("system_prompt")
+  userPrompt      String   @db.Text @map("user_prompt")
+  temperature     Float?
+  maxTokens       Int?     @map("max_tokens")
+
+  // Response
+  response        String   @db.Text
+  parsedOutput    Json?    @map("parsed_output") // Structured JSON output if applicable
+
+  // Performance
+  tokensUsed      Int?     @map("tokens_used")
+  latencyMs       Int?     @map("latency_ms")
+  cost            Float?   // Estimated cost in USD
+
+  // Status
+  success         Boolean  @default(true)
+  errorMessage    String?  @db.Text @map("error_message")
+
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([traceId, createdAt])
+  @@index([userId, createdAt])
+  @@index([threadId, createdAt])
+  @@index([llmType, createdAt])
+  @@map("llm_logs")
+}
