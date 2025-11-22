@@ -4,11 +4,12 @@ import { useEffect, useRef, useState } from 'react';
 import type { Intention, IntentionTokens, RankedItem } from '@citypass/types';
 import { streamChat } from '@/lib/chat/streamClient';
 import { ChatMessageList, type ChatMessage } from './ChatMessageList';
-import { ChatInput } from './ChatInput';
+import { ChatInputBar } from './ChatInputBar';
 import { SlateTabs } from './SlateTabs';
 import { ErrorState } from '@/components/common/ErrorState';
 import { SkeletonStoryCard } from '@/components/feed/SkeletonStoryCard';
 import { logClientEvent } from '@/lib/analytics/logClientEvent';
+import { AnimatePresence, motion } from 'framer-motion';
 
 interface ChatUIProps {
   city: string;
@@ -30,12 +31,18 @@ export function ChatUI({ city, defaultTokens, initialPrompt }: ChatUIProps) {
   const [intention, setIntention] = useState<Intention | null>(null);
   const [traceId, setTraceId] = useState<string | undefined>(undefined);
   const streamCancel = useRef<ReturnType<typeof streamChat> | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (initialPrompt) {
       setInput(initialPrompt);
     }
   }, [initialPrompt]);
+
+  // Auto-scroll to bottom
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, slates, isLoading]);
 
   const handleSend = (prompt?: string) => {
     const text = (prompt ?? input).trim();
@@ -47,6 +54,7 @@ export function ChatUI({ city, defaultTokens, initialPrompt }: ChatUIProps) {
     setInput('');
     setError(null);
     setIsLoading(true);
+    setSlates(null); // Clear previous slates on new query
 
     const userMessage: ChatMessage = { id: crypto.randomUUID(), role: 'user', text };
     const assistantId = crypto.randomUUID();
@@ -113,42 +121,92 @@ export function ChatUI({ city, defaultTokens, initialPrompt }: ChatUIProps) {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-[32px] border border-white/10 bg-white/5 p-6 text-white">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-semibold text-white">Where to?</h2>
+    <div className="flex h-[calc(100vh-4rem)] flex-col bg-background text-foreground">
+      {/* Chat Area */}
+      <div className="flex-1 overflow-y-auto px-4 py-6 scrollbar-hide">
+        <div className="mx-auto max-w-3xl space-y-8">
+          {messages.length === 0 && (
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-center py-20"
+            >
+              <h1 className="text-4xl font-bold tracking-tight mb-4 bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">
+                Where to next?
+              </h1>
+              <p className="text-lg text-muted-foreground">
+                Ask CityLens for personalized plans in {city}.
+              </p>
+            </motion.div>
+          )}
+
+          <ChatMessageList messages={messages} isStreaming={isLoading} />
+
+          {/* Loading State */}
+          {isLoading && !slates && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="grid gap-4 md:grid-cols-3"
+            >
+              {Array.from({ length: 3 }).map((_, idx) => (
+                <SkeletonStoryCard key={idx} />
+              ))}
+            </motion.div>
+          )}
+
+          {/* Results Area */}
+          <AnimatePresence>
+            {slates && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                className="pb-24" // Padding for sticky input
+              >
+                <SlateTabs 
+                  slates={slates} 
+                  activeTab={activeTab} 
+                  onTabChange={setActiveTab} 
+                  intention={intention} 
+                  traceId={traceId} 
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+          
+          {/* Error Message */}
+          {error && (
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-destructive"
+            >
+              <p className="text-sm font-medium">{error}</p>
+              <button 
+                onClick={() => setError(null)}
+                className="mt-2 text-xs underline hover:no-underline"
+              >
+                Dismiss
+              </button>
+            </motion.div>
+          )}
+          
+          <div ref={messagesEndRef} />
         </div>
-        <div className="mt-4">
-          <ChatInput
-            inline
+      </div>
+
+      {/* Sticky Input Area */}
+      <div className="sticky bottom-0 z-10 w-full border-t border-white/5 bg-background/80 backdrop-blur-xl p-4 pb-8">
+        <div className="mx-auto max-w-3xl">
+          <ChatInputBar
             value={input}
             onChange={setInput}
             onSubmit={() => handleSend()}
-            onMicResult={(text) => setInput(text)}
-            onMicError={(err) => setError(err.message)}
             disabled={isLoading}
           />
         </div>
-        {error && (
-          <div className="mt-2 text-sm text-red-300">
-            {error}{' '}
-            <button type="button" className="underline" onClick={() => setError(null)}>
-              dismiss
-            </button>
-          </div>
-        )}
       </div>
-
-      <ChatMessageList messages={messages} isStreaming={isLoading} />
-
-      {isLoading && !slates && (
-        <div className="grid gap-4 md:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, idx) => (
-            <SkeletonStoryCard key={idx} />
-          ))}
-        </div>
-      )}
-      <SlateTabs slates={slates} activeTab={activeTab} onTabChange={setActiveTab} intention={intention} traceId={traceId} />
     </div>
   );
 }

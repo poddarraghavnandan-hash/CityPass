@@ -1,8 +1,9 @@
 'use client';
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { Mic, SendHorizontal } from 'lucide-react';
+import { ArrowUp, Mic } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
 
 type ChatInputBarProps = {
   value: string;
@@ -39,40 +40,55 @@ export function ChatInputBar({ value, onChange, onSubmit, disabled }: ChatInputB
   const canSend = value.trim().length > 0 && !disabled;
 
   return (
-    <div className="border-t border-white/5 bg-gradient-to-b from-transparent via-[#050509]/60 to-[#050509] pb-2 pt-4">
-      <p className="text-xs text-white/60">Examples · CityLens works for mornings, afternoons, and nights</p>
-      <div className="mt-2 flex flex-wrap gap-2 text-left text-xs">
-        {EXAMPLE_PROMPTS.map((example) => (
-          <button
-            key={example}
-            type="button"
-            className="rounded-full border border-white/15 px-3 py-1 text-white/70 transition hover:border-white/40"
-            onClick={() => onChange(example)}
+    <div className="relative w-full">
+      {/* Example Prompts - Fade out when typing */}
+      <AnimatePresence>
+        {!value && !focused && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className="absolute bottom-full left-0 mb-4 w-full overflow-hidden"
           >
-            {example}
-          </button>
-        ))}
-      </div>
+            <p className="mb-2 text-xs font-medium text-muted-foreground/60">Try asking about...</p>
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide mask-fade-right">
+              {EXAMPLE_PROMPTS.map((example) => (
+                <button
+                  key={example}
+                  type="button"
+                  className="whitespace-nowrap rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs text-white/70 transition hover:bg-white/10 hover:text-white"
+                  onClick={() => onChange(example)}
+                >
+                  {example}
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <form
         onSubmit={handleSubmit}
         className={cn(
-          'mt-4 flex w-full items-end gap-3 rounded-[26px] border border-white/10 bg-[#070b13]/90 px-4 py-3 shadow-[0_20px_60px_rgba(5,5,12,0.55)]',
-          focused && 'border-white/30'
+          'relative flex w-full items-end gap-2 rounded-[2rem] border bg-card/50 p-2 shadow-2xl backdrop-blur-xl transition-all duration-300 ease-out',
+          focused ? 'border-white/20 ring-1 ring-white/10' : 'border-white/10',
+          'hover:border-white/20'
         )}
       >
         <button
           type="button"
-          className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white/70"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-white/10 hover:text-white"
           aria-label="Voice input (coming soon)"
         >
-          <Mic size={18} />
+          <Mic size={20} strokeWidth={1.5} />
         </button>
+
         <textarea
           ref={textareaRef}
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          placeholder={placeholder}
-          className="max-h-36 flex-1 resize-none bg-transparent text-sm text-white placeholder:text-white/40 focus:outline-none"
+          placeholder={focused ? 'Ask anything...' : placeholder}
+          className="max-h-36 flex-1 resize-none bg-transparent py-2.5 text-base text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
           rows={1}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
@@ -84,16 +100,18 @@ export function ChatInputBar({ value, onChange, onSubmit, disabled }: ChatInputB
           }}
           disabled={disabled}
         />
+
         <button
           type="submit"
           disabled={!canSend}
           className={cn(
-            'inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold transition',
-            canSend ? 'bg-white text-[#050509]' : 'bg-white/10 text-white/40'
+            'flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all duration-300',
+            canSend
+              ? 'bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:scale-105 active:scale-95'
+              : 'bg-white/5 text-white/20'
           )}
         >
-          Ask CityLens
-          <SendHorizontal className="ml-2 h-4 w-4" />
+          <ArrowUp size={20} strokeWidth={2.5} />
         </button>
       </form>
     </div>

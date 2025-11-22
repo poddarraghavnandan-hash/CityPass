@@ -2,29 +2,36 @@
 
 @layer base {
   :root {
-    --background: 225 70% 4%;
-    --foreground: 220 15% 94%;
-    --surface: 224 45% 9%;
-    --surface-muted: 230 34% 12%;
-    --card: 224 44% 11%;
-    --card-foreground: 220 15% 94%;
-    --popover: 225 52% 8%;
-    --popover-foreground: 220 15% 94%;
-    --primary: 183 64% 58%;
-    --primary-foreground: 225 80% 5%;
-    --secondary: 261 77% 65%;
-    --secondary-foreground: 220 18% 12%;
-    --muted: 226 25% 30%;
-    --muted-foreground: 220 20% 74%; /* Improved from 70% for better contrast */
-    --accent: 261 77% 65%;
-    --accent-foreground: 220 18% 12%;
-    --destructive: 358 75% 59%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 225 32% 20%;
-    --input: 225 32% 20%;
-    --ring: 183 64% 58%;
-    --glow: 183 64% 58%;
-    --radius: 1.5rem;
+    /* Premium Dark Theme Palette */
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 5.9% 10%;
+
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 240 4.9% 83.9%;
+
+    --radius: 0.75rem;
 
     /* Typography Scale - 1.25 ratio (Major Third) */
     --font-size-xs: 0.75rem;      /* 12px - small labels, captions */

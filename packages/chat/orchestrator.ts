@@ -35,7 +35,14 @@ export async function runChatTurn(input: RunChatTurnInput): Promise<RunChatTurnO
 
     // 3. Run Planner
     console.log('[Orchestrator] Step 3: Running Planner');
-    const plannerDecision = await runPlanner(contextSnapshot, analystOutput);
+    let plannerDecision = await runPlanner(contextSnapshot, analystOutput);
+
+    // Validation: Ensure planner returned valid slates
+    if (!plannerDecision.slates || plannerDecision.slates.length === 0) {
+      console.warn('[Orchestrator] Planner returned no slates, attempting fallback');
+      // TODO: Implement a more sophisticated fallback or retry
+      // For now, we proceed, and the UI will handle empty slates gracefully
+    }
 
     // 4. Run Stylist LLM
     console.log('[Orchestrator] Step 4: Running Stylist');
@@ -67,12 +74,13 @@ export async function runChatTurn(input: RunChatTurnInput): Promise<RunChatTurnO
     const nowISO = now.toISOString();
     const futureISO = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString(); // +24 hours
 
+    // Return a safe fallback response
     return {
       threadId: threadId || 'error',
       plannerDecision: {
         intention: {
           primaryGoal: freeText,
-          timeWindow: { fromISO: nowISO, toISO: futureISO }, // Fixed: valid 24h window
+          timeWindow: { fromISO: nowISO, toISO: futureISO },
           city: cityHint || 'New York',
           vibeDescriptors: [],
           constraints: [],
@@ -86,7 +94,7 @@ export async function runChatTurn(input: RunChatTurnInput): Promise<RunChatTurnO
           usedLearnerState: false,
         },
       },
-      reply: 'Sorry, I encountered an error processing your request. Please try again.',
+      reply: "I'm having a little trouble connecting to my brain right now. Could you try asking that again?",
       context: {
         userId,
         anonId,
@@ -111,7 +119,7 @@ export async function runChatTurn(input: RunChatTurnInput): Promise<RunChatTurnO
         },
         chatHistorySummary: 'Error occurred',
         recentPicksSummary: '',
-        searchWindow: { fromISO: nowISO, toISO: futureISO }, // Fixed: valid 24h window
+        searchWindow: { fromISO: nowISO, toISO: futureISO },
         candidateEvents: [],
         traceId: 'error',
       } as any,
