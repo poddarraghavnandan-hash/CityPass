@@ -8,14 +8,14 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(request: NextRequest) {
   try {
-    const stats = await getCacheStats();
+    const stats = await getCacheStats() as any;
 
     return NextResponse.json({
       success: true,
       stats: {
-        connected: stats.connected,
-        totalKeys: stats.keyCount,
-        memoryUsed: stats.memoryUsed,
+        connected: stats.connected ?? false,
+        totalKeys: stats.keyCount ?? 0,
+        memoryUsed: stats.memoryUsed ?? 'unknown',
         hitRate: stats.hitRate ? `${stats.hitRate.toFixed(2)}%` : 'N/A',
       },
     });
