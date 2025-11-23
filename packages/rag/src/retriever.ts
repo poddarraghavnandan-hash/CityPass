@@ -91,54 +91,49 @@ const QDRANT_COLLECTION = 'events_e5';
 const TYPESENSE_COLLECTION = 'events';
 const EMBEDDING_MODEL = process.env.EMBEDDING_MODEL || 'e5-base-v2';
 
-// Simple in-memory cache with TTL
-const cache = new Map<string, { data: RetrievalResult; expires: number }>();
+import { cache } from '@citypass/llm';
+import crypto from 'crypto';
+import OpenAI from 'openai';
 
-function getCached(key: string): RetrievalResult | null {
-  const entry = cache.get(key);
-  if (!entry) return null;
-  if (Date.now() > entry.expires) {
-    cache.delete(key);
-    return null;
+// Lazy-init OpenAI client
+let openai: OpenAI | null = null;
+function getOpenAI(): OpenAI {
+  if (!openai) {
+    openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
   }
-  return entry.data;
-}
-
-function setCache(key: string, data: RetrievalResult, ttlMs: number = 60000): void {
-  cache.set(key, { data, expires: Date.now() + ttlMs });
+  return openai;
 }
 
 /**
- * Generate E5 embedding for query text
- * In production, this would call an embedding service
+ * Generate E5 embedding for query text using OpenAI
  */
 async function generateEmbedding(text: string): Promise<number[]> {
-  // TODO: Replace with actual E5 embedding API call
-  // For now, return mock embedding (768 dimensions for e5-base-v2)
-  console.warn('⚠️ Using mock embeddings. Configure EMBEDDING_SERVICE_URL for production.');
+  const hash = crypto.createHash('md5').update(text).digest('hex');
+  const cacheKey = `emb:${hash}`;
 
-  const embeddingUrl = process.env.EMBEDDING_SERVICE_URL;
-  if (!embeddingUrl) {
-    // Mock embedding - in production this should fail
-    return Array.from({ length: 768 }, () => Math.random() - 0.5);
+  const cached = await cache.get(cacheKey);
+  if (cached) {
+    return JSON.parse(cached);
   }
 
   try {
-    const response = await fetchWithTimeout(embeddingUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, model: EMBEDDING_MODEL }),
-    }, 3000);
+    const response = await getOpenAI().embeddings.create({
+      model: process.env.EMBEDDING_MODEL || 'text-embedding-3-small',
+      input: text,
+      dimensions: 768, // Ensure compatibility with Qdrant collection
+    });
 
-    if (!response.ok) {
-      throw new Error(`Embedding service error: ${response.status}`);
-    }
+    const embedding = response.data[0].embedding;
 
-    const data: any = await response.json();
-    return data.embedding as number[];
+    // Cache for 7 days
+    await cache.set(cacheKey, JSON.stringify(embedding), 86400 * 7);
+
+    return embedding;
   } catch (error: any) {
     console.error('Embedding generation failed:', error.message);
-    // Graceful degradation: return zero vector
+    // Fallback to zero vector to prevent crash, but log severe error
     return Array.from({ length: 768 }, () => 0);
   }
 }
@@ -454,10 +449,10 @@ export async function retrieve(
 
   // Check cache
   if (cacheKey) {
-    const cached = getCached(cacheKey);
+    const cached = await cache.get(cacheKey);
     if (cached) {
       console.log('✅ Cache hit:', cacheKey);
-      return cached;
+      return JSON.parse(cached) as RetrievalResult;
     }
   }
 
@@ -520,7 +515,7 @@ export async function retrieve(
 
   // Cache result
   if (cacheKey) {
-    setCache(cacheKey, result);
+    await cache.set(cacheKey, JSON.stringify(result), 60); // 1 minute TTL
   }
 
   console.log(`📊 Retrieved ${candidates.length} candidates (vector: ${vectorCandidates.length}, keyword: ${keywordCandidates.length}) in ${latencyMs}ms`);

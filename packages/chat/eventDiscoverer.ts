@@ -216,7 +216,31 @@ export async function discoverEventsWithLLM(
     }
 
     console.log(`[EventDiscoverer] Discovered ${discoveredEvents.length} events from web`);
-    return discoveredEvents.slice(0, maxEvents);
+
+    // Verification Step
+    const verifiedEvents: DiscoveredEvent[] = [];
+    // Import dynamically to avoid circular dependency issues if any (though we checked)
+    // Actually, we added the dependency, so static import is fine, but let's use dynamic for safety in this function
+    const { verifyEventData } = await import('@citypass/llm');
+
+    for (const event of discoveredEvents) {
+      try {
+        const verification = await verifyEventData(event);
+        if (verification.isValid && verification.confidence > 0.6) {
+          verifiedEvents.push(event);
+        } else {
+          console.warn(`[EventDiscoverer] Event rejected by verification: ${event.title}`, verification.issues);
+        }
+      } catch (err) {
+        console.error(`[EventDiscoverer] Verification error for ${event.title}:`, err);
+        // If verification fails technically, we might want to keep it or drop it. 
+        // Let's keep it if it looks basic valid
+        if (event.title && event.startTime) verifiedEvents.push(event);
+      }
+    }
+
+    console.log(`[EventDiscoverer] ${verifiedEvents.length} events passed verification`);
+    return verifiedEvents.slice(0, maxEvents);
   } catch (error) {
     console.error('[EventDiscoverer] Discovery failed:', error);
     return [];

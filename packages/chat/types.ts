@@ -42,17 +42,21 @@ export type LearnerState = z.infer<typeof LearnerStateSchema>;
 export const CandidateEventSchema = z.object({
   id: z.string(),
   title: z.string(),
+  description: z.string().nullable().optional(),
   startISO: z.string(),
   endISO: z.string().optional(),
   neighborhood: z.string().nullable().optional(),
   distanceMin: z.number().nullable().optional(),
   priceBand: PriceBandSchema.nullable().optional(),
+  priceMin: z.number().nullable().optional(),
+  priceMax: z.number().nullable().optional(),
   categories: z.array(z.string()),
   moods: z.array(z.string()),
   venueName: z.string().nullable().optional(),
   socialHeatScore: z.number().nullable().optional(),
   noveltyScore: z.number().nullable().optional(),
   fitScore: z.number().nullable().optional(),
+  imageUrl: z.string().nullable().optional(),
 });
 export type CandidateEvent = z.infer<typeof CandidateEventSchema>;
 

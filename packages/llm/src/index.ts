@@ -64,6 +64,8 @@ export {
 // OpenP5-style user modeling
 export {
   createUserPersona,
+  getOrCreateUserPersona,
+  saveUserPersona,
   updatePersonaFromInteraction,
   generatePreferenceEmbedding,
   calculatePersonaEventMatch,
@@ -84,19 +86,15 @@ export {
 
 // Redis caching layer
 export {
-  withCache,
-  cacheEmbedding,
-  cacheEmbeddingsBatch,
-  cacheWebScrape,
-  cacheExtraction,
-  cacheSearchResults,
-  cacheRanking,
-  cacheUserPersona,
-  updateCachedPersona,
+  CacheService,
+  cache,
   invalidateCache,
   getCacheStats,
   clearAllCache,
-  warmupCache,
-  closeRedisConnection,
-  CACHE_TTL,
 } from './cache';
+
+// Data verification
+export {
+  verifyEventData,
+  type VerificationResult,
+} from './verification';

@@ -96,7 +96,8 @@ interface RankingFeatures {
   categoryMatch: number;
   cityMatch: number;
   priceMatch: number;
-  semanticSimilarity: number;
+  semanticSimilarity: number; // Query-Event similarity
+  userSemanticMatch: number;  // UserProfile-Event similarity
 
   // Item features
   popularity: number;
@@ -142,6 +143,9 @@ export async function recallStage(
         // Semantic search using embeddings
         if (context.queryEmbedding) {
           ids = await recallBySemantic(context.queryEmbedding, candidatesPerStrategy);
+        } else if (userProfile?.preferenceEmbedding) {
+          // Fallback to user preference embedding if no query
+          ids = await recallBySemantic(userProfile.preferenceEmbedding, candidatesPerStrategy);
         }
         break;
 
@@ -228,13 +232,14 @@ export async function fineRanking(
   events: RankableEvent[],
   context: RankingContext,
   userProfile?: UserProfile
-): Promise<Array<{ event: RankableEvent; score: number; features: RankingFeatures }>> {
+): Promise<Array<{ event: RankableEvent; score: number; features: RankingFeatures; reason?: string }>> {
   const rankedEvents = await Promise.all(
     events.map(async event => {
       const features = await extractFeatures(event, context, userProfile);
       const score = calculateFinalScore(features);
+      const reason = generateRecommendationReason(features, event, userProfile);
 
-      return { event, score, features };
+      return { event, score, features, reason };
     })
   );
 
@@ -262,10 +267,16 @@ async function extractFeatures(
     priceMatch = Math.max(0, 1 - (priceDiff / userProfile.avgPricePoint));
   }
 
-  // Semantic similarity
+  // Semantic similarity (Query <-> Event)
   let semanticSimilarity = 0;
   if (context.queryEmbedding && event.embedding) {
     semanticSimilarity = cosineSimilarity(context.queryEmbedding, event.embedding);
+  }
+
+  // User Semantic Match (User Profile <-> Event)
+  let userSemanticMatch = 0;
+  if (userProfile?.preferenceEmbedding && event.embedding) {
+    userSemanticMatch = cosineSimilarity(userProfile.preferenceEmbedding, event.embedding);
   }
 
   // Item features
@@ -284,6 +295,7 @@ async function extractFeatures(
     cityMatch,
     priceMatch,
     semanticSimilarity,
+    userSemanticMatch,
     popularity,
     recency,
     quality,
@@ -297,6 +309,7 @@ async function extractFeatures(
     cityMatch,
     priceMatch,
     semanticSimilarity,
+    userSemanticMatch,
     popularity,
     recency,
     quality,
@@ -313,20 +326,22 @@ async function extractFeatures(
 function calculateFinalScore(features: Omit<RankingFeatures, 'score'>): number {
   // Weights learned from user interactions (would be ML model in production)
   const weights = {
-    semanticSimilarity: 0.25,
-    categoryMatch: 0.20,
-    popularity: 0.15,
-    engagement: 0.12,
-    quality: 0.10,
-    cityMatch: 0.08,
-    priceMatch: 0.05,
-    timeMatch: 0.03,
+    semanticSimilarity: 0.25, // High weight for query relevance
+    userSemanticMatch: 0.20,  // High weight for personalization
+    categoryMatch: 0.15,
+    popularity: 0.10,
+    engagement: 0.10,
+    quality: 0.08,
+    cityMatch: 0.05,
+    priceMatch: 0.03,
+    timeMatch: 0.02,
     trending: 0.02,
-    recency: 0.00, // Less important for events
+    recency: 0.00,
   };
 
   let score = 0;
   score += features.semanticSimilarity * weights.semanticSimilarity;
+  score += features.userSemanticMatch * weights.userSemanticMatch;
   score += features.categoryMatch * weights.categoryMatch;
   score += features.popularity * weights.popularity;
   score += features.engagement * weights.engagement;
@@ -338,6 +353,47 @@ function calculateFinalScore(features: Omit<RankingFeatures, 'score'>): number {
   score += features.recency * weights.recency;
 
   return score;
+}
+
+/**
+ * Generate a human-readable reason for the recommendation
+ */
+function generateRecommendationReason(
+  features: RankingFeatures,
+  event: RankableEvent,
+  userProfile?: UserProfile
+): string {
+  // 1. Direct Query Match
+  if (features.semanticSimilarity > 0.85) {
+    return 'Matches your search perfectly';
+  }
+
+  // 2. Category Match
+  if (features.categoryMatch > 0 && userProfile?.favoriteCategories?.includes(event.category)) {
+    return `Because you like ${event.category}`;
+  }
+
+  // 3. User Vibe Match (Semantic Profile)
+  if (features.userSemanticMatch > 0.8) {
+    return 'Matches your vibe';
+  }
+
+  // 4. Trending
+  if (features.trending > 0.8) {
+    return 'Trending right now';
+  }
+
+  // 5. Popularity
+  if (features.popularity > 0.8) {
+    return 'Popular choice';
+  }
+
+  // 6. Local Favorite
+  if (features.cityMatch > 0 && features.engagement > 0.7) {
+    return `Popular in ${event.city}`;
+  }
+
+  return 'Recommended for you';
 }
 
 /**
@@ -450,7 +506,7 @@ export async function rankEvents(
     maxResults?: number;
     includeFeatures?: boolean;
   } = {}
-): Promise<Array<{ event: RankableEvent; score: number; features?: RankingFeatures }>> {
+): Promise<Array<{ event: RankableEvent; score: number; features?: RankingFeatures; reason?: string }>> {
   const { maxResults = 20, includeFeatures = false } = options;
 
   // Stage 1: Recall candidates
@@ -474,41 +530,184 @@ export async function rankEvents(
   const results = fineRanked.slice(0, maxResults);
 
   if (!includeFeatures) {
-    return results.map(r => ({ event: r.event, score: r.score }));
+    return results.map(r => ({ event: r.event, score: r.score, reason: r.reason }));
   }
 
   return results;
 }
 
-// ========== Helper functions (would be database queries in production) ==========
+// ========== Helper functions (Real Implementation) ==========
+
+import { prisma } from '@citypass/db';
+import { QdrantClient } from '@qdrant/js-client-rest';
+
+// Lazy-init Qdrant client
+let qdrantClient: QdrantClient | null = null;
+function getQdrantClient(): QdrantClient {
+  if (!qdrantClient) {
+    qdrantClient = new QdrantClient({
+      url: process.env.QDRANT_URL || 'http://localhost:6333',
+      apiKey: process.env.QDRANT_API_KEY,
+    });
+  }
+  return qdrantClient;
+}
+
+const QDRANT_COLLECTION = 'events_e5';
 
 async function recallBySemantic(queryEmbedding: number[], limit: number): Promise<string[]> {
-  // Would query vector database (Qdrant) in production
-  // For now, return mock IDs
-  return [];
+  try {
+    const searchResult = await getQdrantClient().search(QDRANT_COLLECTION, {
+      vector: queryEmbedding,
+      limit: limit,
+      with_payload: false, // We only need IDs here
+    });
+
+    return searchResult.map((hit: any) => hit.id.toString());
+  } catch (error) {
+    console.error('Semantic recall failed:', error);
+    return [];
+  }
 }
 
 async function recallByCategory(categories: string[], limit: number): Promise<string[]> {
-  // Would query database by category in production
-  return [];
+  if (!categories || categories.length === 0) return [];
+
+  try {
+    const events = await prisma.event.findMany({
+      where: {
+        category: {
+          in: categories as any, // Cast to any to avoid strict enum matching issues if strings vary
+        },
+        startTime: {
+          gte: new Date(), // Only future events
+        },
+      },
+      take: limit,
+      orderBy: {
+        startTime: 'asc',
+      },
+      select: { id: true },
+    });
+
+    return events.map(e => e.id);
+  } catch (error) {
+    console.error('Category recall failed:', error);
+    return [];
+  }
 }
 
 async function recallByCollaborative(userProfile: UserProfile, limit: number): Promise<string[]> {
-  // Would use collaborative filtering model in production
-  return [];
+  // Placeholder: Collaborative filtering requires a user-item interaction matrix
+  // For now, we can fallback to "popular in your favorite categories"
+  if (!userProfile.favoriteCategories || userProfile.favoriteCategories.length === 0) return [];
+
+  try {
+    const events = await prisma.event.findMany({
+      where: {
+        category: { in: userProfile.favoriteCategories as any },
+        startTime: { gte: new Date() },
+      },
+      take: limit,
+      orderBy: {
+        viewCount: 'desc', // Popular in category
+      },
+      select: { id: true },
+    });
+    return events.map(e => e.id);
+  } catch (error) {
+    return [];
+  }
 }
 
 async function recallByTrending(city: string | undefined, limit: number): Promise<string[]> {
-  // Would query database for high viewCount24h in production
-  return [];
+  try {
+    const events = await prisma.event.findMany({
+      where: {
+        city: city ? { equals: city, mode: 'insensitive' } : undefined,
+        startTime: { gte: new Date() },
+      },
+      take: limit,
+      orderBy: {
+        viewCount24h: 'desc',
+      },
+      select: { id: true },
+    });
+
+    return events.map(e => e.id);
+  } catch (error) {
+    console.error('Trending recall failed:', error);
+    return [];
+  }
 }
 
 async function recallByPopular(city: string | undefined, limit: number): Promise<string[]> {
-  // Would query database for high total engagement in production
-  return [];
+  try {
+    const events = await prisma.event.findMany({
+      where: {
+        city: city ? { equals: city, mode: 'insensitive' } : undefined,
+        startTime: { gte: new Date() },
+      },
+      take: limit,
+      orderBy: {
+        viewCount: 'desc', // All-time popularity
+      },
+      select: { id: true },
+    });
+
+    return events.map(e => e.id);
+  } catch (error) {
+    console.error('Popular recall failed:', error);
+    return [];
+  }
 }
 
 async function fetchEventsByIds(ids: string[]): Promise<RankableEvent[]> {
-  // Would fetch from database in production
-  return [];
+  if (ids.length === 0) return [];
+
+  try {
+    const events = await prisma.event.findMany({
+      where: { id: { in: ids } },
+      include: {
+        vector: true, // Fetch embedding if available
+      },
+    });
+
+    // Map Prisma event to RankableEvent
+    return events.map(e => ({
+      id: e.id,
+      title: e.title,
+      description: e.description || undefined,
+      category: e.category || 'OTHER',
+      city: e.city,
+      startTime: e.startTime.toISOString(),
+      priceMin: e.priceMin || undefined,
+      priceMax: e.priceMax || undefined,
+      venueName: e.venueName || undefined,
+      neighborhood: e.neighborhood || undefined,
+      tags: e.tags,
+
+      // Popularity signals
+      viewCount: e.viewCount,
+      saveCount: e.saveCount,
+      shareCount: e.shareCount,
+      clickCount: e.clickCount,
+      viewCount24h: e.viewCount24h,
+      saveCount24h: e.saveCount24h,
+
+      // Quality signals
+      imageUrl: e.imageUrl || undefined,
+      hasDescription: !!e.description && e.description.length > 50,
+      hasVenue: !!e.venueName,
+      hasPrice: e.priceMin !== null,
+
+      // Embedding
+      // Note: We might need to fetch this from Qdrant if not in DB, but let's assume DB has it or we skip
+      // For now, we'll leave it undefined if not in DB to avoid N+1 Qdrant calls
+      embedding: undefined,
+    }));
+  } catch (error) {
+    console.error('Fetch events failed:', error);
+    return [];
+  }
 }

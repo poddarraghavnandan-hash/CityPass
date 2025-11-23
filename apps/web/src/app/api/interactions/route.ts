@@ -78,26 +78,58 @@ export async function POST(req: NextRequest) {
     }
 
     // Update user preferences based on interaction
-    // Commented out until UserProfile has sessionId field
-    // if (profile && (type === 'LIKE' || type === 'SAVE')) {
-    //   const event = await prisma.event.findUnique({
-    //     where: { id: eventId },
-    //     select: { category: true },
-    //   });
+    if (sessionId) {
+      try {
+        // 1. Get or create user persona (uses Cache + DB)
+        // Note: We need userId to persist to DB currently, but getOrCreate handles session-only too
+        const { getOrCreateUserPersona, saveUserPersona, updatePersonaFromInteraction } = await import('@citypass/llm');
 
-    //   if (event?.category) {
-    //     // Add category to favorites if not already there
-    //     const currentCategories = profile.favoriteCategories || [];
-    //     if (!currentCategories.includes(event.category)) {
-    //       await prisma.userProfile.update({
-    //         where: { id: profile.id },
-    //         data: {
-    //           favoriteCategories: [...currentCategories, event.category],
-    //         },
-    //       });
-    //     }
-    //   }
-    // }
+        // Get userId from profile if we can find it (legacy lookup)
+        let userId: string | undefined;
+        // Temporary lookup until we have better session management
+        // const profile = await prisma.userProfile.findFirst({ where: { sessionId } });
+        // if (profile) userId = profile.userId;
+
+        const persona = await getOrCreateUserPersona(sessionId, userId);
+
+        // 2. Fetch event details for the interaction
+        const event = await prisma.event.findUnique({
+          where: { id: eventId },
+          select: {
+            category: true,
+            city: true,
+            venueName: true,
+            neighborhood: true,
+            priceMin: true,
+            tags: true
+          },
+        });
+
+        if (event) {
+          // 3. Update persona
+          const updatedPersona = await updatePersonaFromInteraction(persona, {
+            type,
+            eventId,
+            event: {
+              category: event.category || 'OTHER',
+              city: event.city,
+              venueName: event.venueName || undefined,
+              neighborhood: event.neighborhood || undefined,
+              priceMin: event.priceMin || undefined,
+              tags: event.tags,
+            },
+            dwellTimeMs,
+            timestamp: new Date(),
+          });
+
+          // 4. Save back (uses Cache + DB)
+          await saveUserPersona(updatedPersona);
+        }
+      } catch (err) {
+        console.error('Failed to update personalization:', err);
+        // Don't fail the request
+      }
+    }
 
     // Set cookie if new session
     const response = NextResponse.json({ success: true });

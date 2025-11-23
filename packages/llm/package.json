@@ -5,6 +5,8 @@
   "types": "./src/index.ts",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.68.0",
+    "@citypass/db": "workspace:*",
+    "@citypass/types": "workspace:*",
     "@qdrant/js-client-rest": "^1.15.1",
     "ollama": "^0.6.2",
     "openai": "^6.8.1",

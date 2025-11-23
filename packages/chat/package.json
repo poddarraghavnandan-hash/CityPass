@@ -19,6 +19,7 @@
     "@citypass/ranker": "workspace:*",
     "@citypass/slate": "workspace:*",
     "@citypass/utils": "workspace:*",
+    "@citypass/llm": "workspace:*",
     "openai": "^4.81.0",
     "uuid": "^11.0.5",
     "zod": "^3.25.4"

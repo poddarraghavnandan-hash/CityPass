@@ -3,7 +3,11 @@
  * Deterministic planner that scores events, applies bandit policies, builds slates
  */
 
-import { Ranker, type RankingFeatures, createRanker } from '@citypass/ranker';
+import { fineRanking, type RankableEvent, type RankingContext } from '@citypass/llm';
+
+// ... inside scoreEvents ...
+// const { fineRanking, type RankableEvent, type RankingContext } = await import('@citypass/llm'); // Removed
+
 import { choosePolicyForUser } from '@citypass/slate';
 import type {
   ChatContextSnapshot,
@@ -68,10 +72,11 @@ export async function runPlanner(
   console.log('[Planner] Building slates for trace:', traceId);
 
   // 1. Initialize ranker
-  const ranker = await createRanker();
+  // 1. Initialize ranker (Legacy removed)
+  // const ranker = await createRanker();
 
   // 2. Score all candidate events
-  let scoredEvents = await scoreEvents(candidateEvents, intention, context, ranker);
+  let scoredEvents = await scoreEvents(candidateEvents, intention, context);
 
   // 3. PHASE 4: Apply popularity debiasing to prevent feedback loops
   scoredEvents = debiasPopularity(scoredEvents, 0.3);
@@ -110,94 +115,75 @@ export async function runPlanner(
 /**
  * Score all candidate events using ranker
  */
+/**
+ * Score all candidate events using fineRanking from @citypass/llm
+ */
 async function scoreEvents(
   events: CandidateEvent[],
   intention: IntentionV2,
-  context: ChatContextSnapshot,
-  ranker: Ranker
+  context: ChatContextSnapshot
 ): Promise<ScoredEvent[]> {
-  const scored: ScoredEvent[] = [];
+  if (events.length === 0) return [];
 
-  for (const event of events) {
-    const features = buildRankingFeatures(event, intention, context);
-    const result = ranker.score(features);
+  // const { fineRanking, type RankableEvent, type RankingContext } = await import('@citypass/llm');
 
-    scored.push({
-      event,
-      score: result.score,
-      factorScores: result.factorContributions,
-    });
-  }
+  // Map CandidateEvent to RankableEvent
+  const rankableEvents: RankableEvent[] = events.map(e => ({
+    id: e.id,
+    title: e.title,
+    description: e.description || undefined,
+    category: e.categories[0] || 'OTHER',
+    city: context.city || 'New York',
+    startTime: e.startISO,
+    priceMin: e.priceMin ?? undefined,
+    priceMax: e.priceMax ?? undefined,
+    venueName: e.venueName || undefined,
+    neighborhood: e.neighborhood || undefined,
+    tags: e.moods,
+    // Map popularity signals if available in CandidateEvent, otherwise default
+    viewCount: e.socialHeatScore ? e.socialHeatScore * 100 : 0,
+    // Flags
+    hasDescription: !!e.description,
+    hasVenue: !!e.venueName,
+    hasPrice: e.priceMin != null,
+    imageUrl: e.imageUrl || undefined,
+  }));
 
-  // Sort by score descending
-  return scored.sort((a, b) => b.score - a.score);
+  // Build RankingContext
+  const rankingContext: RankingContext = {
+    query: intention.primaryGoal,
+    city: context.city,
+    timeOfDay: undefined, // TODO: Extract from intention
+  };
+
+  // Run fine ranking
+  const ranked = await fineRanking(rankableEvents, rankingContext, context.profile as any);
+
+  // Map back to ScoredEvent
+  return ranked.map(r => {
+    const originalEvent = events.find(e => e.id === r.event.id)!;
+    return {
+      event: originalEvent,
+      score: r.score, // fineRanking returns 0-1 score
+      factorScores: {
+        // Map RankingFeatures to factorScores for debug/reasons
+        categoryMatch: r.features.categoryMatch,
+        semanticSimilarity: r.features.semanticSimilarity,
+        userSemanticMatch: r.features.userSemanticMatch,
+        popularity: r.features.popularity,
+        timeFit: r.features.timeMatch,
+        priceComfort: r.features.priceMatch,
+        // Store the generated reason
+        reason: r.reason as any,
+      },
+    };
+  });
 }
 
 /**
  * Build ranking features for an event
  */
-function buildRankingFeatures(
-  event: CandidateEvent,
-  intention: IntentionV2,
-  context: ChatContextSnapshot
-): RankingFeatures & { eventId: string } {
-  const now = new Date(context.nowISO);
-  const eventStart = new Date(event.startISO);
 
-  // Time fit: how well event timing matches intention
-  const diffMinutes = (eventStart.getTime() - now.getTime()) / (1000 * 60);
-  const intentionWindow = new Date(intention.timeWindow.toISO);
-  const untilMinutes = (intentionWindow.getTime() - now.getTime()) / (1000 * 60);
-
-  let timeFit = 0.5;
-  if (diffMinutes < 0) timeFit = 0.1; // Past
-  else if (diffMinutes <= untilMinutes) timeFit = 1.0; // Within window
-  else if (diffMinutes <= untilMinutes * 1.5) timeFit = 0.6;
-  else timeFit = 0.3;
-
-  // Recency: prefer sooner events
-  const recencyScore = Math.max(0, 1 - diffMinutes / (untilMinutes || 1440));
-
-  // Distance comfort (if location available)
-  const distanceComfort = event.distanceMin != null ? 1 - Math.min(1, event.distanceMin / 10) : 0.5;
-
-  // Price comfort
-  const budgetMatch = matchBudget(event.priceBand, intention.budgetBand);
-
-  // Mood alignment
-  const moodAlignment = calculateMoodAlignment(event.moods, event.categories, intention.vibeDescriptors);
-
-  // Social heat (placeholder - should come from actual metrics)
-  const socialHeatScore = event.socialHeatScore || 0.5;
-
-  // Novelty score
-  const noveltyScore = event.noveltyScore || 0.5;
-
-  // Taste match (placeholder)
-  const tasteMatchScore = event.fitScore || 0.5;
-
-  return {
-    eventId: event.id,
-    textualSimilarity: 0.7, // Placeholder - should use actual keyword matching
-    semanticSimilarity: 0.6, // Placeholder - should use vector similarity
-    timeFit,
-    recencyScore,
-    distanceKm: event.distanceMin || null,
-    distanceComfort,
-    priceMin: null,
-    priceMax: null,
-    priceComfort: budgetMatch,
-    category: event.categories[0] || null,
-    tags: event.moods,
-    moodAlignment,
-    views24h: 0,
-    saves24h: 0,
-    friendInterest: 0,
-    socialHeatScore,
-    noveltyScore,
-    tasteMatchScore,
-  };
-}
 
 /**
  * Match price band to budget preference
@@ -442,13 +428,18 @@ function buildSlates(
 function compileReasons(factorScores: Record<string, number>): string[] {
   const reasons: string[] = [];
 
+  // Check if we have a pre-generated reason from fineRanking
+  if (factorScores.reason) {
+    reasons.push(factorScores.reason as unknown as string);
+  }
+
   // Check for new matchScorer breakdown (raw point values)
   // categoryMatch: 0-30, vibeAlignment: 0-25, timeFit: 0-25, priceComfort: 0-15, socialFit: 0-10
 
   // Legacy normalized scores (0-1) support
-  const isLegacyScores = Object.values(factorScores).some((score) => score > 0 && score <= 1);
+  const isLegacyScores = Object.values(factorScores).some((score) => typeof score === 'number' && score > 0 && score <= 1);
 
-  if (isLegacyScores) {
+  if (isLegacyScores && reasons.length === 0) {
     // Legacy scoring system (0-1 normalized)
     if (factorScores.timeFit > 0.8) {
       reasons.push('Perfect timing for your schedule');
@@ -471,7 +462,7 @@ function compileReasons(factorScores: Record<string, number>): string[] {
     if (factorScores.tasteMatchScore > 0.7) {
       reasons.push('Based on your past likes');
     }
-  } else {
+  } else if (reasons.length === 0) {
     // New matchScorer breakdown (raw points)
 
     // Category match (0-30 points)

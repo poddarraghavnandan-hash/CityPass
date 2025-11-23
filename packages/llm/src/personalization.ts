@@ -550,3 +550,139 @@ function calculateMedian(numbers: number[]): number {
   }
   return sorted[mid];
 }
+
+// ==========================================
+// Persistence & Caching Layer
+// ==========================================
+
+import { prisma } from '@citypass/db';
+import { cache } from './cache';
+
+/**
+ * Get user persona from Cache or DB, or create new
+ */
+export async function getOrCreateUserPersona(sessionId: string, userId?: string): Promise<UserPersona> {
+  const cacheKey = userId ? `persona:user:${userId}` : `persona:session:${sessionId}`;
+
+  // 1. Try Cache
+  const cached = await cache.get(cacheKey);
+  if (cached) {
+    try {
+      return deserializePersona(JSON.parse(cached));
+    } catch (e) {
+      console.warn('Failed to deserialize cached persona', e);
+    }
+  }
+
+  // 2. Try DB
+  // Note: We currently store persona in UserProfile.meta
+  // If we have userId, look up by userId. If not, look up by sessionId (if supported)
+
+  let profile = null;
+  if (userId) {
+    profile = await prisma.userProfile.findUnique({ where: { userId } });
+  } else {
+    // Fallback: try to find by sessionId if we add that index later
+    // For now, we can't efficiently look up by sessionId in UserProfile without an index
+    // So we might just create a fresh one if no userId
+  }
+
+  if (profile && profile.meta && (profile.meta as any).persona) {
+    const persona = deserializePersona((profile.meta as any).persona);
+    // Update cache
+    await cache.set(cacheKey, JSON.stringify(serializePersona(persona)), 3600);
+    return persona;
+  }
+
+  // 3. Create New
+  const newPersona = createUserPersona(sessionId, userId);
+  if (profile) {
+    // Seed with profile data
+    newPersona.explicitly.favoriteCategories = profile.favoriteCategories || [];
+  }
+
+  return newPersona;
+}
+
+/**
+ * Save user persona to DB and Cache
+ */
+export async function saveUserPersona(persona: UserPersona): Promise<void> {
+  const cacheKey = persona.userId ? `persona:user:${persona.userId}` : `persona:session:${persona.sessionId}`;
+  const serialized = serializePersona(persona);
+
+  // 1. Update Cache
+  await cache.set(cacheKey, JSON.stringify(serialized), 3600);
+
+  // 2. Update DB
+  if (persona.userId) {
+    // Upsert UserProfile
+    // We need to be careful not to overwrite other profile fields
+    // Best practice: fetch, merge, update
+
+    // For simplicity/performance, we assume the persona is the source of truth for preferences
+    await prisma.userProfile.upsert({
+      where: { userId: persona.userId },
+      create: {
+        userId: persona.userId,
+        favoriteCategories: persona.explicitly.favoriteCategories,
+        meta: {
+          persona: serialized,
+          lastInteraction: new Date(),
+        },
+      },
+      update: {
+        favoriteCategories: persona.explicitly.favoriteCategories,
+        meta: {
+          persona: serialized,
+          lastInteraction: new Date(),
+        },
+      },
+    });
+  }
+}
+
+/**
+ * Serialize Persona for JSON storage (Maps -> Objects)
+ */
+function serializePersona(persona: UserPersona): any {
+  return {
+    ...persona,
+    implicitly: {
+      ...persona.implicitly,
+      categoryAffinities: Object.fromEntries(persona.implicitly.categoryAffinities),
+      venueAffinities: Object.fromEntries(persona.implicitly.venueAffinities),
+      neighborhoodAffinities: Object.fromEntries(persona.implicitly.neighborhoodAffinities),
+      interestTags: Object.fromEntries(persona.implicitly.interestTags),
+      activityPatterns: Object.fromEntries(persona.implicitly.activityPatterns),
+    }
+  };
+}
+
+/**
+ * Deserialize Persona from JSON (Objects -> Maps, Strings -> Dates)
+ */
+function deserializePersona(data: any): UserPersona {
+  const persona = { ...data };
+  persona.createdAt = new Date(persona.createdAt);
+  persona.lastActive = new Date(persona.lastActive);
+  persona.lastUpdated = new Date(persona.lastUpdated);
+
+  if (persona.implicitly.categoryAffinities && !(persona.implicitly.categoryAffinities instanceof Map)) {
+    persona.implicitly.categoryAffinities = new Map(Object.entries(persona.implicitly.categoryAffinities));
+  }
+  if (persona.implicitly.venueAffinities && !(persona.implicitly.venueAffinities instanceof Map)) {
+    persona.implicitly.venueAffinities = new Map(Object.entries(persona.implicitly.venueAffinities));
+  }
+  if (persona.implicitly.neighborhoodAffinities && !(persona.implicitly.neighborhoodAffinities instanceof Map)) {
+    persona.implicitly.neighborhoodAffinities = new Map(Object.entries(persona.implicitly.neighborhoodAffinities));
+  }
+  if (persona.implicitly.interestTags && !(persona.implicitly.interestTags instanceof Map)) {
+    persona.implicitly.interestTags = new Map(Object.entries(persona.implicitly.interestTags));
+  }
+  if (persona.implicitly.activityPatterns && !(persona.implicitly.activityPatterns instanceof Map)) {
+    persona.implicitly.activityPatterns = new Map(Object.entries(persona.implicitly.activityPatterns));
+  }
+
+  return persona;
+}
