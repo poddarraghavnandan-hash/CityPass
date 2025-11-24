@@ -184,7 +184,13 @@ export const cacheRanking = async (key: string, fn: () => Promise<any>) => withC
 export const cacheUserPersona = async (id: string, fn: () => Promise<any>) => withCache(`persona:${id}`, fn, 3600);
 export const updateCachedPersona = async (id: string, data: any) => cache.set(`persona:${id}`, JSON.stringify(data), 3600);
 export const invalidateCache = async (key: string) => cache.del(key);
-export const getCacheStats = () => ({});
+export const getCacheStats = () => ({
+  connected: false,
+  hits: 0,
+  misses: 0,
+  keys: 0,
+  memoryUsed: 0,
+});
 export const clearAllCache = async () => { };
 export const warmupCache = async () => { };
 export const closeRedisConnection = async () => { };

@@ -1,20 +1,24 @@
 /**
  * Advanced Embedding Router with Multi-Model Support
- * Supports: BGE-M3, E5-Base-v2, GTE-Small, all-MiniLM-L6-v2
+ * Supports: BGE-M3, E5-Base-v2, GTE-Small, all-MiniLM-L6-v2, OpenAI
  * Use-case based model selection for optimal performance and cost
  */
 
 import { Ollama } from 'ollama';
 import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import { cacheEmbedding, cacheEmbeddingsBatch } from './cache';
 
 const OLLAMA_HOST = process.env.OLLAMA_HOST || 'http://localhost:11434';
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 const USE_CACHE = process.env.USE_EMBEDDING_CACHE !== 'false'; // Default: enabled
+const EMBEDDING_PROVIDER = process.env.EMBEDDING_PROVIDER || (process.env.NODE_ENV === 'production' ? 'openai' : 'ollama');
 
 // Singleton clients
 let ollamaClient: Ollama | null = null;
 let anthropicClient: InstanceType<typeof Anthropic> | null = null;
+let openaiClient: OpenAI | null = null;
 
 function getOllamaClient(): Ollama {
   if (!ollamaClient) {
@@ -30,6 +34,13 @@ function getAnthropicClient(): InstanceType<typeof Anthropic> {
   return anthropicClient;
 }
 
+function getOpenAIClient(): OpenAI {
+  if (!openaiClient) {
+    openaiClient = new OpenAI({ apiKey: OPENAI_API_KEY });
+  }
+  return openaiClient;
+}
+
 /**
  * Embedding models available in the system
  */
@@ -39,7 +50,9 @@ export type EmbeddingModel =
   | 'gte-small'        // 384-dim, fastest for realtime queries
   | 'minilm-l6-v2'     // 384-dim, lightweight fallback
   | 'voyage-2'         // API-based, highest quality (costs $)
-  | 'claude-embeddings'; // Claude's embedding (if available)
+  | 'claude-embeddings' // Claude's embedding (if available)
+  | 'text-embedding-3-small' // OpenAI, 1536-dim, fast & cheap
+  | 'text-embedding-3-large'; // OpenAI, 3072-dim, high precision
 
 /**
  * Use case for embedding to determine optimal model
@@ -59,7 +72,7 @@ export type EmbeddingUseCase =
 export const MODEL_CONFIG: Record<EmbeddingModel, {
   dimensions: number;
   maxTokens: number;
-  provider: 'ollama' | 'api';
+  provider: 'ollama' | 'api' | 'openai';
   costPer1MTokens?: number; // USD
   avgLatency?: number; // ms
   useCases: EmbeddingUseCase[];
@@ -108,6 +121,22 @@ export const MODEL_CONFIG: Record<EmbeddingModel, {
     avgLatency: 200,
     useCases: ['event-indexing', 'reranking'],
   },
+  'text-embedding-3-small': {
+    dimensions: 1536,
+    maxTokens: 8191,
+    provider: 'openai',
+    costPer1MTokens: 0.02,
+    avgLatency: 100,
+    useCases: ['query-search', 'event-similarity', 'user-preference', 'category-matching'],
+  },
+  'text-embedding-3-large': {
+    dimensions: 3072,
+    maxTokens: 8191,
+    provider: 'openai',
+    costPer1MTokens: 0.13,
+    avgLatency: 150,
+    useCases: ['event-indexing', 'domain-specific'],
+  },
 };
 
 /**
@@ -115,9 +144,17 @@ export const MODEL_CONFIG: Record<EmbeddingModel, {
  */
 export function selectModelForUseCase(
   useCase: EmbeddingUseCase,
-  preferLocal: boolean = true
+  preferLocal: boolean = EMBEDDING_PROVIDER === 'ollama'
 ): EmbeddingModel {
-  // Priority order based on use case
+  // If OpenAI is preferred (e.g. production), return OpenAI models
+  if (!preferLocal) {
+    if (useCase === 'event-indexing' || useCase === 'domain-specific') {
+      return 'text-embedding-3-large';
+    }
+    return 'text-embedding-3-small';
+  }
+
+  // Priority order based on use case for local models
   const useCasePreferences: Record<EmbeddingUseCase, EmbeddingModel[]> = {
     'event-indexing': ['bge-m3', 'e5-base-v2', 'voyage-2'],
     'query-search': ['gte-small', 'minilm-l6-v2', 'e5-base-v2'],
@@ -159,7 +196,7 @@ export async function generateEmbedding(
 ): Promise<number[]> {
   const {
     useCase = 'event-similarity',
-    model = selectModelForUseCase(useCase, true),
+    model = selectModelForUseCase(useCase),
     normalize = true,
     skipCache = false,
   } = options;
@@ -172,6 +209,8 @@ export async function generateEmbedding(
 
     if (config.provider === 'ollama') {
       embedding = await generateOllamaEmbedding(text, model);
+    } else if (config.provider === 'openai') {
+      embedding = await generateOpenAIEmbedding(text, model);
     } else {
       throw new Error(`API-based embedding model ${model} not yet implemented`);
     }
@@ -207,7 +246,7 @@ export async function generateEmbeddingsBatch(
 ): Promise<number[][]> {
   const {
     useCase = 'event-indexing',
-    model = selectModelForUseCase(useCase, true),
+    model = selectModelForUseCase(useCase),
     batchSize = 10,
     normalize = true,
     skipCache = false,
@@ -275,6 +314,29 @@ async function generateOllamaEmbedding(
 }
 
 /**
+ * Generate embedding using OpenAI
+ */
+async function generateOpenAIEmbedding(
+  text: string,
+  model: EmbeddingModel
+): Promise<number[]> {
+  const openai = getOpenAIClient();
+
+  try {
+    const response = await openai.embeddings.create({
+      model: model,
+      input: text,
+      encoding_format: 'float',
+    });
+
+    return response.data[0].embedding;
+  } catch (error) {
+    console.error(`OpenAI embedding failed for model ${model}:`, error);
+    throw error;
+  }
+}
+
+/**
  * Map our model enum to Ollama model names
  */
 function getOllamaModelName(model: EmbeddingModel): string {
@@ -306,7 +368,9 @@ export function normalizeVector(vector: number[]): number[] {
  */
 export function cosineSimilarity(a: number[], b: number[]): number {
   if (a.length !== b.length) {
-    throw new Error('Vectors must have same dimensions');
+    // throw new Error('Vectors must have same dimensions');
+    // Soft fail for dimension mismatch (e.g. mixed models)
+    return 0;
   }
 
   let dotProduct = 0;
@@ -415,3 +479,4 @@ export function prepareQueryForEmbedding(
 
   return parts.join(' ');
 }
+

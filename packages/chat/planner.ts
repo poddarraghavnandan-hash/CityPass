@@ -153,6 +153,7 @@ async function scoreEvents(
   const rankingContext: RankingContext = {
     query: intention.primaryGoal,
     city: context.city,
+    neighborhood: intention.neighborhoodPreference || undefined,
     timeOfDay: undefined, // TODO: Extract from intention
   };
 

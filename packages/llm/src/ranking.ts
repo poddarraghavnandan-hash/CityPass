@@ -81,6 +81,7 @@ export interface RankingContext {
   query?: string;
   queryEmbedding?: number[];
   city?: string;
+  neighborhood?: string;
   timeOfDay?: 'morning' | 'afternoon' | 'evening' | 'night';
   dayOfWeek?: number; // 0-6
   date?: Date;
@@ -95,6 +96,7 @@ interface RankingFeatures {
   // User-Item features
   categoryMatch: number;
   cityMatch: number;
+  neighborhoodMatch: number;
   priceMatch: number;
   semanticSimilarity: number; // Query-Event similarity
   userSemanticMatch: number;  // UserProfile-Event similarity
@@ -142,10 +144,10 @@ export async function recallStage(
       case 'semantic':
         // Semantic search using embeddings
         if (context.queryEmbedding) {
-          ids = await recallBySemantic(context.queryEmbedding, candidatesPerStrategy);
+          ids = await recallBySemantic(context.queryEmbedding, candidatesPerStrategy, context.city);
         } else if (userProfile?.preferenceEmbedding) {
           // Fallback to user preference embedding if no query
-          ids = await recallBySemantic(userProfile.preferenceEmbedding, candidatesPerStrategy);
+          ids = await recallBySemantic(userProfile.preferenceEmbedding, candidatesPerStrategy, context.city);
         }
         break;
 
@@ -261,6 +263,16 @@ async function extractFeatures(
   const categoryMatch = userProfile?.favoriteCategories?.includes(event.category) ? 1.0 : 0.0;
   const cityMatch = context.city === event.city ? 1.0 : 0.0;
 
+  // Neighborhood match (fuzzy check)
+  let neighborhoodMatch = 0.0;
+  if (context.neighborhood && event.neighborhood) {
+    const target = context.neighborhood.toLowerCase();
+    const actual = event.neighborhood.toLowerCase();
+    if (actual.includes(target) || target.includes(actual)) {
+      neighborhoodMatch = 1.0;
+    }
+  }
+
   let priceMatch = 0.5; // neutral default
   if (userProfile?.avgPricePoint && event.priceMin !== undefined) {
     const priceDiff = Math.abs(event.priceMin - userProfile.avgPricePoint);
@@ -293,6 +305,7 @@ async function extractFeatures(
   const score = calculateFinalScore({
     categoryMatch,
     cityMatch,
+    neighborhoodMatch,
     priceMatch,
     semanticSimilarity,
     userSemanticMatch,
@@ -307,6 +320,7 @@ async function extractFeatures(
   return {
     categoryMatch,
     cityMatch,
+    neighborhoodMatch,
     priceMatch,
     semanticSimilarity,
     userSemanticMatch,
@@ -333,6 +347,7 @@ function calculateFinalScore(features: Omit<RankingFeatures, 'score'>): number {
     engagement: 0.10,
     quality: 0.08,
     cityMatch: 0.05,
+    neighborhoodMatch: 0.20, // High weight for specific location requests
     priceMatch: 0.03,
     timeMatch: 0.02,
     trending: 0.02,
@@ -347,6 +362,7 @@ function calculateFinalScore(features: Omit<RankingFeatures, 'score'>): number {
   score += features.engagement * weights.engagement;
   score += features.quality * weights.quality;
   score += features.cityMatch * weights.cityMatch;
+  score += features.neighborhoodMatch * weights.neighborhoodMatch;
   score += features.priceMatch * weights.priceMatch;
   score += features.timeMatch * weights.timeMatch;
   score += features.trending * weights.trending;
@@ -555,15 +571,27 @@ function getQdrantClient(): QdrantClient {
 
 const QDRANT_COLLECTION = 'events_e5';
 
-async function recallBySemantic(queryEmbedding: number[], limit: number): Promise<string[]> {
+async function recallBySemantic(queryEmbedding: number[], limit: number, city?: string): Promise<string[]> {
   try {
+    const filter: any = {};
+    if (city) {
+      filter.must = [
+        {
+          key: 'city',
+          match: { value: city }
+        }
+      ];
+    }
+
     const searchResult = await getQdrantClient().search(QDRANT_COLLECTION, {
       vector: queryEmbedding,
       limit: limit,
-      with_payload: false, // We only need IDs here
+      filter: Object.keys(filter).length > 0 ? filter : undefined,
+      with_payload: true, // Need payload to verify ID if needed, but mostly for future proofing
     });
 
-    return searchResult.map((hit: any) => hit.id.toString());
+    // Qdrant returns payload.eventId as the ID we want (Postgres ID), not the Qdrant point ID
+    return searchResult.map((hit: any) => hit.payload?.eventId || hit.id.toString());
   } catch (error) {
     console.error('Semantic recall failed:', error);
     return [];

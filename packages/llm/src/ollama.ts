@@ -1,9 +1,13 @@
 import { Ollama } from 'ollama';
+import OpenAI from 'openai';
 
 const OLLAMA_HOST = process.env.OLLAMA_HOST || 'http://localhost:11434';
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
+const LLM_PROVIDER = process.env.LLM_PROVIDER || (process.env.NODE_ENV === 'production' ? 'openai' : 'ollama');
 
-// Singleton Ollama client
+// Singleton clients
 let ollamaClient: Ollama | null = null;
+let openaiClient: OpenAI | null = null;
 
 function getOllamaClient(): Ollama {
   if (!ollamaClient) {
@@ -12,12 +16,21 @@ function getOllamaClient(): Ollama {
   return ollamaClient;
 }
 
+function getOpenAIClient(): OpenAI {
+  if (!openaiClient) {
+    openaiClient = new OpenAI({ apiKey: OPENAI_API_KEY });
+  }
+  return openaiClient;
+}
+
 /**
  * Generate embeddings using BGE-M3 model
  * @param text Text to embed
  * @returns 1024-dimensional embedding vector
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
+  // Note: For embeddings, prefer using the dedicated embeddings.ts module
+  // This function is kept for backward compatibility but delegates to Ollama only for now
   const ollama = getOllamaClient();
 
   const response = await ollama.embeddings({
@@ -54,6 +67,14 @@ export async function rerank(
   query: string,
   documents: { id: string; text: string }[]
 ): Promise<{ id: string; text: string; score: number }[]> {
+  // Reranking is currently only supported via Ollama/Local models
+  // For production/OpenAI, we might skip reranking or use a different strategy
+  if (LLM_PROVIDER === 'openai') {
+    // Skip reranking in production for now, just return original order
+    // TODO: Implement Cohere or other reranking API
+    return documents.map(d => ({ ...d, score: 0 }));
+  }
+
   const ollama = getOllamaClient();
 
   const results: { id: string; text: string; score: number }[] = [];
@@ -79,7 +100,7 @@ export async function rerank(
 }
 
 /**
- * Generate natural language response using Llama 3.1
+ * Generate natural language response using Llama 3.1 or OpenAI
  * @param prompt User prompt
  * @param systemPrompt Optional system prompt
  * @returns Generated text response
@@ -88,6 +109,18 @@ export async function generateResponse(
   prompt: string,
   systemPrompt?: string
 ): Promise<string> {
+  if (LLM_PROVIDER === 'openai') {
+    const openai = getOpenAIClient();
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        ...(systemPrompt ? [{ role: 'system' as const, content: systemPrompt }] : []),
+        { role: 'user', content: prompt },
+      ],
+    });
+    return completion.choices[0]?.message?.content || '';
+  }
+
   const ollama = getOllamaClient();
 
   const response = await ollama.generate({
@@ -110,6 +143,26 @@ export async function generateStreamingResponse(
   systemPrompt: string | undefined,
   onChunk: (chunk: string) => void
 ): Promise<void> {
+  if (LLM_PROVIDER === 'openai') {
+    const openai = getOpenAIClient();
+    const stream = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        ...(systemPrompt ? [{ role: 'system' as const, content: systemPrompt }] : []),
+        { role: 'user', content: prompt },
+      ],
+      stream: true,
+    });
+
+    for await (const chunk of stream) {
+      const content = chunk.choices[0]?.delta?.content || '';
+      if (content) {
+        onChunk(content);
+      }
+    }
+    return;
+  }
+
   const ollama = getOllamaClient();
 
   const stream = await ollama.generate({
@@ -125,7 +178,7 @@ export async function generateStreamingResponse(
 }
 
 /**
- * Extract structured information from text using Llama 3.1
+ * Extract structured information from text using Llama 3.1 or OpenAI
  * @param text Input text
  * @param schema JSON schema describing the desired output structure
  * @returns Extracted data matching the schema
@@ -139,7 +192,9 @@ export async function extractStructured<T>(
   const response = await generateResponse(text, systemPrompt);
 
   try {
-    return JSON.parse(response) as T;
+    // Clean up response if it contains markdown code blocks
+    const cleanResponse = response.replace(/```json\n?|\n?```/g, '').trim();
+    return JSON.parse(cleanResponse) as T;
   } catch (error) {
     throw new Error(`Failed to parse LLM response as JSON: ${response}`);
   }
@@ -159,3 +214,4 @@ export async function summarize(
 
   return await generateResponse(text, systemPrompt);
 }
+

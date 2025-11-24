@@ -1,5 +1,5 @@
 import { QdrantClient } from '@qdrant/js-client-rest';
-import { generateEmbedding } from './ollama';
+import { generateEmbedding } from './embeddings';
 
 const QDRANT_URL = process.env.QDRANT_URL || 'http://localhost:6333';
 const EVENTS_COLLECTION = 'events';
