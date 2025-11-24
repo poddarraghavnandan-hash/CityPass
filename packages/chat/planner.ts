@@ -391,7 +391,7 @@ function buildSlates(
   // 1. Best Slate: Top-ranked events with MMR diversity
   // λ=0.7 means 70% relevance, 30% diversity
   const diverseBestEvents = diversifySlateMMR(scoredEvents, 10, 0.7);
-  const bestItems: SlateItemDecision[] = diverseBestEvents.slice(0, 5).map((se, idx) => ({
+  const bestItems: SlateItemDecision[] = diverseBestEvents.slice(0, 3).map((se, idx) => ({
     eventId: se.event.id,
     priority: idx + 1,
     reasons: [],
@@ -409,7 +409,7 @@ function buildSlates(
       (se) => se.factorScores.noveltyScore > 0.4 && se.score > 0.35
     );
 
-    const wildcardItems: SlateItemDecision[] = wildcardCandidates.slice(0, 5).map((se, idx) => ({
+    const wildcardItems: SlateItemDecision[] = wildcardCandidates.slice(0, 3).map((se, idx) => ({
       eventId: se.event.id,
       priority: idx + 1,
       reasons: [],
@@ -431,7 +431,7 @@ function buildSlates(
     return scoreB - scoreA;
   });
 
-  const closeEasyItems: SlateItemDecision[] = convenientCandidates.slice(0, 5).map((se, idx) => ({
+  const closeEasyItems: SlateItemDecision[] = convenientCandidates.slice(0, 3).map((se, idx) => ({
     eventId: se.event.id,
     priority: idx + 1,
     reasons: [],
