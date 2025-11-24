@@ -3,10 +3,7 @@
  * Deterministic planner that scores events, applies bandit policies, builds slates
  */
 
-import { fineRanking, type RankableEvent, type RankingContext } from '@citypass/llm';
-
-// ... inside scoreEvents ...
-// const { fineRanking, type RankableEvent, type RankingContext } = await import('@citypass/llm'); // Removed
+import { fineRanking, fetchEventsFromGPT, type RankableEvent, type RankingContext } from '@citypass/llm';
 
 import { choosePolicyForUser } from '@citypass/slate';
 import type {
@@ -58,10 +55,6 @@ function debiasPopularity(scoredEvents: ScoredEvent[], alpha: number = 0.3): Sco
   return sorted;
 }
 
-/**
- * Run deterministic planner to score events and build slates
- * PHASE 4 (WEEK 8-10): Enhanced with popularity debiasing
- */
 export async function runPlanner(
   context: ChatContextSnapshot,
   analystOutput: { intention: IntentionV2; explorationPlan: ExplorationPlan }
@@ -71,12 +64,43 @@ export async function runPlanner(
 
   console.log('[Planner] Building slates for trace:', traceId);
 
-  // 1. Initialize ranker
-  // 1. Initialize ranker (Legacy removed)
-  // const ranker = await createRanker();
+  // 1. Fetch augmented events from GPT (Parallel to existing flow or additive)
+  // We do this here to augment the candidate pool before scoring
+  let allCandidates = [...candidateEvents];
+
+  try {
+    console.log('[Planner] Fetching augmented events from GPT...');
+    const gptEvents = await fetchEventsFromGPT(intention.primaryGoal, context.city);
+
+    const mappedGptEvents: CandidateEvent[] = gptEvents.map((e, i) => ({
+      id: `gpt-${Date.now()}-${i}`,
+      title: e.title,
+      description: e.description,
+      startISO: e.startTime,
+      neighborhood: undefined, // GPT might not give this reliably yet
+      categories: [e.category || 'OTHER'],
+      moods: [],
+      venueName: e.venueName,
+      priceMin: e.priceMin,
+      priceMax: e.priceMax,
+      imageUrl: undefined, // No image for GPT events yet
+      socialHeatScore: 0,
+      noveltyScore: 0.8, // Assume new/interesting
+      fitScore: 0.5,
+      // Custom field for source URL (we might need to extend the type or store it elsewhere)
+      // For now, we'll append it to description or handle it in a separate map if needed
+      // But CandidateEvent is strict Zod. We'll stick to standard fields.
+    }));
+
+    console.log(`[Planner] Added ${mappedGptEvents.length} GPT events`);
+    allCandidates = [...allCandidates, ...mappedGptEvents];
+  } catch (error) {
+    console.error('[Planner] Failed to fetch GPT events:', error);
+    // Continue with DB events only
+  }
 
   // 2. Score all candidate events
-  let scoredEvents = await scoreEvents(candidateEvents, intention, context);
+  let scoredEvents = await scoreEvents(allCandidates, intention, context);
 
   // 3. PHASE 4: Apply popularity debiasing to prevent feedback loops
   scoredEvents = debiasPopularity(scoredEvents, 0.3);

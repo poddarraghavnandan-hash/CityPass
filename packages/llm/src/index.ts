@@ -98,3 +98,9 @@ export {
   verifyEventData,
   type VerificationResult,
 } from './verification';
+
+// GPT-based event discovery
+export {
+  fetchEventsFromGPT,
+  type GPTSuggestedEvent,
+} from './discovery';
