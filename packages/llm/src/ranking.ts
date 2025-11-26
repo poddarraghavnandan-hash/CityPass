@@ -265,11 +265,22 @@ async function extractFeatures(
 
   // Neighborhood match (fuzzy check)
   let neighborhoodMatch = 0.0;
-  if (context.neighborhood && event.neighborhood) {
+  if (context.neighborhood) {
     const target = context.neighborhood.toLowerCase();
-    const actual = event.neighborhood.toLowerCase();
-    if (actual.includes(target) || target.includes(actual)) {
-      neighborhoodMatch = 1.0;
+
+    if (event.neighborhood) {
+      const actual = event.neighborhood.toLowerCase();
+      if (actual.includes(target) || target.includes(actual)) {
+        neighborhoodMatch = 1.0;
+      }
+    } else {
+      // Fallback: Check title, venue name and description if neighborhood is missing or doesn't match
+      const title = event.title?.toLowerCase() || '';
+      const venue = event.venueName?.toLowerCase() || '';
+      const desc = event.description?.toLowerCase() || '';
+      if (title.includes(target) || venue.includes(target) || desc.includes(target)) {
+        neighborhoodMatch = 0.8; // High confidence fallback
+      }
     }
   }
 

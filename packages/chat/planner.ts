@@ -77,7 +77,7 @@ export async function runPlanner(
       title: e.title,
       description: e.description,
       startISO: e.startTime,
-      neighborhood: undefined, // GPT might not give this reliably yet
+      neighborhood: e.neighborhood,
       categories: [e.category || 'OTHER'],
       moods: [],
       venueName: e.venueName,
@@ -181,8 +181,32 @@ async function scoreEvents(
     timeOfDay: undefined, // TODO: Extract from intention
   };
 
-  // Run fine ranking
-  const ranked = await fineRanking(rankableEvents, rankingContext, context.profile as any);
+  // Run fine ranking with fallback
+  let ranked;
+  try {
+    ranked = await fineRanking(rankableEvents, rankingContext, context.profile as any);
+  } catch (error) {
+    console.error('[Planner] Fine ranking failed, using fallback heuristic:', error);
+    // Fallback: Score based on simple heuristics
+    ranked = rankableEvents.map(e => ({
+      event: e,
+      score: e.id.startsWith('gpt-') ? 0.9 : 0.5, // Prioritize GPT events in fallback
+      features: {
+        categoryMatch: 0.5,
+        cityMatch: 1.0,
+        neighborhoodMatch: 0.5,
+        priceMatch: 0.5,
+        semanticSimilarity: 0.5,
+        userSemanticMatch: 0.5,
+        popularity: 0.5,
+        recency: 0.8,
+        quality: 0.5,
+        engagement: 0.5,
+        timeMatch: 0.5,
+        trending: 0.5,
+      }
+    }));
+  }
 
   // Map back to ScoredEvent
   return ranked.map(r => {
@@ -199,7 +223,7 @@ async function scoreEvents(
         timeFit: r.features.timeMatch,
         priceComfort: r.features.priceMatch,
         // Store the generated reason
-        reason: r.reason as any,
+
       },
     };
   });

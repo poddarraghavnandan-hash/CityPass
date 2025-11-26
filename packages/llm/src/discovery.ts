@@ -20,6 +20,7 @@ export interface GPTSuggestedEvent {
     description?: string;
     url: string; // Critical for source capture
     sourceName?: string;
+    neighborhood?: string;
     category?: string;
     priceMin?: number;
     priceMax?: number;
@@ -41,14 +42,19 @@ export async function fetchEventsFromGPT(
     You are a local event expert for ${city}.
     The user is looking for: "${query}".
     
-    Find 3-5 REAL, specific events happening soon that match this request.
+    Current Date: ${new Date().toISOString()}
+    
+    Find 3-5 REAL, specific events happening SOON (ideally today/tonight or this week) that match this request.
+    If the user asks for "tonight" or "this evening", prioritize events happening within the next 12 hours.
+    
     You MUST provide a valid URL for each event where the user can find more info or buy tickets.
     Do not invent events. If you are unsure, return fewer results.
     
     Return a JSON object with a "events" key containing an array of objects with these fields:
     - title: string
     - venueName: string
-    - startTime: ISO 8601 string (assume current year/month if not specified, today is ${new Date().toISOString()})
+    - neighborhood: string (e.g., "Williamsburg", "Downtown", "Brooklyn") - CRITICAL
+    - startTime: ISO 8601 string (assume current year/month if not specified)
     - description: short summary
     - url: string (REQUIRED)
     - sourceName: string (e.g., "Eventbrite", "Venue Website")
@@ -103,19 +109,24 @@ async function captureSources(events: GPTSuggestedEvent[], city: string) {
                 sourceType = SourceType.TICKETING;
             }
 
-            await prisma.source.upsert({
-                where: { url: event.url },
-                update: { lastSuccess: new Date() },
-                create: {
-                    name: event.sourceName || domain,
-                    url: event.url,
-                    domain: domain,
-                    city: city,
-                    sourceType: sourceType,
-                    crawlMethod: CrawlMethod.FIRECRAWL,
-                    active: true
-                }
-            });
+            try {
+                await prisma.source.upsert({
+                    where: { url: event.url },
+                    update: { lastSuccess: new Date() },
+                    create: {
+                        name: event.sourceName || domain,
+                        url: event.url,
+                        domain: domain,
+                        city: city,
+                        sourceType: sourceType,
+                        crawlMethod: CrawlMethod.FIRECRAWL,
+                        active: true
+                    }
+                });
+            } catch (dbError) {
+                // Silent failure for DB issues to not block the main thread
+                // console.warn('[GPT Discovery] Failed to save source:', dbError);
+            }
         } catch (e) {
             // Ignore invalid URLs or DB errors
         }
